@@ -98,6 +98,7 @@ Salve em `roadmaps/` (ou numa subpasta, que vira a categoria) e rode `python3 to
 | [Como funciona](docs/como-funciona.md) | o que roda onde, onde ficam os dados, a API |
 | [Docker e rede](docs/docker-e-rede.md) | volumes, backup, token, outros aparelhos |
 | [Formato do JSON](docs/SCHEMA.md) | referência de cada campo |
+| [Publicando versões](docs/publicando-versoes.md) | versionamento, releases automáticas e [CHANGELOG](CHANGELOG.md) |
 
 ## Licença
 

@@ -9,3 +9,7 @@ compose.yaml
 **/__pycache__
 data
 tools/demos
+.github
+.agents
+.gitattributes
+CHANGELOG.md

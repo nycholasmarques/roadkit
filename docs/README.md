@@ -12,5 +12,6 @@ Se é a primeira vez, comece pelo passeio na interface. Se você só quer criar 
 | [Como funciona](como-funciona.md) | O que roda onde, onde cada coisa é guardada e como o código se organiza |
 | [Docker e rede](docker-e-rede.md) | Subir com Compose, volumes, backup e abrir para outros aparelhos |
 | [Formato do JSON](SCHEMA.md) | Referência de cada campo de um roadmap |
+| [Publicando versões](publicando-versoes.md) | Versionamento, releases automáticas, CI e proteção da main |
 
 As imagens e os GIFs que aparecem nos textos ficam em `media/` e são gerados por um script, então não precisa refazer à mão quando a interface mudar. O [final de "Como funciona"](como-funciona.md#as-imagens-da-documentação) explica como.
