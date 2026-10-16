@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#f6f7fb">
   <title>Roadkit</title>
+  <script>try{var m=localStorage.getItem('roadkit:v1:theme');document.documentElement.dataset.theme=m==='dark'||(m!=='light'&&matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light'}catch(e){}</script>
   <link rel="stylesheet" href="src/style.css">
 </head>
 <body>
@@ -23,6 +24,7 @@
     <button class="nav-btn" id="importBtn" data-i18n="importProgress"></button>
     <button class="nav-btn" id="resetBtn" data-i18n="resetProgress"></button>
     <button class="nav-btn" id="openFileBtn" data-i18n="openFile"></button>
+    <button class="nav-btn" id="themeBtn"></button>
     <div class="aside-bottom" id="sidebarNote"></div>
   </aside>
   <main class="workspace">

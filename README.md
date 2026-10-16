@@ -41,6 +41,8 @@ O formato está descrito em [`docs/SCHEMA.md`](docs/SCHEMA.md) e em [`schema/roa
 
 Não há coordenadas no JSON. O layout é calculado no navegador: os tópicos principais descem em ordem pela coluna central, agrupados por fase, e os opcionais ficam à direita do tópico de origem.
 
+O tema da interface pode ser claro, escuro ou automático (segue o sistema). O botão "Tema" na barra lateral alterna entre os três e a escolha fica salva no navegador.
+
 Os textos da interface ficam em `src/labels/` (`pt-BR` e `en`) e são escolhidos por `meta.language`. Para um idioma novo, copie um dos arquivos e traduza.
 
 ## Exemplos

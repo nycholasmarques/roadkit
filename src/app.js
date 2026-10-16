@@ -31,6 +31,24 @@ const S = {
   links: [], legendEl: null, svg: null,
 };
 
+/* ---------- theme: auto (follows the system), light or dark ---------- */
+const THEME_KEY = 'roadkit:v1:theme';
+const THEME_NEXT = { auto: 'light', light: 'dark', dark: 'auto' };
+const darkQuery = matchMedia('(prefers-color-scheme: dark)');
+const themeMode = () => { const m = store.get(THEME_KEY); return m === 'light' || m === 'dark' ? m : 'auto'; };
+
+function updateThemeBtn() {
+  const m = themeMode(), name = S.L['theme' + m[0].toUpperCase() + m.slice(1)];
+  if (S.L.theme && name) $('themeBtn').textContent = `${S.L.theme}: ${name}`;
+}
+
+function applyTheme() {
+  const m = themeMode(), dark = m === 'dark' || (m === 'auto' && darkQuery.matches);
+  document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', dark ? '#0e131b' : '#f6f7fb');
+  updateThemeBtn();
+}
+
 /* ---------- normalize: tolerant reader (tools/roadkit.py check is the strict one) ---------- */
 function normLinks(v) {
   return arr(v).map(l => {
@@ -103,6 +121,7 @@ function applyI18n() {
   document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = L[el.dataset.i18n] ?? ''; });
   document.querySelectorAll('[data-i18n-placeholder]').forEach(el => { el.placeholder = L[el.dataset.i18nPlaceholder] ?? ''; });
   document.querySelectorAll('[data-i18n-aria]').forEach(el => el.setAttribute('aria-label', L[el.dataset.i18nAria] ?? ''));
+  updateThemeBtn();
 }
 
 function applyChrome() {
@@ -425,6 +444,8 @@ function wire() {
     S.progress = {}; store.set(KEY.progress(S.rm.id), '{}'); refresh(); renderDetail();
   });
   $('openFileBtn').addEventListener('click', () => $('openFile').click());
+  $('themeBtn').addEventListener('click', () => { store.set(THEME_KEY, THEME_NEXT[themeMode()]); applyTheme(); });
+  darkQuery.addEventListener('change', applyTheme);
   $('openFile').addEventListener('change', async e => { const f = e.target.files?.[0]; if (f) await openLocalFile(f); e.target.value = ''; });
   $('roadmapSelect').addEventListener('change', e => {
     if (e.target.value === '__local__') return setRoadmap(S.localRm, { local: true });
@@ -442,6 +463,7 @@ function wire() {
 
 async function init() {
   wire();
+  applyTheme();
   try {
     [S.manifest, S.defaults] = await Promise.all([getJson('manifest.json'), getJson('src/labels/pt-BR.json')]);
   } catch (err) {
