@@ -60,15 +60,16 @@ A ordem do array define a ordem das fases.
 |---|---|
 | `id` (obrigatório) | slug único; chave do progresso |
 | `title` (obrigatório) | curto (≤ 60 caracteres) |
-| `phase` | id da fase (obrigatório se houver `phases`) |
+| `phase` | id da fase (obrigatório nos tópicos principais se houver `phases`; subtópicos herdam a do pai) |
 | `time` | texto livre no card e no painel ("Semana 2") |
 | `summary` | parágrafo no painel lateral |
 | `topics` | lista de strings (etiquetas) |
 | `challenge` | tarefa prática/entregável (caixa amarela) |
 | `success` | critério de conclusão |
 | `links` | `[{ "title": "…", "url": "https://…" }]` |
-| `optional` | `true` = ramo lateral, não conta no progresso |
-| `anchor` | obrigatório se `optional`: id de um tópico **principal** |
+| `parent` | id do tópico de que este é subtópico (veja "Árvore" abaixo) |
+| `optional` | `true` = ramo lateral, não conta no progresso nem no tópico pai. Precisa de `parent` |
+| `anchor` | nome antigo de `parent`, usado só por opcionais. Ainda funciona |
 | `status` | coluna inicial no kanban: `todo`, `working`, `review` ou `finished`. Se omitido, sai das tarefas (ou `todo`) |
 | `tasks` | lista de tarefas do tópico, exibidas como um kanban pequeno dentro do card (veja abaixo) |
 
@@ -76,9 +77,26 @@ Todos os campos além de `id` e `title` são opcionais; seções vazias não apa
 
 ### Ordem e layout
 
-- Tópicos principais (não opcionais) descem pela coluna central **na ordem do array**, e precisam estar agrupados por fase na ordem das fases.
-- Opcionais ficam à direita do tópico âncora (vários na mesma âncora empilham). Podem estar em qualquer posição do array.
+- Tópicos principais (sem `parent` e não opcionais) descem pela coluna central **na ordem do array**, e precisam estar agrupados por fase na ordem das fases.
+- Subtópicos e opcionais ficam à direita do pai (vários no mesmo pai empilham) e podem estar em qualquer posição do array.
 - O layout é calculado no navegador a partir da altura real de cada card. Não existem coordenadas no JSON.
+
+### Árvore: subtópicos e opcionais
+
+Um tópico pode ter filhos com `parent`, até **2 níveis** abaixo de um tópico principal (principal, filho e neto):
+
+```jsonc
+{ "id": "instalar", "title": "Instalar o Argo CD", "phase": "base" },
+{ "id": "via-helm", "title": "Via Helm", "parent": "instalar" },
+{ "id": "values", "title": "Values do chart", "parent": "via-helm" },
+{ "id": "hooks", "title": "Hooks", "parent": "via-helm", "optional": true }
+```
+
+- Filhos aparecem nas colunas da direita, ligados ao pai. Em telas estreitas ficam aninhados abaixo dele.
+- O filho herda a fase do pai.
+- **Subtópicos obrigatórios** (sem `optional`) comandam o pai: o pai fica concluído quando todos eles (e as suas `tasks`) estiverem. Marcar o pai como concluído conclui tudo abaixo dele, e reabrir o pai reabre. Só os tópicos principais contam no progresso geral.
+- **Opcionais** não contam em nada: nem no progresso, nem para concluir o pai.
+- Ciclos e profundidade acima de 2 são erros no `check`; a interface tolera e sobe o nó um nível.
 
 ## Kanban
 

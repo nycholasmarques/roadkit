@@ -41,7 +41,8 @@ TOP_KEYS = {"$schema", "schemaVersion", "id", "meta", "theme", "labels", "phases
 META_KEYS = {"title", "eyebrow", "subtitle", "description", "icon", "language", "brand", "tagline", "sidebarNote", "footer", "defaultView"}
 THEME_KEYS = {"accent", "brandAccent"}
 PHASE_KEYS = {"id", "title", "summary", "period", "color", "milestone"}
-NODE_KEYS = {"id", "title", "phase", "time", "summary", "topics", "challenge", "success", "links", "optional", "anchor", "status", "tasks"}
+NODE_KEYS = {"id", "title", "phase", "time", "summary", "topics", "challenge", "success", "links", "optional", "anchor", "parent", "status", "tasks"}
+MAX_DEPTH = 2  # sub-topics go at most this many levels below a main topic
 STATUSES = ("todo", "working", "review", "finished")
 TASK_KEYS = {"id", "title", "note", "status"}
 
@@ -58,37 +59,53 @@ def section_title(folder):
             title = json.loads(meta.read_text("utf-8")).get("title")
             if isinstance(title, str) and title.strip():
                 return title.strip()
-            print(f"warn: {meta.relative_to(ROOT).as_posix()} needs a non-empty 'title'", file=sys.stderr)
+            print(f"warn: {rel(meta)} needs a non-empty 'title'", file=sys.stderr)
         except (OSError, ValueError, AttributeError) as e:
-            print(f"warn: {meta.relative_to(ROOT).as_posix()} is not valid ({e})", file=sys.stderr)
+            print(f"warn: {rel(meta)} is not valid ({e})", file=sys.stderr)
     return pretty(folder.name)
 
 
 def json_files(folder):
-    return sorted(p for p in folder.glob("*.json") if not p.name.startswith("_"))
+    return sorted(p for p in folder.glob("*.json") if not p.name.startswith(("_", ".")))
+
+
+def category_dirs():
+    """Section path (posix, '' for the top level) -> the folders that hold it. roadmaps/ and the data folder
+    (where the UI saves) share the same sections, so a roadmap made in the UI lands next to your files."""
+    out = {}
+    for base in (ROADMAPS, USER_DIR):
+        if not base.is_dir():
+            continue
+        for d in [base] + sorted(base.rglob("*")):
+            if not d.is_dir():
+                continue
+            parts = d.relative_to(base).parts
+            if not any(part.startswith((".", "_")) for part in parts):
+                out.setdefault("/".join(parts), []).append(d)
+    return out
+
+
+def prefix_title(parts):
+    folders = [b.joinpath(*parts) for b in (ROADMAPS, USER_DIR) if b.joinpath(*parts).is_dir()]
+    for f in folders:
+        if (f / "_section.json").is_file():
+            return section_title(f)
+    return section_title(folders[0]) if folders else pretty(parts[-1])
 
 
 def discover():
-    """Sections in display order: (group id, title, files). Every folder below roadmaps/ is a section,
-    at any depth; folders starting with '.' or '_' are ignored. Examples come last."""
-    out = []
-    root_files = (json_files(ROADMAPS) if ROADMAPS.is_dir() else []) + (json_files(USER_DIR) if USER_DIR.is_dir() else [])
-    if root_files:
-        out.append(("roadmaps", ROOT_TITLE, root_files))
-    if ROADMAPS.is_dir():
-        folders = sorted(
-            (d for d in ROADMAPS.rglob("*")
-             if d.is_dir() and not any(part.startswith((".", "_")) for part in d.relative_to(ROADMAPS).parts)),
-            key=lambda d: d.relative_to(ROADMAPS).as_posix().lower(),
-        )
-        for d in folders:
-            files = json_files(d)
-            if not files:
-                continue
-            rel = d.relative_to(ROADMAPS)
-            gid = "roadmaps/" + rel.as_posix()
-            title = " / ".join(section_title(ROADMAPS.joinpath(*rel.parts[: i + 1])) for i in range(len(rel.parts)))
-            out.append((gid, title, files))
+    """Sections in display order: (group id, title, files). Every folder below roadmaps/ (or below the data
+    folder's roadmaps/) is a section, at any depth; folders starting with '.' or '_' are ignored. Examples come last."""
+    out, dirs = [], category_dirs()
+    for path in sorted(dirs, key=lambda r: (r != "", r.lower())):
+        files = [f for d in dirs[path] for f in json_files(d)]
+        if not files:
+            continue
+        if not path:
+            out.append(("roadmaps", ROOT_TITLE, files))
+        else:
+            parts = path.split("/")
+            out.append(("roadmaps/" + path, " / ".join(prefix_title(parts[: i + 1]) for i in range(len(parts))), files))
     for gid, title in EXAMPLE_GROUPS:
         files = json_files(ROOT / gid) if (ROOT / gid).is_dir() else []
         if files:
@@ -192,9 +209,10 @@ def validate(data, known_labels):
             errs.append(f"{w}: 'title' is required")
         elif len(title) > 60:
             warns.append(f"{w}: title has {len(title)} chars; keep it short (<= 60)")
+        hangs = bool(n.get("parent") or (n.get("optional") and n.get("anchor")))
         if phases:
-            if n.get("phase") not in phase_ids:
-                errs.append(f"{w}: 'phase' must be one of {phase_ids}")
+            if n.get("phase") not in phase_ids and not (hangs and "phase" not in n):
+                errs.append(f"{w}: 'phase' must be one of {phase_ids}" + (" (or omit it to inherit the parent's)" if hangs else ""))
         elif "phase" in n:
             warns.append(f"{w}: 'phase' ignored because the roadmap defines no phases")
         for key in ("topics",):
@@ -238,20 +256,44 @@ def validate(data, known_labels):
                     task_ids.add(t["id"])
                 if "status" in t and t["status"] not in STATUSES:
                     errs.append(f"{tw}: status must be one of {list(STATUSES)}")
-        if n.get("optional"):
-            if not n.get("anchor"):
-                errs.append(f"{w}: optional nodes need an 'anchor' (id of a core node)")
-        else:
-            if "anchor" in n:
-                warns.append(f"{w}: 'anchor' only applies to optional nodes")
+        if n.get("optional") and not hangs:
+            errs.append(f"{w}: optional nodes need a 'parent' (the topic they hang from; 'anchor' also works)")
+        if "anchor" in n and not n.get("optional"):
+            warns.append(f"{w}: 'anchor' only applies to optional nodes; use 'parent' for sub-topics")
+        if not n.get("optional") and not n.get("parent"):
             core_ids.append(nid)
             if phases and n.get("phase") in phase_ids:
                 core_phase_idx.append(phase_ids.index(n["phase"]))
+    depth_of = {}
+
+    def depth(nid, trail=()):
+        if nid in depth_of:
+            return depth_of[nid]
+        n = ids[nid]
+        pid = n.get("parent") or (n.get("anchor") if n.get("optional") else None)
+        if not pid:
+            d = 0
+        elif pid not in ids or pid == nid or pid in trail or nid in trail:
+            d = None
+        else:
+            pd = depth(pid, trail + (nid,))
+            d = None if pd is None else pd + 1
+        depth_of[nid] = d
+        return d
+
     for nid, n in ids.items():
-        if n.get("optional") and n.get("anchor"):
-            a = ids.get(n["anchor"])
-            if a is None or a.get("optional"):
-                errs.append(f"node '{nid}': anchor '{n['anchor']}' must be the id of a non-optional node")
+        pid = n.get("parent") or (n.get("anchor") if n.get("optional") else None)
+        if not pid:
+            continue
+        d = depth(nid)
+        if pid not in ids:
+            errs.append(f"node '{nid}': parent '{pid}' does not exist")
+        elif d is None:
+            errs.append(f"node '{nid}': parent '{pid}' creates a loop")
+        elif d > MAX_DEPTH:
+            errs.append(f"node '{nid}': sub-topics go at most {MAX_DEPTH} levels below a main topic")
+        elif phases and n.get("phase") and ids[pid].get("phase") and n["phase"] != ids[pid]["phase"]:
+            warns.append(f"node '{nid}': 'phase' ignored, it inherits the phase of its parent '{pid}'")
     if not core_ids:
         errs.append("needs at least one non-optional node")
     if core_phase_idx != sorted(core_phase_idx):
@@ -269,6 +311,14 @@ def rel(path):
         return path.relative_to(ROOT).as_posix()
     except ValueError:
         return str(path)
+
+
+def is_user(path):
+    try:
+        path.relative_to(USER_DIR)
+        return True
+    except ValueError:
+        return False
 
 
 def read_hidden():
@@ -296,18 +346,24 @@ def write_json(path, obj):
         raise
 
 
-def default_finished(n):
-    """Is this topic finished before any progress is saved? (its own status, or all of its tasks)"""
+def parent_of(n):
+    return n.get("parent") or (n.get("anchor") if n.get("optional") else None)
+
+
+def finished_by_default(n, kids):
+    """Is this topic finished before any progress is saved? Its own status, or else all of its tasks and
+    required sub-topics (the same rule the UI uses to derive a status)."""
     if n.get("status"):
         return n["status"] == "finished"
-    tasks = [t for t in n.get("tasks", []) if isinstance(t, dict)]
-    return bool(tasks) and all(t.get("status") == "finished" for t in tasks)
+    parts = [t.get("status") == "finished" for t in n.get("tasks", []) if isinstance(t, dict)]
+    parts += [finished_by_default(c, kids) for c in kids.get(n.get("id"), []) if not c.get("optional")]
+    return bool(parts) and all(parts)
 
 
 def manifest_text(user):
     entries, seen, hidden = [], {}, read_hidden() if user else set()
     for folder, path in roadmap_files():
-        if not user and path.parent == USER_DIR:
+        if not user and is_user(path):
             continue
         try:
             d = json.loads(path.read_text("utf-8"))
@@ -319,19 +375,24 @@ def manifest_text(user):
         if rid in seen:
             print(f"index: duplicate id '{rid}' in {rel(path)} (also {seen[rid]}); skipped", file=sys.stderr)
             continue
-        editable = path.parent == USER_DIR
+        editable = is_user(path)
         seen[rid] = rel(path)
         nodes = [n for n in d.get("nodes", []) if isinstance(n, dict)]
-        core = [n for n in nodes if not n.get("optional")]
+        kids = {}
+        for n in nodes:
+            if parent_of(n):
+                kids.setdefault(parent_of(n), []).append(n)
+        core = [n for n in nodes if not n.get("optional") and not parent_of(n)]
         entries.append({
-            "id": rid, "file": f"user/{path.name}" if editable else seen[rid], "group": folder, "title": title,
+            "id": rid, "file": f"user/{path.relative_to(USER_DIR).as_posix()}" if editable else seen[rid], "group": folder, "title": title,
             "description": d["meta"].get("description", ""), "icon": d["meta"].get("icon", ""),
             "language": d["meta"].get("language", ""),
             "phases": len(d.get("phases", [])),
             "topics": len(core),
-            "optional": len(nodes) - len(core),
+            "optional": sum(1 for n in nodes if n.get("optional")),
+            "subtopics": sum(1 for n in nodes if parent_of(n) and not n.get("optional")),
             "coreIds": [n.get("id") for n in core],
-            "doneByDefault": [n.get("id") for n in core if default_finished(n)],
+            "doneByDefault": [n.get("id") for n in core if finished_by_default(n, kids)],
             **({"editable": True} if editable else {}),
             **({"hidden": True} if rid in hidden else {}),
         })
@@ -405,6 +466,19 @@ class ApiError(Exception):
         self.code, self.body = code, body
 
 
+CATEGORY_PART = re.compile(r"^[a-z0-9][a-z0-9_-]{0,39}$")
+
+
+def user_file(rid):
+    """The file of a roadmap made in the UI, wherever its category put it."""
+    if not slug_ok(rid) or not USER_DIR.is_dir():
+        return None
+    for f in USER_DIR.rglob(f"{rid}.json"):
+        if f.is_file() and not any(x.startswith((".", "_")) for x in f.relative_to(USER_DIR).parts):
+            return f
+    return None
+
+
 def slug_ok(rid):
     return isinstance(rid, str) and bool(SLUG.match(rid)) and len(rid) <= 100
 
@@ -453,8 +527,9 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 
     def serve_user_file(self, path):
         name = unquote(path[len("/user/"):])
-        f = USER_DIR / name
-        if "/" in name or not name.endswith(".json") or name.startswith(("_", ".")) or not f.is_file():
+        parts = name.split("/")
+        f = USER_DIR.joinpath(*parts)
+        if any(not x or x.startswith((".", "_")) for x in parts) or not name.endswith(".json") or not f.is_file():
             return self.send_error(404)
         body = f.read_bytes()
         self.send_response(200)
@@ -560,36 +635,55 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 out[f.stem] = {"updatedAt": v["updatedAt"], "nodes": v["state"].get("nodes", {})}
         return 200, out
 
-    # -- roadmaps made in the UI: POST /api/roadmaps, PUT/DELETE /api/roadmaps/<id> --
+    # -- roadmaps made in the UI: POST /api/roadmaps, PUT/DELETE /api/roadmaps/<id>; ?category=<path>&categoryTitle=<name> --
     def check_roadmap(self, data):
         errs, warns = validate(data, label_keys())
         if errs:
             raise ApiError(422, {"errors": errs, "warnings": warns})
         return warns
 
+    def category_target(self, query):
+        """Folder chosen with ?category=, or None when the request does not mention one."""
+        if "category" not in query:
+            return None
+        parts = [x for x in query["category"][0].split("/") if x]
+        if len(parts) > 3 or any(not CATEGORY_PART.match(x) for x in parts):
+            raise ApiError(400, {"error": "category must be up to 3 folder names like 'estudos' or 'work/golang'"})
+        folder = USER_DIR.joinpath(*parts)
+        title = (query.get("categoryTitle", [""])[0] or "").strip()[:80]
+        if parts and title and not folder.exists():
+            folder.mkdir(parents=True, exist_ok=True)
+            write_json(folder / "_section.json", {"title": title})
+        return folder
+
     def roadmap_create(self, _, query):
         data = self.read_json()
         warns = self.check_roadmap(data)
+        folder = self.category_target(query) or USER_DIR
         with LOCK:
             if data["id"] in known_ids():
                 raise ApiError(409, {"error": f"a roadmap with id '{data['id']}' already exists"})
-            write_json(USER_DIR / f"{data['id']}.json", data)
+            write_json(folder / f"{data['id']}.json", data)
         return 201, {"id": data["id"], "warnings": warns}
 
     def roadmap_update(self, rid, query):
         data = self.read_json()
-        if not slug_ok(rid) or not (USER_DIR / f"{rid}.json").is_file():
+        current = user_file(rid)
+        if current is None:
             raise ApiError(404, {"error": "only roadmaps created in the interface can be edited"})
         if not isinstance(data, dict) or data.get("id") != rid:
             raise ApiError(400, {"error": "the id of a roadmap cannot change (it keys the saved progress)"})
         warns = self.check_roadmap(data)
+        folder = self.category_target(query) or current.parent
         with LOCK:
-            write_json(USER_DIR / f"{rid}.json", data)
+            write_json(folder / f"{rid}.json", data)
+            if folder / f"{rid}.json" != current:   # moved to another category
+                current.unlink()
         return 200, {"id": rid, "warnings": warns}
 
     def roadmap_delete(self, rid, query):
-        f = USER_DIR / f"{rid}.json" if slug_ok(rid) else None
-        if f is None or not f.is_file():
+        f = user_file(rid)
+        if f is None:
             raise ApiError(405 if rid in known_ids() else 404, {"error": "only roadmaps created in the interface can be deleted; hide the others"})
         with LOCK:
             f.unlink()

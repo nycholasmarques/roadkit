@@ -13,7 +13,8 @@ const KEY = {
   last: 'roadkit:v1:last',
   token: 'roadkit:v1:token',
 };
-const G = { spineX: 420, nodeW: 290, optX: 800, optW: 255, top: 110, gap: 56, msGap: 40, optGap: 14, mapW: 1135, msW: 210 };
+const G = { spineX: 420, nodeW: 290, optX: 800, optW: 255, subX: 1110, subW: 230, top: 110, gap: 56, msGap: 40, optGap: 14, mapW: 1135, mapW2: 1370, msW: 210 };
+const NEST = 22;   // narrow layout: indent per sub-topic level
 const NARROW_BELOW = 860;   // map viewport width (px) under which the compact vertical layout is used
 const MAX_SCALE = 1.4;      // the wide layout is scaled to fit the viewport, up to this factor
 const STATUSES = ['todo', 'working', 'review', 'finished'];
@@ -163,26 +164,51 @@ function normalize(raw, fallbackId) {
     const n = {
       id, phase, title: str(r.title) || id, time: str(r.time), summary: str(r.summary),
       topics: arr(r.topics).map(String), challenge: str(r.challenge), success: str(r.success),
-      links: normLinks(r.links), optional: !!r.optional, anchor: str(r.anchor),
-      tasks: normTasks(r.tasks),
+      links: normLinks(r.links), optional: !!r.optional, parentId: str(r.parent) || (r.optional ? str(r.anchor) : ''),
+      tasks: normTasks(r.tasks), children: [], parent: null, depth: 0,
     };
-    n.status = STATUSES.includes(r.status) ? r.status : deriveStatus(n.tasks.map(t => t.status));
+    n.explicit = STATUSES.includes(r.status);
+    n.status = n.explicit ? r.status : null;   // settled below, once the tree is known
     n.hay = [n.title, n.summary, ...n.topics, ...n.tasks.map(t => t.title)].join(' ').toLocaleLowerCase();
     byId[id] = n; nodes.push(n);
   });
-  let core = nodes.filter(n => !n.optional);
+  // tree: a node hangs from `parent` (or, for optional ones, the older `anchor`); up to 2 levels below a main topic
+  const MAX_DEPTH = 2;
+  nodes.forEach(n => {
+    const p = byId[n.parentId];
+    if (n.parentId && (!p || p === n)) warn.push(`node "${n.id}": unknown parent "${n.parentId}"`);
+    else if (p) n.parent = p;
+  });
+  nodes.forEach(n => {   // cut cycles
+    const seen = new Set();
+    for (let p = n; p; p = p.parent) { if (seen.has(p)) { warn.push(`node "${n.id}": parent loop, made a main topic`); n.parent = null; break; } seen.add(p); }
+  });
+  const depthOf = n => (n.parent ? depthOf(n.parent) + 1 : 0);
+  nodes.forEach(n => { while (n.parent && depthOf(n) > MAX_DEPTH) { warn.push(`node "${n.id}": too deep, moved up one level`); n.parent = n.parent.parent; } });
+  let core = nodes.filter(n => !n.optional && !n.parent);
   if (!core.length) throw new Error('needs at least one non-optional node');
   const sorted = [...core].sort((a, b) => phaseById[a.phase].index - phaseById[b.phase].index);
   if (sorted.some((n, i) => n !== core[i])) warn.push('core nodes were reordered to follow phase order');
   core = sorted;
   core.forEach((n, i) => { n.num = i + 1; phaseById[n.phase].nodes.push(n); });
-  nodes.filter(n => n.optional).forEach(n => {
-    if (!byId[n.anchor] || byId[n.anchor].optional) {
-      const fb = phaseById[n.phase].nodes.at(-1) || core[0];
-      warn.push(`optional "${n.id}": invalid anchor "${n.anchor}", using "${fb.id}"`);
-      n.anchor = fb.id;
-    }
+  nodes.filter(n => n.optional && !n.parent).forEach(n => {   // optional with no valid parent: hang it from the last topic of its phase
+    const fb = phaseById[n.phase].nodes.filter(x => !x.parent).at(-1) || core.find(x => x.phase === n.phase) || core[0];
+    warn.push(`optional "${n.id}": no valid parent "${n.parentId}", using "${fb.id}"`);
+    n.parent = fb;
   });
+  nodes.forEach(n => { if (n.parent) n.parent.children.push(n); });
+  let maxDepth = 0;
+  nodes.forEach(n => {
+    n.depth = depthOf(n); maxDepth = Math.max(maxDepth, n.depth);
+    let r = n; while (r.parent) r = r.parent;
+    n.phase = r.phase;   // sub-topics live in the phase of their main topic
+  });
+  // status: explicit, else derived from tasks and required sub-topics
+  const settle = n => {
+    n.children.forEach(settle);
+    if (!n.explicit) n.status = deriveStatus([...n.tasks.map(t => t.status), ...n.children.filter(c => !c.optional).map(c => c.status)]);
+  };
+  core.forEach(settle);
   if (warn.length) console.warn(`[roadmap ${raw.id || fallbackId}]`, warn);
   const th = raw.theme || {};
   return {
@@ -190,7 +216,7 @@ function normalize(raw, fallbackId) {
     theme: { accent: hex(th.accent) || '#233b65', brand: hex(th.brandAccent) || '#7549bd' },
     labels: raw.labels && typeof raw.labels === 'object' ? raw.labels : {},
     defaultView: meta.defaultView === 'kanban' ? 'kanban' : 'map',
-    phases, hasPhases, nodes, core, byId, phaseById, warn,
+    phases, hasPhases, nodes, core, byId, phaseById, warn, maxDepth,
   };
 }
 
@@ -234,12 +260,16 @@ function saveState() {
   store.set(KEY.ts(S.rm.id), String(S.ts));
 }
 
-const deriveNode = n => deriveStatus(n.tasks.map(t => taskStatus(n, t)));
+const requiredKids = n => n.children.filter(c => !c.optional);
+const deriveNode = n => deriveStatus([...n.tasks.map(t => taskStatus(n, t)), ...requiredKids(n).map(nodeStatus)]);
+/* a sub-topic changed: the topics above it follow */
+function bubble(n) { for (let p = n.parent; p; p = p.parent) if (p.tasks.length || requiredKids(p).length) S.state.nodes[p.id] = deriveNode(p); }
 
 function setTaskStatus(n, t, st) {
   if (taskStatus(n, t) === st) return;
   S.state.tasks[taskKey(n, t)] = st;
   S.state.nodes[n.id] = deriveNode(n);
+  bubble(n);
   changed();
 }
 
@@ -248,7 +278,11 @@ function setNodeStatus(n, st) {
   const prev = nodeStatus(n);
   if (prev === st) return;
   S.state.nodes[n.id] = st;
-  if (n.tasks.length && (st === 'finished' || st === 'todo' || prev === 'finished')) n.tasks.forEach(t => { S.state.tasks[taskKey(n, t)] = st; });
+  if (st === 'finished' || st === 'todo' || prev === 'finished') {   // applies to all of its tasks and required sub-topics
+    const apply = x => { x.tasks.forEach(t => { S.state.tasks[taskKey(x, t)] = st; }); requiredKids(x).forEach(c => { S.state.nodes[c.id] = st; apply(c); }); };
+    apply(n);
+  }
+  bubble(n);
   changed();
 }
 
@@ -876,7 +910,8 @@ function wireEditor() {
 
 /* ---------- map build + layout ---------- */
 function metaText(n) {
-  return [n.time, n.optional ? S.L.optionalTag : '', n.tasks.length ? `${finishedTasks(n)}/${n.tasks.length}` : ''].filter(Boolean).join(' | ');
+  const kids = requiredKids(n), fin = kids.filter(c => nodeStatus(c) === 'finished').length;
+  return [n.time, n.optional ? S.L.optionalTag : '', n.tasks.length ? `${finishedTasks(n)}/${n.tasks.length}` : '', kids.length ? `↳ ${fin}/${kids.length}` : ''].filter(Boolean).join(' | ');
 }
 
 function buildMap() {
@@ -903,11 +938,11 @@ function buildMap() {
   });
   rm.nodes.forEach(n => {
     const el = document.createElement('div');
-    el.className = 'road-node' + (n.optional ? ' optional-node' : '');
+    el.className = 'road-node' + (n.optional ? ' optional-node' : n.parent ? ' sub-node' : '') + (n.depth ? ` depth-${n.depth}` : '');
     el.dataset.node = n.id;
     el.setAttribute('role', 'button');
     el.tabIndex = 0;
-    const num = n.optional ? '+' : String(n.num).padStart(2, '0');
+    const num = n.optional ? '+' : n.parent ? '↳' : String(n.num).padStart(2, '0');
     const meta = metaText(n);
     el.innerHTML = `<span class="node-num">${num}</span><span class="node-txt"><span class="node-name">${esc(n.title)}</span>${meta ? `<span class="node-meta">${esc(meta)}</span>` : ''}</span><button class="node-check" title="${esc(L.toggleDone)}" aria-label="${esc(L.toggleDone)}: ${esc(n.title)}"><svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true"><path d="M2 6.5l2.5 2.5L10 3.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>`;
     el.addEventListener('click', () => select(n.id));
@@ -918,14 +953,45 @@ function buildMap() {
   });
   const lg = document.createElement('div');
   lg.className = 'legend';
-  lg.innerHTML = `<div class="heading">${esc(L.legendTitle)}</div><div class="legend-item"><span class="swatch"></span> ${esc(L.legendMain)}</div><div class="legend-item"><span class="swatch green"></span> ${esc(L.legendDone)}</div>${rm.nodes.some(n => n.optional) ? `<div class="legend-item"><span class="swatch opt"></span> ${esc(L.legendOptional)}</div>` : ''}<div class="hint">${esc(L.legendHint)}</div>`;
+  lg.innerHTML = `<div class="heading">${esc(L.legendTitle)}</div><div class="legend-item"><span class="swatch"></span> ${esc(L.legendMain)}</div><div class="legend-item"><span class="swatch green"></span> ${esc(L.legendDone)}</div>${rm.nodes.some(n => n.optional) ? `<div class="legend-item"><span class="swatch opt"></span> ${esc(L.legendOptional)}</div>` : ''}${rm.nodes.some(n => n.parent && !n.optional) ? `<div class="legend-item"><span class="swatch sub"></span> ${esc(L.legendSub)}</div>` : ''}<div class="hint">${esc(L.legendHint)}</div>`;
   map.append(lg); S.legendEl = lg;
 }
 
 function geometry() {
-  const vw = $('mapViewport').clientWidth || G.mapW;
+  const vw = $('mapViewport').clientWidth || G.mapW, wide = S.rm?.maxDepth >= 2 ? G.mapW2 : G.mapW;
   if (vw < NARROW_BELOW) return { narrow: true, mapW: Math.max(280, vw), scale: 1 };
-  return { narrow: false, mapW: G.mapW, scale: Math.min(MAX_SCALE, vw / G.mapW) };
+  return { narrow: false, mapW: wide, scale: Math.min(MAX_SCALE, vw / wide) };
+}
+
+/* Sub-topics: each level sits in its own column to the right (wide) or indented below (narrow). */
+const kidsHeight = n => (n.children.length
+  ? n.children.reduce((sum, c) => sum + Math.max(c.el.offsetHeight, kidsHeight(c)), 0) + G.optGap * (n.children.length - 1) : 0);
+
+function placeKidsWide(n, top) {
+  let cy = top;
+  n.children.forEach(c => {
+    const h = c.el.offsetHeight, kh = kidsHeight(c);
+    Object.assign(c, { x: c.depth === 1 ? G.optX : G.subX, y: cy, h });
+    c.el.style.left = c.x + 'px'; c.el.style.top = cy + 'px';
+    const sx = n.x + n.el.offsetWidth, sy = n.y + n.h / 2, ex = c.x, ey = cy + h / 2, mx = sx + (ex - sx) / 2;
+    addLine(`M${sx} ${sy} L${mx} ${sy} L${mx} ${ey} L${ex} ${ey}`, c.optional, n, c);
+    placeKidsWide(c, kh <= h ? cy + (h - kh) / 2 : cy);
+    cy += Math.max(h, kh) + G.optGap;
+  });
+}
+
+/* returns the y just below the last placed descendant */
+function placeKidsNarrow(n, top, nodeX) {
+  let oy = top;
+  n.children.forEach(c => {
+    const h = c.el.offsetHeight, cx = nodeX + NEST * c.depth;
+    Object.assign(c, { x: cx, y: oy, h });
+    c.el.style.left = cx + 'px'; c.el.style.top = oy + 'px';
+    const px = n.x + 10, ey = oy + h / 2;
+    addLine(`M${px} ${n.y + n.h} L${px} ${ey} L${cx} ${ey}`, c.optional, n, c);
+    oy = placeKidsNarrow(c, oy + h + 10, nodeX);
+  });
+  return oy;
 }
 
 /* Wide: central spine with phase flags on the left and optional branches on the right,
@@ -935,14 +1001,14 @@ function layout() {
   const { rm } = S, map = $('map'), svg = S.svg;
   if (!svg || S.view === 'kanban') return;
   const geo = S.geo = geometry(), nw = geo.narrow;
-  const nodeX = nw ? 44 : G.spineX, nodeW = nw ? geo.mapW - nodeX - 16 : G.nodeW, optW = nw ? nodeW - 22 : G.optW;
+  const nodeX = nw ? 44 : G.spineX, nodeW = nw ? geo.mapW - nodeX - 16 : G.nodeW;
   const gap = nw ? 30 : G.gap, msGap = nw ? 22 : G.msGap, lineX = nw ? 24 : nodeX + nodeW / 2;
   const shown = rm.phases.filter(p => p.nodes.length);
   svg.replaceChildren();
   S.links = [];
 
   // widths first, because card heights depend on them
-  rm.nodes.forEach(n => { n.el.style.width = nw ? (n.optional ? optW : nodeW) + 'px' : ''; });
+  rm.nodes.forEach(n => { n.el.style.width = nw ? (nodeW - NEST * n.depth) + 'px' : ''; });
   shown.forEach(ph => {
     if (ph.flagEl) { ph.flagEl.style.width = nw ? nodeW + 'px' : ''; ph.flagEl.style.left = nw ? nodeX + 'px' : ''; }
     if (ph.msEl) ph.msEl.style.width = nw ? nodeW + 'px' : '';
@@ -963,30 +1029,16 @@ function layout() {
       const h = n.el.offsetHeight;
       Object.assign(n, { x: nodeX, y, h });
       n.el.style.left = n.x + 'px'; n.el.style.top = y + 'px';
-      const opts = rm.nodes.filter(o => o.optional && o.anchor === n.id);
-      const hs = opts.map(o => o.el.offsetHeight);
       let slot = h;
-      if (nw) {
-        let oy = y + h + 10;
-        opts.forEach((o, i) => {
-          Object.assign(o, { x: nodeX + 22, y: oy, h: hs[i] });
-          o.el.style.left = o.x + 'px'; o.el.style.top = oy + 'px';
-          const px = nodeX + 10, ey = oy + hs[i] / 2;
-          addLine(`M${px} ${y + h} L${px} ${ey} L${o.x} ${ey}`, true, n, o);
-          oy += hs[i] + 10;
-        });
-        if (opts.length) slot = oy - 10 - y;
-      } else {
-        const total = hs.reduce((a, b) => a + b, 0) + G.optGap * Math.max(0, opts.length - 1);
-        let oy = total <= h ? y + (h - total) / 2 : y;
-        opts.forEach((o, i) => {
-          Object.assign(o, { x: G.optX, y: oy, h: hs[i] });
-          o.el.style.left = o.x + 'px'; o.el.style.top = oy + 'px';
-          const sx = n.x + nodeW, sy = y + h / 2, ex = o.x, ey = oy + hs[i] / 2, mx = sx + (ex - sx) / 2;
-          addLine(`M${sx} ${sy} L${mx} ${sy} L${mx} ${ey} L${ex} ${ey}`, true, n, o);
-          oy += hs[i] + G.optGap;
-        });
-        slot = Math.max(h, total);
+      if (n.children.length) {
+        if (nw) {
+          const end = placeKidsNarrow(n, y + h + 10, nodeX);
+          slot = end - 10 - y;
+        } else {
+          const total = kidsHeight(n);
+          placeKidsWide(n, total <= h ? y + (h - total) / 2 : y);
+          slot = Math.max(h, total);
+        }
       }
       spine.push(n);
       y += slot + gap;
@@ -1079,7 +1131,7 @@ function applyFilters() {
 /* ---------- skipped-topic warning ---------- */
 /* A topic that moved past "todo" while earlier main topics are not finished is a skipped topic. */
 function pendingBefore(n) {
-  if (n.optional || nodeStatus(n) === 'todo') return [];
+  if (n.optional || n.parent || nodeStatus(n) === 'todo') return [];
   return S.rm.core.slice(0, S.rm.core.indexOf(n)).filter(x => !isDone(x));
 }
 
@@ -1105,7 +1157,7 @@ function renderBoard() {
       const ph = rm.phaseById[n.phase], tot = n.tasks.length, fin = finishedTasks(n), miss = skipInfo(n), open = !!miss && S.warnOpen.has(n.id);
       return `<div class="kcard${S.selected === n.id ? ' selected' : ''}" data-drag data-node="${esc(n.id)}" tabindex="0" style="--flag:${ph.color}">` +
         `<span class="grip">${ICON.grip}</span>` +
-        `<div class="kc-top">${rm.hasPhases && ph.title ? `<span class="kc-phase">${esc(ph.title)}</span>` : ''}${n.optional ? `<span class="kc-opt">${esc(L.optionalTag)}</span>` : ''}${miss ? `<button type="button" class="kc-warn${open ? ' on' : ''}" data-warn aria-expanded="${open}" aria-label="${esc(L.skipWarnLabel)}" title="${esc(L.skipWarnLabel)}">${ICON.warn}</button>` : ''}</div>` +
+        `<div class="kc-top">${rm.hasPhases && ph.title ? `<span class="kc-phase">${esc(ph.title)}</span>` : ''}${n.optional ? `<span class="kc-opt">${esc(L.optionalTag)}</span>` : ''}${n.parent && !n.optional ? `<span class="kc-sub">↳ ${esc(n.parent.title)}</span>` : ''}${miss ? `<button type="button" class="kc-warn${open ? ' on' : ''}" data-warn aria-expanded="${open}" aria-label="${esc(L.skipWarnLabel)}" title="${esc(L.skipWarnLabel)}">${ICON.warn}</button>` : ''}</div>` +
         `<div class="kc-title">${esc(n.title)}</div>` + (open ? skipNote(miss) : '') +
         (n.time ? `<div class="kc-time">${esc(n.time)}</div>` : '') +
         (tot ? `<div class="kc-prog"><span class="kc-bar"><i style="width:${Math.round(fin / tot * 100)}%"></i></span><span>${fin}/${tot}</span></div>` : '') +
@@ -1139,7 +1191,11 @@ function renderDetail() {
     return;
   }
   const ph = rm.phaseById[n.phase], st = nodeStatus(n), done = st === 'finished', miss = skipInfo(n);
-  const kicker = n.optional ? L.optionalKicker : [n.time, ph.title].filter(Boolean).join(' | ');
+  const trail = []; for (let p = n.parent; p; p = p.parent) trail.unshift(p.title);
+  const kicker = n.optional ? L.optionalKicker : n.parent ? trail.join(' › ') : [n.time, ph.title].filter(Boolean).join(' | ');
+  const subs = n.children.length
+    ? `<h3>${esc(L.subtopics)} <span class="h3-count">${requiredKids(n).filter(c => nodeStatus(c) === 'finished').length}/${requiredKids(n).length}</span></h3><div class="sublist">${n.children.map(c => `<button type="button" class="subitem s-${nodeStatus(c)}" data-goto="${esc(c.id)}"><span class="kdot k-${nodeStatus(c)}"></span><span>${esc(c.title)}</span>${c.optional ? `<em>${esc(L.optionalTag)}</em>` : ''}</button>`).join('')}</div>`
+    : '';
   const tasks = n.tasks.length
     ? `<h3>${esc(L.tasks)} <span class="h3-count">${finishedTasks(n)}/${n.tasks.length}</span></h3><div class="mini" data-dnd-root data-node="${esc(n.id)}">` +
       STATUSES.map((s, i) => {
@@ -1155,6 +1211,7 @@ function renderDetail() {
     `<div class="statusbar" role="group" aria-label="${esc(L.status)}">${STATUSES.map(s => `<button type="button" data-status="${s}" class="s-${s}${s === st ? ' on' : ''}" aria-pressed="${s === st}">${esc(L[STATUS_LABEL[s]])}</button>`).join('')}</div>` +
     (miss ? skipNote(miss) : '') +
     (n.summary ? `<p>${esc(n.summary)}</p>` : '') +
+    subs +
     (n.topics.length ? `<h3>${esc(L.topics)}</h3><div>${n.topics.map(t => `<span class="topic">${esc(t)}</span>`).join('')}</div>` : '') +
     (n.challenge ? `<h3>${esc(L.challenge)}</h3><div class="mission">${esc(n.challenge)}</div>` : '') +
     tasks +
@@ -1373,6 +1430,8 @@ function wireDnd() {
   });
   $('detailContent').addEventListener('click', e => {
     onClick(e);
+    const go = e.target.closest('[data-goto]');
+    if (go) { select(go.dataset.goto, true); return; }
     const sb = e.target.closest('[data-status]');
     if (sb) { setNodeStatus(S.rm.byId[S.selected], sb.dataset.status); return; }
     if (e.target.closest('#completeAction')) toggleDone(S.rm.byId[S.selected]);

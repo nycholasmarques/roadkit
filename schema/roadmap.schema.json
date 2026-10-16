@@ -66,7 +66,7 @@
     "nodes": {
       "type": "array",
       "minItems": 1,
-      "description": "Core nodes form the main vertical path, in order, grouped by phase. Optional nodes branch to the right of their anchor.",
+      "description": "Main topics (no parent, not optional) form the vertical path, in order, grouped by phase. Sub-topics and optional topics hang from a parent and branch to the right, up to 2 levels deep.",
       "items": {
         "type": "object",
         "required": ["id", "title"],
@@ -74,7 +74,7 @@
         "properties": {
           "id": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$" },
           "title": { "type": "string", "maxLength": 60 },
-          "phase": { "type": "string", "description": "Phase id. Required when the roadmap defines phases." },
+          "phase": { "type": "string", "description": "Phase id. Required on main topics when the roadmap defines phases; sub-topics inherit their parent's." },
           "time": { "type": "string", "description": "Free text, e.g. 'Week 2'." },
           "summary": { "type": "string" },
           "topics": { "type": "array", "items": { "type": "string" } },
@@ -105,8 +105,9 @@
               }
             }
           },
-          "optional": { "type": "boolean", "description": "Side branch; does not count toward progress." },
-          "anchor": { "type": "string", "description": "Id of the core node this optional node hangs from. Required if optional." }
+          "parent": { "type": "string", "description": "Id of the topic this one is a sub-topic of (up to 2 levels below a main topic). A topic with required sub-topics is finished when they all are." },
+          "optional": { "type": "boolean", "description": "Side branch; does not count toward progress or toward its parent. Needs a parent." },
+          "anchor": { "type": "string", "description": "Older name for `parent`, used by optional nodes. Prefer `parent`." }
         }
       }
     }

@@ -117,6 +117,22 @@
       ]
     },
     {
+      "id": "helm", "parent": "packaging", "title": "Helm charts", "time": "Week 3",
+      "summary": "Package the application as a chart and publish it through an Argo CD Application."
+    },
+    {
+      "id": "helm-values", "parent": "helm", "title": "Values per environment",
+      "summary": "One values file per environment, kept next to the Application that uses it."
+    },
+    {
+      "id": "kustomize", "parent": "packaging", "title": "Kustomize overlays", "time": "Week 3",
+      "summary": "A shared base plus one overlay per environment."
+    },
+    {
+      "id": "jsonnet", "parent": "packaging", "optional": true, "title": "Jsonnet",
+      "summary": "Only worth it if your team already writes Jsonnet."
+    },
+    {
       "id": "waves", "phase": "operations", "title": "Sync waves and hooks", "time": "Week 4",
       "summary": "Control the order in which resources are applied and run tasks before or after the deploy.",
       "topics": ["Sync waves", "PreSync and PostSync", "Migration jobs", "Health checks"],

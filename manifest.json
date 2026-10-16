@@ -25,7 +25,8 @@
       "language": "",
       "phases": 4,
       "topics": 13,
-      "optional": 2,
+      "optional": 3,
+      "subtopics": 3,
       "coreIds": [
         "gitops",
         "cluster",
@@ -57,6 +58,7 @@
       "phases": 3,
       "topics": 8,
       "optional": 3,
+      "subtopics": 0,
       "coreIds": [
         "avaliacao",
         "rodagem",
@@ -80,6 +82,7 @@
       "phases": 3,
       "topics": 9,
       "optional": 3,
+      "subtopics": 0,
       "coreIds": [
         "hardware",
         "instalacao",
@@ -106,6 +109,7 @@
       "phases": 0,
       "topics": 3,
       "optional": 1,
+      "subtopics": 0,
       "coreIds": [
         "primeiro",
         "segundo",
@@ -124,6 +128,7 @@
       "phases": 3,
       "topics": 8,
       "optional": 3,
+      "subtopics": 0,
       "coreIds": [
         "entrevistas",
         "pagina",
@@ -147,6 +152,7 @@
       "phases": 3,
       "topics": 10,
       "optional": 3,
+      "subtopics": 0,
       "coreIds": [
         "ambiente",
         "select",
@@ -171,7 +177,8 @@
       "language": "en",
       "phases": 4,
       "topics": 13,
-      "optional": 2,
+      "optional": 3,
+      "subtopics": 3,
       "coreIds": [
         "gitops",
         "cluster",
@@ -203,6 +210,7 @@
       "phases": 3,
       "topics": 8,
       "optional": 3,
+      "subtopics": 0,
       "coreIds": [
         "assessment",
         "easy-runs",
@@ -226,6 +234,7 @@
       "phases": 3,
       "topics": 9,
       "optional": 3,
+      "subtopics": 0,
       "coreIds": [
         "hardware",
         "install",
@@ -252,6 +261,7 @@
       "phases": 0,
       "topics": 3,
       "optional": 1,
+      "subtopics": 0,
       "coreIds": [
         "first",
         "second",
@@ -270,6 +280,7 @@
       "phases": 3,
       "topics": 8,
       "optional": 3,
+      "subtopics": 0,
       "coreIds": [
         "interviews",
         "landing",
@@ -293,6 +304,7 @@
       "phases": 3,
       "topics": 10,
       "optional": 3,
+      "subtopics": 0,
       "coreIds": [
         "environment",
         "select",

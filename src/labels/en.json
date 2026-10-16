@@ -118,6 +118,8 @@
   "edColorsHint": "Blank colors use the default. Each phase color shows on the map and in the sidebar.",
   "edGhostTitle": "Your topic here",
   "edGhostSummary": "Topics you add to this phase show up here.",
+  "legendSub": "Sub-topic (counts toward its topic)",
+  "subtopics": "Sub-topics",
   "resizeDetail": "Resize details panel",
   "confirmReset": "Remove all checkmarks for this roadmap? This applies to every device using this server.",
   "importOk": "Imported successfully!",

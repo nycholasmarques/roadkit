@@ -116,6 +116,22 @@
       ]
     },
     {
+      "id": "helm", "parent": "empacotar", "title": "Charts do Helm", "time": "Semana 3",
+      "summary": "Empacotar a aplicação como chart e publicar por uma Application do Argo CD."
+    },
+    {
+      "id": "helm-values", "parent": "helm", "title": "Values por ambiente",
+      "summary": "Um arquivo de values por ambiente, ao lado da Application que o usa."
+    },
+    {
+      "id": "kustomize", "parent": "empacotar", "title": "Overlays do Kustomize", "time": "Semana 3",
+      "summary": "Uma base compartilhada e um overlay por ambiente."
+    },
+    {
+      "id": "jsonnet", "parent": "empacotar", "optional": true, "title": "Jsonnet",
+      "summary": "Só vale a pena se o time já escreve Jsonnet."
+    },
+    {
       "id": "waves", "phase": "operacao", "title": "Sync waves e hooks", "time": "Semana 4",
       "summary": "Controlar a ordem em que os recursos são aplicados e rodar tarefas antes ou depois do deploy.",
       "topics": ["Sync waves", "PreSync e PostSync", "Jobs de migração", "Health checks"],

@@ -118,6 +118,8 @@
   "edColorsHint": "Cores em branco usam o padrão. A cor de cada fase aparece no mapa e na barra lateral.",
   "edGhostTitle": "Seu tópico aqui",
   "edGhostSummary": "Os tópicos que você adicionar a esta fase aparecem aqui.",
+  "legendSub": "Subtópico (conta no tópico de cima)",
+  "subtopics": "Subtópicos",
   "resizeDetail": "Redimensionar painel de detalhes",
   "confirmReset": "Remover todas as marcações deste roadmap? Isso vale para todos os aparelhos que usam este servidor.",
   "importOk": "Importado com sucesso!",
