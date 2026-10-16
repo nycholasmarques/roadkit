@@ -16,10 +16,32 @@ python3 tools/roadkit.py serve      # abre em http://localhost:8765
 
 Só precisa de Python 3, sem dependências e sem etapa de build. Abrir o `index.html` direto do disco não funciona, porque o navegador bloqueia a leitura dos JSONs. Use o servidor.
 
-- O seletor **Roadmaps** na barra lateral lista os JSONs de `roadmaps/` (os seus) e os exemplos de `examples/`, agrupados por idioma.
+- O seletor **Roadmaps** na barra lateral lista os JSONs de `roadmaps/` (os seus, em seções por pasta) e os exemplos de `examples/`, agrupados por idioma.
 - `?r=<id>` na URL abre um roadmap específico, por exemplo `http://localhost:8765/?r=estudar-sql`.
 - Também dá para arrastar um arquivo `.json` para a página, ou usar "Abrir arquivo JSON", para ver um roadmap sem salvá-lo na pasta.
 - O progresso (as marcações nos tópicos) fica no `localStorage` do navegador, separado por roadmap, usando o `id` do JSON. Há botões para exportar e importar o progresso. Como o `localStorage` é por origem, mantenha a mesma porta.
+
+## Organizar em seções
+
+Cada subpasta de `roadmaps/` vira uma seção no seletor de roadmaps. Os arquivos soltos em `roadmaps/` ficam na seção "Meus roadmaps".
+
+```
+roadmaps/
+  solto.json              # Meus roadmaps
+  trabalho/
+    argocd.json           # Trabalho
+    migracao.json
+  estudos/
+    _section.json         # {"title": "Estudos 2026"}
+    sql.json              # Estudos 2026
+    cloud/
+      redes.json          # Estudos 2026 / Cloud
+```
+
+- O título da seção é o nome da pasta com a primeira letra maiúscula (`trabalho` vira "Trabalho"). Para outro título, crie um `_section.json` com `{ "title": "..." }` dentro da pasta.
+- Subpastas dentro de subpastas funcionam e aparecem como "Pai / Filha". Pastas e arquivos que começam com `_` ou `.` são ignorados.
+- O `id` de cada roadmap continua sendo o que vale: mover um arquivo de pasta não perde o progresso salvo. Só não repita ids entre pastas.
+- Seções novas aparecem ao recarregar a página, inclusive no Docker, porque `./roadmaps` é montada inteira.
 
 ## Criar um roadmap
 
@@ -90,7 +112,7 @@ docker compose down
 index.html              casca da interface, sem conteúdo
 src/app.js, style.css   lê o JSON, calcula o layout e desenha
 src/labels/             textos da interface por idioma
-roadmaps/               seus roadmaps
+roadmaps/               seus roadmaps (cada subpasta vira uma seção)
 examples/pt-BR, en/       roadmaps de exemplo, por idioma
 schema/                 JSON Schema
 tools/roadkit.py        serve, check e index

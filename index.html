@@ -15,7 +15,7 @@
     <div class="side-sub" id="tagline"></div>
     <div class="roadmap-switch">
       <div class="aside-label" data-i18n="roadmaps"></div>
-      <select id="roadmapSelect" aria-label="Roadmap"></select>
+      <div class="sel-wrap"><select id="roadmapSelect" aria-label="Roadmap"></select></div>
     </div>
     <div class="aside-label" data-i18n="journey"></div>
     <nav id="phaseNav"></nav>
@@ -70,12 +70,12 @@
               <button type="button" data-fs="xlarge" class="fs-xl" data-i18n="fontXLarge"></button>
             </div></div>
           <div class="set-row"><label class="set-label" for="skipSel" data-i18n="skipWarn"></label>
-            <select id="skipSel">
+            <div class="sel-wrap"><select id="skipSel">
               <option value="0" data-i18n="skipWarnAlways"></option>
               <option value="3" data-i18n="skipWarnUpTo3"></option>
               <option value="5" data-i18n="skipWarnUpTo5"></option>
               <option value="off" data-i18n="skipWarnNever"></option>
-            </select>
+            </select></div>
             <span class="set-hint" data-i18n="skipWarnHint"></span></div>
           <div class="set-tools">
             <button type="button" class="secondary" data-act="export" data-i18n="exportProgress"></button>
