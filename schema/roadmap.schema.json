@@ -1,0 +1,97 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "roadmap.schema.json",
+  "title": "Roadkit roadmap",
+  "description": "One roadmap rendered by the Roadkit UI. Semantic rules (unique ids, anchors, phase order) are enforced by `python3 tools/roadkit.py check`.",
+  "type": "object",
+  "required": ["id", "meta", "nodes"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "schemaVersion": { "const": 1 },
+    "id": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$", "description": "Unique slug; also the key for saved progress. Never change it after use." },
+    "meta": {
+      "type": "object",
+      "required": ["title"],
+      "additionalProperties": false,
+      "properties": {
+        "title": { "type": "string" },
+        "eyebrow": { "type": "string", "description": "Small uppercase line above the title." },
+        "subtitle": { "type": "string", "description": "Line under the title." },
+        "description": { "type": "string", "description": "One sentence; shown in listings." },
+        "icon": { "type": "string", "description": "An emoji." },
+        "language": { "type": "string", "description": "UI language pack in src/labels/ (pt-BR, en). Default pt-BR." },
+        "brand": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": { "plain": { "type": "string" }, "accent": { "type": "string" } },
+          "description": "Sidebar logo: plain text + accent-colored suffix."
+        },
+        "tagline": { "type": "string", "description": "Sidebar text under the logo. \\n = line break." },
+        "sidebarNote": { "type": "string", "description": "Sidebar bottom note. \\n = line break." },
+        "footer": { "type": "string" }
+      }
+    },
+    "theme": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "accent": { "type": "string", "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$" },
+        "brandAccent": { "type": "string", "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$" }
+      }
+    },
+    "labels": {
+      "type": "object",
+      "description": "Overrides for UI strings. Keys are listed in src/labels/pt-BR.json.",
+      "additionalProperties": { "type": "string" }
+    },
+    "phases": {
+      "type": "array",
+      "description": "Optional. Ordered stages of the roadmap. Omit for a flat list.",
+      "items": {
+        "type": "object",
+        "required": ["id", "title"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$" },
+          "title": { "type": "string" },
+          "summary": { "type": "string" },
+          "period": { "type": "string", "description": "e.g. 'Weeks 1 to 3'." },
+          "color": { "type": "string", "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$" },
+          "milestone": { "type": "string", "description": "Checkpoint shown after the phase's last core node; turns green when the phase is complete." }
+        }
+      }
+    },
+    "nodes": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Core nodes form the main vertical path, in order, grouped by phase. Optional nodes branch to the right of their anchor.",
+      "items": {
+        "type": "object",
+        "required": ["id", "title"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$" },
+          "title": { "type": "string", "maxLength": 60 },
+          "phase": { "type": "string", "description": "Phase id. Required when the roadmap defines phases." },
+          "time": { "type": "string", "description": "Free text, e.g. 'Week 2'." },
+          "summary": { "type": "string" },
+          "topics": { "type": "array", "items": { "type": "string" } },
+          "challenge": { "type": "string", "description": "Hands-on task / deliverable." },
+          "success": { "type": "string", "description": "How to know it is done." },
+          "links": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["title", "url"],
+              "additionalProperties": false,
+              "properties": { "title": { "type": "string" }, "url": { "type": "string", "pattern": "^https?://" } }
+            }
+          },
+          "optional": { "type": "boolean", "description": "Side branch; does not count toward progress." },
+          "anchor": { "type": "string", "description": "Id of the core node this optional node hangs from. Required if optional." }
+        }
+      }
+    }
+  }
+}
