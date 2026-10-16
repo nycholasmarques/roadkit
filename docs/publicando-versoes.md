@@ -14,41 +14,37 @@ O que conta como "o contrato" é o formato do JSON dos roadmaps (veja o [`SCHEMA
 
 ## O caminho de uma release
 
-1. **Escreva o que mudou** no [`CHANGELOG.md`](../CHANGELOG.md), numa seção nova no topo, com o número e a data:
+As notas da release se escrevem sozinhas: o workflow junta os commits desde a release anterior, agrupa por tipo e monta o texto. Não precisa mexer em nenhum arquivo para publicar. Então o caminho mais curto é:
 
-   ```markdown
-   ## [1.1.0] - 2026-11-20
+1. Espere o CI da `main` ficar verde.
+2. Em *Actions → Release → Run workflow*, digite a versão sem o `v` (por exemplo `1.1.0`) e confirme. O próprio workflow cria a tag `v1.1.0` e publica tudo.
 
-   ### Interface
-   - O que mudou, em linguagem de gente.
-   ```
+Se preferir pela linha de comando, é só criar e subir a tag; o resultado é o mesmo:
 
-   O texto dessa seção vira o corpo da release. Se a seção não existir, a release sai com as notas geradas a partir dos commits, e o workflow avisa. Vale acrescentar também a linha do link no fim do arquivo (`[1.1.0]: https://github.com/.../releases/tag/v1.1.0`).
+```bash
+git tag -a v1.1.0 -m "Roadkit 1.1.0"
+git push origin v1.1.0
+```
 
-2. **Faça o commit** na `main` (ou passe por um pull request, se a proteção estiver ligada) e espere o CI ficar verde.
+Em um ou dois minutos a release aparece em *Releases*, e a imagem Docker em alguns minutos a mais, por causa do build para duas arquiteturas. Uma versão com sufixo, como `1.2.0-rc.1`, vira *pre-release* e não ganha a etiqueta `latest` no Docker.
 
-3. **Crie a tag e suba:**
+### De onde vêm as notas
 
-   ```bash
-   git tag -a v1.1.0 -m "Roadkit 1.1.0"
-   git push origin v1.1.0
-   ```
+O texto da release tem até três partes, nesta ordem:
 
-4. **Acompanhe na aba Actions.** Em um ou dois minutos a release aparece em *Releases*, e a imagem Docker em alguns minutos a mais, por causa do build para duas arquiteturas.
+1. **Destaques escritos por você** (opcional): se o [`CHANGELOG.md`](../CHANGELOG.md) tem uma seção `## [1.1.0] - data`, ela vai no topo. Serve para contar o que importa em linguagem de gente, e é o que foi usado na 1.0.0.
+2. **O que mudou** (automático): cada commit entre a release anterior e esta, em grupos: Novidades, Correções, Desempenho, Documentação, Dependências, Manutenção e Outras mudanças. As duas últimas vêm recolhidas. Cada linha leva o link do commit, ou do pull request quando o título termina com `(#12)`, e no fim há um link para comparar as duas versões. Na primeira release essa parte não aparece, porque listaria o projeto inteiro.
+3. **Como instalar**: o zip, o checksum e o comando `docker pull` da versão.
 
-A tag precisa ter o formato `vX.Y.Z`. Uma tag com sufixo, como `v1.2.0-rc.1`, vira *pre-release* e não recebe a etiqueta `latest` no Docker.
+O agrupamento lê o começo do título do commit (ou do PR, que vira o commit quando você faz *squash*). Dá para ajudar escrevendo no estilo [Conventional Commits](https://www.conventionalcommits.org/pt-br/): `feat: botão de exportar`, `fix: erro ao importar zip`, `docs: explica as categorias`, `chore: atualiza o CI`. Um `feat(deps):` ou o Dependabot caem em Dependências, e um `!` depois do tipo (`feat!: ...`) marca uma quebra de compatibilidade. Sem prefixo ainda funciona: títulos que começam com "Add", "Fix" e parecidos são reconhecidos, e o resto vai para "Outras mudanças".
 
-## O que o workflow faz
+Dá para ver como ficaria antes de publicar:
 
-O arquivo é o [`release.yml`](../.github/workflows/release.yml), e são dois trabalhos:
+```bash
+python3 .github/scripts/release_notes.py v1.1.0 nycholasmarques/roadkit
+```
 
-**release** confere o formato da tag, avisa se o commit não passou no CI, tira do `CHANGELOG.md` a seção da versão, gera o zip do código (`roadkit-1.1.0.zip`, sem as imagens da documentação, então fica com uns 100 KB) e um `SHA256SUMS`, e cria a release com tudo isso.
-
-**docker** monta a imagem para `linux/amd64` e `linux/arm64` (dá para rodar num Raspberry Pi) e publica em `ghcr.io/nycholasmarques/roadkit` com três tags: `1.1.0`, `1.1` e `1`. Versões finais também ganham `latest`.
-
-Na primeira vez, o pacote no GHCR nasce privado. Para qualquer pessoa conseguir puxar a imagem, vá em *Packages → roadkit → Package settings* e mude a visibilidade para pública.
-
-Se alguma coisa falhar depois de a tag existir, não precisa apagar nem mover a tag: corrija, e rode o workflow de novo em *Actions → Release → Run workflow*, informando a tag.
+(Ele precisa de uma tag `v1.1.0` local para comparar. Para um teste, crie a tag, rode e apague.)
 
 ## O CI
 
