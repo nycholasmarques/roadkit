@@ -609,7 +609,7 @@ async function duplicateRoadmap(entry) {
     while (ids.has(id)) id = `${raw.id}-copy-${n++}`;
     raw.id = id;
     raw.meta = { ...raw.meta, title: `${raw.meta.title} ${L.rmCopySuffix}` };
-    if (!await manageCall('POST', 'api/roadmaps', raw)) return;
+    if (!await manageCall('POST', `api/roadmaps?category=${encodeURIComponent(catPath(entry.group) ?? '')}`, raw)) return;
     await reloadManifest();
     $('manageDlg').close();
     await openEntry(entryById(id));
@@ -628,16 +628,30 @@ function modelFromJson(j) {
     accent: hex(j.theme?.accent) || '', brandColor: hex(j.theme?.brandAccent) || '', logoPlain: str(m.brand?.plain), logoAccent: str(m.brand?.accent),
     language: str(m.language) || S.rm?.meta.language || 'pt-BR',
     phases: arr(j.phases).map(p => ({ key: str(p.id) || `p${ed.n++}`, orig: p, title: str(p.title), period: str(p.period), color: hex(p.color) || '' })),
-    nodes: arr(j.nodes).map(n => ({
-      orig: n, tmp: `t${ed.n++}`, title: str(n.title), phase: str(n.phase), open: false,
+    nodes: treeOrder(arr(j.nodes).map(n => ({
+      orig: n, tmp: `t${ed.n++}`, title: str(n.title), phase: str(n.phase), open: false, optional: !!n.optional, parent: str(n.parent) || (n.optional ? str(n.anchor) : ''),
       ...Object.fromEntries(NODE_TEXT.map(k => [k, str(n[k])])),
       topics: arr(n.topics).map(str).join('\n'), tasks: arr(n.tasks).map(t => str(t?.title)).join('\n'),
       links: arr(n.links).map(l => `${str(l?.title)} | ${str(l?.url)}`).join('\n'),
-    })),
+    }))),
   };
 }
 
-const blankNode = phase => ({ orig: null, tmp: `t${ed.n++}`, title: '', phase, open: false, time: '', summary: '', challenge: '', success: '', topics: '', tasks: '', links: '' });
+const rowId = r => r.orig?.id || r.tmp;
+/* Rows stay in tree order (each one right after its parent's subtree), so moving, removing and indenting are slices of one array. */
+function treeOrder(rows) {
+  const ids = new Set(rows.map(rowId)), kids = new Map(), roots = [], out = [], seen = new Set();
+  rows.forEach(r => {
+    if (r.parent && r.parent !== rowId(r) && ids.has(r.parent)) { if (!kids.has(r.parent)) kids.set(r.parent, []); kids.get(r.parent).push(r); }
+    else { r.parent = ''; roots.push(r); }
+  });
+  const walk = r => { if (seen.has(r)) return; seen.add(r); out.push(r); (kids.get(rowId(r)) || []).forEach(walk); };
+  roots.forEach(walk); rows.forEach(walk);
+  return out;
+}
+const rowDepths = rows => { const d = new Map(); return rows.map(r => { const v = r.parent ? (d.get(r.parent) ?? 0) + 1 : 0; d.set(rowId(r), v); return v; }); };
+
+const blankNode = (phase, parent = '') => ({ orig: null, tmp: `t${ed.n++}`, title: '', phase, parent, optional: false, open: false, time: '', summary: '', challenge: '', success: '', topics: '', tasks: '', links: '' });
 const lines = t => str(t).split('\n').map(x => x.trim()).filter(Boolean);
 
 /* preview: ids are the rows' temporary keys, so they stay put while you type; saving makes real slugs. */
@@ -660,19 +674,29 @@ function buildJson(model, base, preview = false) {
     return o;
   });
   const nodeIds = new Set(model.nodes.map(n => n.orig?.id).filter(Boolean));
-  let nodes = model.nodes.filter(n => n.title.trim()).map(n => {
-    const o = { ...(n.orig || {}), id: n.orig?.id || (preview ? n.tmp : fresh(nodeIds, n.title, 'topico')), title: n.title.trim() };
-    if (phases.length) o.phase = idOf[n.phase] || phases[0].id; else delete o.phase;
+  const rows = model.nodes.filter(n => n.title.trim()), idByRow = new Map();
+  rows.forEach(n => idByRow.set(rowId(n), n.orig?.id || (preview ? n.tmp : fresh(nodeIds, n.title, 'topico'))));
+  const hangs = n => !!n.parent && idByRow.has(n.parent) && n.parent !== rowId(n);
+  const built = new Map(rows.map(n => {
+    const o = { ...(n.orig || {}), id: idByRow.get(rowId(n)), title: n.title.trim() };
     for (const k of NODE_TEXT) { const v = n[k].trim(); if (v) o[k] = v; else delete o[k]; }
     const topics = lines(n.topics); if (topics.length) o.topics = topics; else delete o.topics;
     const old = arr(n.orig?.tasks), taskIds = new Set(old.map(t => t.id)), tasks = lines(n.tasks).map((t, k) => old.find(x => x.title === t) || { id: preview ? `k${k}` : fresh(taskIds, t, 'tarefa'), title: t });
     if (tasks.length) o.tasks = tasks; else delete o.tasks;
     const links = lines(n.links).map(l => { const i = l.indexOf('|'); return i < 0 ? { title: l, url: l } : { title: l.slice(0, i).trim() || l.slice(i + 1).trim(), url: l.slice(i + 1).trim() }; });
     if (links.length) o.links = links; else delete o.links;
-    return o;
-  });
-  if (preview) for (const p of phases) if (!nodes.some(n => n.phase === p.id)) nodes.push({ id: `ghost-${p.id}`, title: S.L.edGhostTitle, phase: p.id, summary: S.L.edGhostSummary });   // a phase with no topics yet still shows up
-  if (phases.length) { const idx = id => phases.findIndex(p => p.id === id); nodes = nodes.map((n, i) => [n, i]).sort((a, b) => idx(a[0].phase) - idx(b[0].phase) || a[1] - b[1]).map(x => x[0]); }
+    delete o.anchor;   // `parent` replaces the older name
+    if (hangs(n)) { o.parent = idByRow.get(n.parent); delete o.phase; if (n.optional) o.optional = true; else delete o.optional; }
+    else { delete o.parent; delete o.optional; if (phases.length) o.phase = idOf[n.phase] || phases[0].id; else delete o.phase; }
+    return [rowId(n), o];
+  }));
+  const kids = new Map();
+  rows.filter(hangs).forEach(n => { if (!kids.has(n.parent)) kids.set(n.parent, []); kids.get(n.parent).push(n); });
+  const flat = n => [built.get(rowId(n)), ...(kids.get(rowId(n)) || []).flatMap(flat)];
+  let groups = rows.filter(n => !hangs(n)).map(n => ({ phase: built.get(rowId(n)).phase, list: flat(n) }));
+  if (preview) for (const p of phases) if (!groups.some(g => g.phase === p.id)) groups.push({ phase: p.id, list: [{ id: `ghost-${p.id}`, title: S.L.edGhostTitle, phase: p.id, summary: S.L.edGhostSummary }] });   // a phase with no topics yet still shows up
+  if (phases.length) { const idx = id => phases.findIndex(p => p.id === id); groups = groups.map((g, i) => [g, i]).sort((a, b) => idx(a[0].phase) - idx(b[0].phase) || a[1] - b[1]).map(x => x[0]); }
+  const nodes = groups.flatMap(g => g.list);
   const id = base?.id || (preview ? 'draft' : fresh(used, model.title, 'roadmap'));
   const { phases: _p, nodes: _n, ...rest } = base || {};
   const { theme: _t, ...rest2 } = rest;
@@ -699,10 +723,37 @@ function renderForm() {
     `<div class="ed-grid">${fld(L.edName, inp('title', m.title), 'wide')}${fld(L.edLanguage, `<select data-f="language">${langs.map(c => `<option value="${esc(c)}"${c === m.language ? ' selected' : ''}>${esc(LANG_NAMES[c] || c)}</option>`).join('')}</select>`)}${fld(L.edIcon, inp('icon', m.icon, '🚀', 'maxlength="8"'))}${fld(L.edSubtitle, inp('subtitle', m.subtitle), 'wide')}${fld(L.edDescription, inp('description', m.description), 'wide')}</div>` +
     `<h3 class="ed-h">${esc(L.edColors)}</h3><div class="ed-grid">${fld(L.edAccent, colorField('accent', m.accent, DEFAULT_ACCENT))}${fld(L.edBrandColor, colorField('brandColor', m.brandColor, DEFAULT_BRAND))}${fld(L.edLogo, `<span class="ed-logo-row">${inp('logoPlain', m.logoPlain, 'road')}${inp('logoAccent', m.logoAccent, 'kit')}<span class="ed-logo" id="logoMini">${logoHtml(m)}</span></span>`, 'wide')}</div><p class="ed-hint">${esc(L.edColorsHint)}</p>` +
     `<h3 class="ed-h">${esc(L.edPhases)}</h3><div data-list="phases">${m.phases.map((p, i) => `<div class="ed-row" data-i="${i}">${inp('title', p.title, L.edPhaseTitle)}${inp('period', p.period, L.edPhasePeriod)}${colorField('color', p.color, PALETTE[i % PALETTE.length], L.edPhaseColor, 'phase')}${rowBtns(L)}</div>`).join('')}</div><button type="button" class="secondary ed-add" data-do="add-phase">+ ${esc(L.edAddPhase)}</button>` +
-    `<h3 class="ed-h">${esc(L.edTopics)}</h3><div data-list="nodes">${m.nodes.map((n, i) => `<div class="ed-card${n.open ? ' open' : ''}" data-i="${i}"><div class="ed-row"><span class="ed-num">${i + 1}</span>${inp('title', n.title, L.edTopicTitle)}${rowBtns(L)}<span class="ed-br"></span>${m.phases.length ? `<select data-f="phase" aria-label="${esc(L.edPhaseOf)}">${phaseOpts(n.phase || m.phases[0].key)}</select>` : ''}${inp('time', n.time, L.edTime)}</div>` +
-      `<button type="button" class="ed-more" data-do="more" aria-expanded="${n.open}">${n.open ? '▾' : '▸'} ${esc(L.edDetails)}${n.orig?.optional ? ` · ${esc(L.edOptionalTag)}` : ''}</button>` +
-      (n.open ? `<div class="ed-det">${fld(L.edSummary, area('summary', n.summary, 2), 'wide')}${fld(L.edStudy, area('topics', n.topics))}${fld(L.edTasks, area('tasks', n.tasks))}${fld(L.edChallenge, area('challenge', n.challenge, 2))}${fld(L.edSuccess, area('success', n.success, 2))}${fld(L.edLinks, area('links', n.links), 'wide')}</div>` : '') + '</div>').join('')}</div>` +
+    `<h3 class="ed-h">${esc(L.edTopics)}</h3><div data-list="nodes">${topicCards(m, L, phaseOpts)}</div>` +
     `<button type="button" class="secondary ed-add" data-do="add-node">+ ${esc(L.edAddTopic)}</button><p class="ed-hint">${esc(L.edHint)}</p>`;
+}
+
+function topicCards(m, L, phaseOpts) {
+  const depths = rowDepths(m.nodes);
+  let rootNo = 0;
+  return m.nodes.map((n, i) => {
+    const d = depths[i], root = d === 0;
+    if (root) rootNo++;
+    const second = root
+      ? (m.phases.length ? `<select data-f="phase" aria-label="${esc(L.edPhaseOf)}">${phaseOpts(n.phase || m.phases[0].key)}</select>` : '')
+      : `<label class="ed-chk"><input type="checkbox" data-f="optional"${n.optional ? ' checked' : ''}> ${esc(L.edOptional)}</label>`;
+    return `<div class="ed-card d${d}${n.open ? ' open' : ''}" data-i="${i}" style="--d:${d}"><div class="ed-row"><span class="ed-num">${root ? rootNo : '↳'}</span>${inp('title', n.title, L.edTopicTitle)}${rowBtns(L)}<span class="ed-br"></span>${second}${inp('time', n.time, L.edTime)}</div>` +
+      `<div class="ed-acts"><button type="button" class="ed-more" data-do="more" aria-expanded="${n.open}">${n.open ? '▾' : '▸'} ${esc(L.edDetails)}</button>${d < 2 ? `<button type="button" class="ed-more" data-do="add-sub">${esc(L.edAddSub)}</button>` : ''}</div>` +
+      (n.open ? `<div class="ed-det">${fld(L.edSummary, area('summary', n.summary, 2), 'wide')}${fld(L.edStudy, area('topics', n.topics))}${fld(L.edTasks, area('tasks', n.tasks))}${fld(L.edChallenge, area('challenge', n.challenge, 2))}${fld(L.edSuccess, area('success', n.success, 2))}${fld(L.edLinks, area('links', n.links), 'wide')}</div>` : '') + '</div>';
+  }).join('');
+}
+
+/* Category = the section (folder) a roadmap lives in. */
+const catPath = group => (group === 'roadmaps' ? '' : String(group).startsWith('roadmaps/') ? String(group).slice('roadmaps/'.length) : null);
+
+function buildCategorySelect() {
+  const sel = $('edCat'), opts = [['', S.L.groupMine], ...S.manifest.groups.filter(g => catPath(g.id)).map(g => [catPath(g.id), g.title])];
+  if (ed.cat && ed.cat !== '__new__' && !opts.some(o => o[0] === ed.cat)) opts.push([ed.cat, ed.cat]);
+  opts.push(['__new__', S.L.edCategoryNew]);
+  sel.replaceChildren(...opts.map(([value, textContent]) => Object.assign(document.createElement('option'), { value, textContent })));
+  sel.value = ed.cat;
+  $('edCatNew').hidden = ed.cat !== '__new__';
+  $('edCatNew').value = ed.catNew;
+  sel.title = S.L.edCategoryHint;
 }
 
 function showEditErr(list) { $('editErr').innerHTML = list.length ? `<strong>${esc(S.L.edErrors)}</strong><ul>${list.map(x => `<li>${esc(x)}</li>`).join('')}</ul>` : ''; }
@@ -784,12 +835,14 @@ async function openEditor(entry = null) {
     try { base = JSON.parse(await getText(entry.file)); } catch (err) { return alert(err.message); }
   }
   ed.id = entry ? entry.id : null; ed.base = base; ed.dirty = false; ed.mode = 'form';
+  ed.cat = catPath((entry || entryById(S.rm?.id))?.group ?? '') ?? ''; ed.catNew = '';
   ed.prev = S.rm ? { id: S.rm.id, local: S.isLocal } : null;
   ed.model = base ? modelFromJson(base) : { ...modelFromJson({ meta: {}, nodes: [] }), nodes: [blankNode('')] };
   if (!base) ed.model.language = S.rm?.meta.language || 'pt-BR';
   S.L = { ...S.defaults, ...await loadLabels(uiLang({ meta: { language: ed.model.language } })) };   // the editor speaks the draft's language, not the previous roadmap's
   applyI18n();
   $('editTitle').textContent = entry ? S.L.edTitleEdit : S.L.edTitleNew;
+  buildCategorySelect();
   $('editBody').replaceChildren();
   showEditErr([]);
   if ($('manageDlg').open) $('manageDlg').close();
@@ -836,7 +889,14 @@ async function saveEditor() {
   showEditErr([]);
   $('editSave').disabled = true;
   try {
-    const r = await apiFetch(ed.id ? 'PUT' : 'POST', ed.id ? `api/roadmaps/${encodeURIComponent(ed.id)}` : 'api/roadmaps', json);
+    let cat = ed.cat, extra = '';
+    if (cat === '__new__') {
+      const title = ed.catNew.trim(), name = slug(title).slice(0, 40);
+      if (!name) return showEditErr([S.L.edCategoryNeedName]);
+      cat = name; extra = `&categoryTitle=${encodeURIComponent(title)}`;
+    }
+    const q = `?category=${encodeURIComponent(cat)}${extra}`;
+    const r = await apiFetch(ed.id ? 'PUT' : 'POST', (ed.id ? `api/roadmaps/${encodeURIComponent(ed.id)}` : 'api/roadmaps') + q, json);
     const j = await r.json().catch(() => ({}));
     if (!r.ok) return showEditErr(j.errors || [j.error || (r.status === 404 || r.status === 405 ? S.L.rmNoServer : `HTTP ${r.status}`)]);
     await reloadManifest();
@@ -861,7 +921,7 @@ function wireEditor() {
     }
     if (!f || !card || ed.mode !== 'form') return;
     const kind = e.target.closest('[data-list]').dataset.list, row = ed.model[kind][+card.dataset.i];
-    row[f] = e.target.value;
+    row[f] = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
     if (e.target.type === 'color') e.target.closest('.ed-color').classList.add('set');
     if (kind === 'phases' && f === 'title') body.querySelectorAll(`select[data-f=phase] option[value="${CSS.escape(row.key)}"]`).forEach(o => { o.textContent = row.title || S.L.edPhaseTitle; });
   });
@@ -875,20 +935,30 @@ function wireEditor() {
     if (!b || ed.mode !== 'form') return;
     ed.dirty = true;
     const card = b.closest('[data-i]'), i = card ? +card.dataset.i : -1, m = ed.model, kind = card?.closest('[data-list]').dataset.list;
+    const end = k => { const d = rowDepths(m.nodes); let j = k + 1; while (j < m.nodes.length && d[j] > d[k]) j++; return j; };
+    const moveTree = dir => {   // swap this row's subtree with its neighbouring sibling's
+      const sibs = m.nodes.map((r, k) => k).filter(k => m.nodes[k].parent === m.nodes[i].parent), at = sibs.indexOf(i), other = sibs[at + dir];
+      if (other === undefined) return;
+      const a0 = i, a1 = end(i), b0 = other, b1 = end(other), A = m.nodes.slice(a0, a1), B = m.nodes.slice(b0, b1);
+      if (dir < 0) m.nodes.splice(b0, a1 - b0, ...A, ...B); else m.nodes.splice(a0, b1 - a0, ...B, ...A);
+    };
+    let focusAt = -1;
     switch (b.dataset.do) {
-      case 'up': move(m[kind], i, -1); break;
-      case 'down': move(m[kind], i, 1); break;
+      case 'up': if (kind === 'nodes') moveTree(-1); else move(m[kind], i, -1); break;
+      case 'down': if (kind === 'nodes') moveTree(1); else move(m[kind], i, 1); break;
       case 'rm':
-        m[kind].splice(i, 1);
+        if (kind === 'nodes') m.nodes.splice(i, end(i) - i); else m[kind].splice(i, 1);
         if (kind === 'nodes' && !m.nodes.length) m.nodes.push(blankNode(m.phases[0]?.key || ''));
         break;
       case 'more': m.nodes[i].open = !m.nodes[i].open; break;
+      case 'add-sub': focusAt = end(i); m.nodes.splice(focusAt, 0, blankNode('', rowId(m.nodes[i]))); break;
       case 'reset-color': if (b.dataset.kind === 'phase') m.phases[i].color = ''; else m[b.dataset.f] = ''; break;
       case 'add-phase': m.phases.push({ key: `p${ed.n++}`, orig: null, title: '', period: '', color: '' }); break;
       case 'add-node': m.nodes.push(blankNode(m.phases.at(-1)?.key || '')); break;
     }
     rerender();
     if (b.dataset.do !== 'more') schedulePreview();
+    if (focusAt >= 0) body.querySelector(`[data-list=nodes] .ed-card[data-i="${focusAt}"] input`)?.focus();
     if (b.dataset.do === 'add-node') body.querySelector('[data-list=nodes] .ed-card:last-child input')?.focus();
     if (b.dataset.do === 'add-phase') body.querySelector('[data-list=phases] .ed-row:last-child input')?.focus();
   });
@@ -901,6 +971,8 @@ function wireEditor() {
   });
   $('editMode').addEventListener('click', e => { const b = e.target.closest('[data-mode]'); if (b) { setEditMode(b.dataset.mode); schedulePreview(); } });
   $('editSave').addEventListener('click', saveEditor);
+  $('edCat').addEventListener('change', e => { ed.cat = e.target.value; ed.dirty = true; $('edCatNew').hidden = ed.cat !== '__new__'; if (!$('edCatNew').hidden) $('edCatNew').focus(); });
+  $('edCatNew').addEventListener('input', e => { ed.catNew = e.target.value; ed.dirty = true; });
   $('edBack').addEventListener('click', closeEditor);
   $('edCancel').addEventListener('click', closeEditor);
   $('edPreviewBtn').addEventListener('click', () => { document.body.classList.add('edit-preview'); window.scrollTo({ top: 0 }); S.rm && S.view === 'map' && layout(); });
@@ -1673,7 +1745,7 @@ function wire() {
     else { S.L = { ...S.defaults, ...await loadLabels(uiLang(null)) }; applyI18n(); }
     buildLangSel(); renderManage();
     if (!$('rmPop').hidden) renderPicker();
-    if (S.editing) { $('editTitle').textContent = ed.id ? S.L.edTitleEdit : S.L.edTitleNew; if (ed.mode === 'form') renderForm(); if (!S.rm) await showPreviewHint(); }
+    if (S.editing) { buildCategorySelect(); $('editTitle').textContent = ed.id ? S.L.edTitleEdit : S.L.edTitleNew; if (ed.mode === 'form') renderForm(); if (!S.rm) await showPreviewHint(); }
   });
   $('skipSel').addEventListener('change', e => { store.set(SKIP_KEY, e.target.value); applyFilters(); renderDetail(); });
   new ResizeObserver(syncToolbarHeight).observe($('toolbar'));
