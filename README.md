@@ -2,6 +2,8 @@
 
 Uma interface única para roadmaps interativos, no estilo do roadmap.sh, em que todo o conteúdo vem de arquivos JSON. Título, fases, tópicos, desafios, links, cores e idioma ficam no arquivo. Trocou o JSON, trocou o roadmap.
 
+![Demonstração do Roadkit com um roadmap de Argo CD](docs/demo.gif)
+
 ## Por que existe
 
 Eu queria ter vários roadmaps, tanto de projetos que quero tocar quanto de coisas que quero estudar, todos com a mesma cara e sem precisar refazer a interface a cada um. A ideia é simples: a interface não sabe nada sobre o assunto, ela só desenha o que está no JSON. Para um roadmap novo, basta escrever um arquivo.
@@ -63,6 +65,7 @@ Os textos da interface ficam em `src/labels/` (`pt-BR` e `en`) e são escolhidos
 |---|---|
 | `examples/minimal.json` | o menor roadmap válido, sem fases |
 | `examples/estudar-sql.json` | trilha de estudo em fases |
+| `examples/argocd-gitops.json` | trilha de estudo com tarefas por tópico (a da demonstração acima) |
 | `examples/home-lab.json` | projeto pessoal, com rótulos trocados |
 | `examples/primeira-meia-maratona.json` | meta sem relação com tecnologia |
 | `examples/side-project-saas.json` | projeto em inglês, com cores próprias |

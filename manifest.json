@@ -16,6 +16,17 @@
   ],
   "roadmaps": [
     {
+      "id": "argocd-gitops",
+      "file": "examples/argocd-gitops.json",
+      "group": "examples",
+      "title": "GitOps com Argo CD",
+      "description": "Roadmap para aprender GitOps na prática com Argo CD e Kubernetes, em sete semanas.",
+      "icon": "",
+      "phases": 4,
+      "topics": 13,
+      "optional": 2
+    },
+    {
       "id": "estudar-sql",
       "file": "examples/estudar-sql.json",
       "group": "examples",
