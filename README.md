@@ -3,7 +3,7 @@
 Uma interface única para roadmaps interativos, no estilo do roadmap.sh, em que todo o conteúdo vem de arquivos JSON. Título, fases, tópicos, desafios, links, cores e idioma ficam no arquivo. Trocou o JSON, trocou o roadmap.
 
 <p align="center">
-  <img src="docs/demo.gif" alt="Demonstração do Roadkit" width="100%">
+  <img src="docs/roadkit-demo.gif" alt="Demonstração do Roadkit" width="100%">
 </p>
 
 Prefere em vídeo? [Baixe a demonstração em MP4](docs/demo.mp4).
