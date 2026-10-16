@@ -625,6 +625,7 @@ async function duplicateRoadmap(entry) {
 const LANG_NAMES = { 'pt-BR': 'Português (Brasil)', en: 'English' };
 const ed = { id: null, base: null, model: null, mode: 'form', dirty: false, n: 0 };
 const NODE_TEXT = ['time', 'summary', 'challenge', 'success'];
+const SLUG_OK = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 function modelFromJson(j) {
   const m = j.meta || {};
@@ -819,8 +820,79 @@ async function rebuildPreview(first = false) {
   rm.nodes.filter(n => n.id.startsWith('ghost-')).forEach(n => n.el.classList.add('ghost'));
 }
 
+/* ---- live validation (same rules as `check`) ---- */
+let lintTimer = 0, lintSeq = 0;
+function renderLint(res) {
+  const el = $('editLint');
+  if (!res) { el.removeAttribute('data-state'); el.innerHTML = ''; return; }
+  const e = res.errors.length, w = res.warnings.length, L = S.L;
+  el.dataset.state = e ? 'bad' : w ? 'warn' : 'ok';
+  if (!e && !w) { el.innerHTML = `<span>✓ ${esc(L.edLintOk)}</span>`; return; }
+  const head = [e ? fmt(e === 1 ? L.edLintErr1 : L.edLintErrN, { n: e }) : '', w ? fmt(w === 1 ? L.edLintWarn1 : L.edLintWarnN, { n: w }) : ''].filter(Boolean).join(' · ');
+  el.innerHTML = `<details><summary>${e ? '✕' : '!'} ${esc(head)}</summary><ul>${res.errors.map(x => `<li class="bad">${esc(x)}</li>`).join('')}${res.warnings.map(x => `<li class="warn">${esc(x)}</li>`).join('')}</ul></details>`;
+}
+async function runLint() {
+  if (!S.editing) return;
+  let json;
+  try {
+    json = ed.mode === 'json' ? JSON.parse($('edJson').value) : buildJson(ed.model, ed.base);
+    if (!json || (ed.mode === 'form' && !json.nodes.length)) return renderLint(null);
+  } catch (err) { return renderLint({ errors: [S.L.edJsonInvalid + err.message], warnings: [] }); }
+  const seq = ++lintSeq;
+  try {
+    const r = await apiFetch('POST', 'api/validate', json);
+    if (seq === lintSeq) renderLint(r.ok ? await r.json() : null);
+  } catch { if (seq === lintSeq) renderLint(null); }
+}
+const scheduleLint = () => { clearTimeout(lintTimer); lintTimer = setTimeout(runLint, 600); };
+
+/* ---- create with an AI: build a prompt, take the answer back ---- */
+const AI_SIZES = { s: 'about 6 to 8 main topics', m: 'about 10 to 14 main topics, in 2 to 4 phases', l: 'about 16 to 24 main topics, in 3 to 5 phases' };
+let aiTemplate = null;
+
+async function buildAiPrompt() {
+  try { aiTemplate ??= await getText('src/ai-prompt.txt'); } catch { $('aiPrompt').value = S.L.aiLoadFail; return; }
+  const code = $('aiLang').value || 'en';
+  const goal = $('aiGoal').value.trim() || '(describe here what you want the roadmap to cover)';
+  $('aiPrompt').value = aiTemplate.replace(/\{\{goal\}\}/g, goal).replace(/\{\{languageCode\}\}/g, code)
+    .replace(/\{\{language\}\}/g, LANG_NAMES[code] || code).replace(/\{\{size\}\}/g, AI_SIZES[$('aiSize').value] || AI_SIZES.m);
+}
+
+function openAi() {
+  const langs = S.manifest.languages?.length ? S.manifest.languages : ['pt-BR', 'en'];
+  $('aiLang').replaceChildren(...langs.map(c => Object.assign(document.createElement('option'), { value: c, textContent: LANG_NAMES[c] || c })));
+  $('aiLang').value = ed.model?.language && langs.includes(ed.model.language) ? ed.model.language : langs[0];
+  $('aiErr').textContent = '';
+  $('aiDlg').showModal();
+  buildAiPrompt();
+  $('aiGoal').focus();
+}
+
+/* The answer may come wrapped in prose or a ```json fence: take the outermost { ... }. */
+function extractJson(text) {
+  const a = text.indexOf('{'), b = text.lastIndexOf('}');
+  if (a < 0 || b <= a) throw new Error(S.L.aiNoJson);
+  return JSON.parse(text.slice(a, b + 1));
+}
+
+async function useAiAnswer() {
+  const err = m => { $('aiErr').textContent = m; };
+  let json;
+  try { json = extractJson($('aiAnswer').value); } catch (e) { return err(e.message); }
+  if (!json?.meta?.title || !Array.isArray(json.nodes) || !json.nodes.length) return err(S.L.aiBad);
+  delete json.$schema;
+  if (!SLUG_OK.test(str(json.id)) || entryById(json.id)) delete json.id;   // let the editor pick a free id from the title
+  ed.base = json; ed.model = modelFromJson(json); ed.dirty = true;
+  $('aiDlg').close();
+  if (ed.mode === 'json') { ed.mode = 'form'; $('editBody').replaceChildren(); }
+  setEditMode('form'); renderForm();
+  $('editBody').scrollTop = 0;
+  await rebuildPreview(true);
+  runLint();
+}
+
 let previewTimer = 0;
-const schedulePreview = () => { clearTimeout(previewTimer); previewTimer = setTimeout(() => S.editing && rebuildPreview(), 250); };
+const schedulePreview = () => { clearTimeout(previewTimer); previewTimer = setTimeout(() => S.editing && rebuildPreview(), 250); scheduleLint(); };
 
 /* Clicking a topic in the preview scrolls the form to its row. */
 function focusEditorRow(id) {
@@ -860,6 +932,8 @@ async function openEditor(entry = null) {
   await rebuildPreview(true);
   window.scrollTo({ top: 0 });
   $('editBody').querySelector('input')?.focus();
+  renderLint(null); scheduleLint();
+  $('edAi').hidden = !!entry;   // building from an AI answer only makes sense for a new roadmap
 }
 
 async function leaveEditor(savedId = null) {
@@ -982,6 +1056,16 @@ function wireEditor() {
   });
   $('editMode').addEventListener('click', e => { const b = e.target.closest('[data-mode]'); if (b) { setEditMode(b.dataset.mode); schedulePreview(); } });
   $('editSave').addEventListener('click', saveEditor);
+  $('edAi').addEventListener('click', openAi);
+  const ai = $('aiDlg');
+  ai.addEventListener('click', e => { if (e.target === ai || e.target.closest('[data-close]')) ai.close(); });
+  ['aiGoal', 'aiLang', 'aiSize'].forEach(id => $(id).addEventListener('input', buildAiPrompt));
+  $('aiCopy').addEventListener('click', async () => {
+    const t = $('aiPrompt').value;
+    try { await navigator.clipboard.writeText(t); } catch { $('aiPrompt').select(); document.execCommand('copy'); }
+    $('aiCopy').textContent = S.L.aiCopied; setTimeout(() => { $('aiCopy').textContent = S.L.aiCopy; }, 1500);
+  });
+  $('aiUse').addEventListener('click', useAiAnswer);
   $('edCat').addEventListener('change', e => { ed.cat = e.target.value; ed.dirty = true; $('edCatNew').hidden = ed.cat !== '__new__'; if (!$('edCatNew').hidden) $('edCatNew').focus(); });
   $('edCatNew').addEventListener('input', e => { ed.catNew = e.target.value; ed.dirty = true; });
   $('edBack').addEventListener('click', closeEditor);

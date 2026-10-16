@@ -49,11 +49,13 @@
       <button type="button" class="secondary" id="edBack"><span aria-hidden="true">←</span> <span data-i18n="edBack"></span></button>
       <h2 id="editTitle"></h2>
       <div class="seg small" id="editMode" role="group"><button type="button" data-mode="form" data-i18n="edForm"></button><button type="button" data-mode="json" data-i18n="edJson"></button></div>
+      <button type="button" class="secondary" id="edAi" data-i18n="aiOpen"></button>
       <button type="button" class="secondary ep-toggle" id="edPreviewBtn" data-i18n="edPreview"></button>
     </div>
     <div class="ep-cat"><label for="edCat" data-i18n="edCategory"></label><select id="edCat"></select><input type="text" id="edCatNew" hidden data-i18n-placeholder="edCategoryName"></div>
     <div class="ep-body" id="editBody"></div>
     <div class="ep-foot">
+      <div class="ed-lint" id="editLint" aria-live="polite"></div>
       <div class="dlg-err" id="editErr" role="alert"></div>
       <button type="button" class="secondary" id="edCancel" data-i18n="rmCancel"></button>
       <button type="button" class="primary" id="editSave" data-i18n="edSave"></button>
@@ -145,6 +147,27 @@
       <button type="button" class="secondary" data-act="import" data-i18n="importProgress"></button>
     </div>
     <div class="dlg-body" id="manageBody"></div>
+  </div>
+</dialog>
+<dialog class="dlg dlg-wide" id="aiDlg" aria-labelledby="aiTitle">
+  <div class="dlg-in">
+    <div class="dlg-head"><h2 id="aiTitle" data-i18n="aiTitle"></h2><button type="button" class="dlg-x" data-close data-i18n-aria="rmClose">×</button></div>
+    <div class="dlg-body ai-body">
+      <p class="dlg-note" data-i18n="aiHow"></p>
+      <h3 class="ai-h"><span>1</span> <b data-i18n="aiStep1"></b></h3>
+      <label class="ed-f"><span data-i18n="aiGoal"></span><textarea id="aiGoal" rows="4" data-i18n-placeholder="aiGoalPh"></textarea></label>
+      <div class="ai-row">
+        <label class="ed-f"><span data-i18n="aiLang"></span><select id="aiLang"></select></label>
+        <label class="ed-f"><span data-i18n="aiSize"></span><select id="aiSize"><option value="s" data-i18n="aiSizeS"></option><option value="m" data-i18n="aiSizeM" selected></option><option value="l" data-i18n="aiSizeL"></option></select></label>
+      </div>
+      <h3 class="ai-h"><span>2</span> <b data-i18n="aiStep2"></b></h3>
+      <textarea id="aiPrompt" class="ai-prompt" rows="7" readonly spellcheck="false" aria-label="Prompt"></textarea>
+      <button type="button" class="primary" id="aiCopy" data-i18n="aiCopy"></button>
+      <h3 class="ai-h"><span>3</span> <b data-i18n="aiStep3"></b></h3>
+      <textarea id="aiAnswer" rows="6" spellcheck="false" data-i18n-placeholder="aiAnswerPh" aria-label="JSON"></textarea>
+      <div class="dlg-err" id="aiErr" role="alert"></div>
+      <button type="button" class="primary" id="aiUse" data-i18n="aiUse"></button>
+    </div>
   </div>
 </dialog>
 <div class="scrim" id="scrim"></div>

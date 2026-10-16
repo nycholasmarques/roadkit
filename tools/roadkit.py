@@ -656,6 +656,11 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             write_json(folder / "_section.json", {"title": title})
         return folder
 
+    def roadmap_validate(self, _, query):
+        """Same rules as `check`, without saving: lets the editor lint a draft while you type."""
+        errs, warns = validate(self.read_json(), label_keys())
+        return 200, {"errors": errs, "warnings": warns}
+
     def roadmap_create(self, _, query):
         data = self.read_json()
         warns = self.check_roadmap(data)
@@ -711,6 +716,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 ROUTES = [
     (r"/api/state/([^/]+)", {"GET": "state_get", "PUT": "state_put"}),
     (r"/api/states", {"GET": "states_get"}),
+    (r"/api/validate", {"POST": "roadmap_validate"}),
     (r"/api/roadmaps", {"POST": "roadmap_create"}),
     (r"/api/roadmaps/([^/]+)", {"PUT": "roadmap_update", "DELETE": "roadmap_delete"}),
     (r"/api/hidden/([^/]+)", {"PUT": "hidden_put"}),

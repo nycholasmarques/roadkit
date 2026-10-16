@@ -1,0 +1,48 @@
+I want you to build a roadmap for an app called Roadkit. Reply with ONE JSON object that follows the format below, and nothing else (no explanation before or after).
+
+WHAT I WANT
+{{goal}}
+
+Write all the text of the roadmap in {{language}} and set "meta.language" to "{{languageCode}}".
+Size: {{size}}.
+
+FORMAT
+{
+  "schemaVersion": 1,
+  "id": "short-slug-with-hyphens",
+  "meta": {
+    "title": "Roadmap title",
+    "eyebrow": "small line above the title",
+    "subtitle": "one line under the title",
+    "description": "one sentence",
+    "icon": "one emoji",
+    "language": "{{languageCode}}"
+  },
+  "phases": [
+    { "id": "phase-slug", "title": "Phase name", "period": "Weeks 1 and 2", "summary": "one sentence" }
+  ],
+  "nodes": [
+    {
+      "id": "topic-slug",
+      "title": "Short topic name (max 60 characters)",
+      "phase": "phase-slug",
+      "time": "Week 1",
+      "summary": "One or two sentences on what this topic is about.",
+      "topics": ["short", "things to study"],
+      "challenge": "A concrete hands-on task I can check by myself.",
+      "success": "How I know I am done.",
+      "tasks": [ { "id": "task-slug", "title": "A small step" } ],
+      "links": [ { "title": "Official docs", "url": "https://..." } ]
+    }
+  ]
+}
+
+RULES
+- Every "id" is a lowercase slug (a-z, 0-9, hyphens) and is unique among its siblings (phases, nodes, and the tasks of one node).
+- "nodes" lists the main topics in the order I should do them, grouped by phase, in the same order as "phases".
+- A topic can have sub-topics. Give them "parent": "<id of the topic they belong to>". Go at most 2 levels below a main topic, and list each sub-topic right after its parent. Sub-topics do not need "phase" (they take their parent's).
+- A topic is finished when all its sub-topics are, so only create sub-topics that are real parts of it.
+- For optional explorations that should not block progress, add "optional": true (they also need a "parent").
+- Use "tasks" only when a topic really breaks into steps (3 to 6). Leave out any field you have nothing good to put in.
+- Only include links you are sure exist, like official documentation. When unsure, leave "links" out.
+- Do not add keys that are not in the format above.
