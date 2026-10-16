@@ -1,0 +1,67 @@
+{
+  "schemaVersion": 1,
+  "id": "rust-do-zero",
+  "meta": {
+    "title": "Rust do zero",
+    "eyebrow": "Seis semanas, cinco horas por semana",
+    "subtitle": "Do primeiro cargo new a uma ferramenta de linha de comando publicada",
+    "description": "Trilha para sair do zero em Rust e terminar com uma CLI sua.",
+    "icon": "🦀",
+    "language": "pt-BR"
+  },
+  "phases": [
+    { "id": "base", "title": "A base da linguagem", "period": "Semanas 1 e 2", "summary": "Sintaxe, tipos e o modelo de posse." },
+    { "id": "pratica", "title": "Escrever Rust de verdade", "period": "Semanas 3 e 4", "summary": "Erros, traits e testes." },
+    { "id": "entrega", "title": "Entregar a CLI", "period": "Semanas 5 e 6", "summary": "Montar, testar e publicar." }
+  ],
+  "nodes": [
+    {
+      "id": "ambiente", "phase": "base", "title": "Ambiente e primeiro projeto", "time": "Semana 1",
+      "summary": "Instalar o toolchain e entender o que o cargo faz por você.",
+      "topics": ["rustup", "cargo", "rustfmt", "clippy"],
+      "challenge": "Criar um projeto, rodar cargo run e deixar cargo clippy sem avisos.",
+      "success": "Você sabe o que cada comando do cargo faz."
+    },
+    {
+      "id": "posse", "phase": "base", "title": "Posse e empréstimos", "time": "Semana 2",
+      "summary": "A parte que diferencia Rust: quem é dono de cada valor e por quanto tempo.",
+      "topics": ["ownership", "borrowing", "lifetimes"],
+      "challenge": "Reescrever um programa pequeno corrigindo cada erro do compilador sem usar clone.",
+      "success": "Você consegue explicar por que o compilador recusou cada trecho."
+    },
+    { "id": "moves", "parent": "posse", "title": "Moves e cópias", "summary": "O que acontece quando um valor muda de dono." },
+    { "id": "referencias", "parent": "posse", "title": "Referências e lifetimes", "summary": "Emprestar sem entregar o valor." },
+    { "id": "lifetimes-elisao", "parent": "referencias", "title": "Elisão de lifetimes", "summary": "Quando o compilador deduz sozinho." },
+    { "id": "unsafe", "parent": "posse", "optional": true, "title": "Um olhar sobre unsafe", "summary": "Só para saber que existe e quando aparece." },
+    {
+      "id": "erros", "phase": "pratica", "title": "Tratamento de erros", "time": "Semana 3",
+      "summary": "Result, Option e o operador ?.",
+      "topics": ["Result", "Option", "operador ?", "erros próprios"],
+      "challenge": "Ler um arquivo de configuração e devolver mensagens de erro úteis para cada falha possível.",
+      "success": "Nenhum unwrap sobra no seu código."
+    },
+    {
+      "id": "traits", "phase": "pratica", "title": "Traits e genéricos", "time": "Semana 4",
+      "summary": "Comportamento compartilhado sem herança.",
+      "topics": ["traits", "genéricos", "dyn Trait"],
+      "challenge": "Definir uma trait para formatos de saída e implementar duas versões.",
+      "success": "Você escolhe entre genérico e dyn por um motivo."
+    },
+    {
+      "id": "cli", "phase": "entrega", "title": "A CLI", "time": "Semana 5",
+      "summary": "Juntar tudo numa ferramenta que você usaria.",
+      "topics": ["clap", "serde", "testes de integração"],
+      "tasks": [
+        { "id": "argumentos", "title": "Ler argumentos com clap" },
+        { "id": "formato", "title": "Saída em texto e em JSON" },
+        { "id": "testes", "title": "Testes de integração" }
+      ],
+      "challenge": "Uma CLI que lê um arquivo, transforma e escreve o resultado, com testes."
+    },
+    {
+      "id": "publicar", "phase": "entrega", "title": "Publicar", "time": "Semana 6",
+      "summary": "Documentar, versionar e publicar no crates.io.",
+      "success": "Alguém instala sua ferramenta com cargo install."
+    }
+  ]
+}

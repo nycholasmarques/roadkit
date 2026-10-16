@@ -8,3 +8,4 @@ Dockerfile
 compose.yaml
 **/__pycache__
 data
+tools/demos
