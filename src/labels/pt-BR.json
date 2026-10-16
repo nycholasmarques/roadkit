@@ -41,5 +41,18 @@
   "importOk": "Progresso importado com sucesso!",
   "importFail": "Não foi possível importar: ",
   "loadFail": "Não foi possível carregar o roadmap",
-  "localFile": "arquivo local"
+  "localFile": "arquivo local",
+  "viewSwitch": "Visualização",
+  "viewMap": "Mapa",
+  "viewKanban": "Kanban",
+  "kanbanTodo": "A fazer",
+  "kanbanWorking": "Em andamento",
+  "kanbanReview": "Em revisão",
+  "kanbanFinished": "Concluído",
+  "kanbanEmpty": "Arraste um cartão para cá",
+  "kanbanHint": "Arraste os cartões entre as colunas ou use as setas. Concluir um tópico conclui todas as suas tarefas.",
+  "tasks": "Tarefas",
+  "status": "Status",
+  "moveLeft": "Mover para a coluna anterior",
+  "moveRight": "Mover para a próxima coluna"
 }

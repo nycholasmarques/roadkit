@@ -20,15 +20,21 @@
   ],
   "nodes": [
     {
-      "id": "ambiente", "phase": "basico", "title": "Banco local e dados de exemplo", "time": "Semana 1",
+      "id": "ambiente", "phase": "basico", "title": "Banco local e dados de exemplo", "time": "Semana 1", "status": "working",
       "summary": "Suba um PostgreSQL local e carregue um conjunto de dados para praticar.",
       "topics": ["PostgreSQL local", "psql ou cliente gráfico", "Importar um dump"],
       "challenge": "Ter um banco rodando com pelo menos três tabelas com dados.",
       "success": "Você consegue conectar, listar as tabelas e contar as linhas de cada uma.",
+      "tasks": [
+        { "id": "instalar", "title": "Instalar o PostgreSQL ou subir um contêiner", "status": "finished" },
+        { "id": "cliente", "title": "Conectar com psql ou um cliente gráfico", "status": "working" },
+        { "id": "dados", "title": "Importar um conjunto de dados de exemplo", "note": "Qualquer dump pequeno serve." },
+        { "id": "contar", "title": "Contar as linhas de cada tabela" }
+      ],
       "links": [{ "title": "Documentação do PostgreSQL", "url": "https://www.postgresql.org/docs/current/" }]
     },
     {
-      "id": "select", "phase": "basico", "title": "SELECT, filtros e ordenação", "time": "Semana 1",
+      "id": "select", "phase": "basico", "title": "SELECT, filtros e ordenação", "time": "Semana 1", "status": "review",
       "summary": "A base de tudo: escolher colunas, filtrar linhas e ordenar o resultado.",
       "topics": ["SELECT e WHERE", "ORDER BY e LIMIT", "LIKE e IN", "NULL"],
       "challenge": "Responder dez perguntas sobre os dados usando apenas uma tabela.",
@@ -47,7 +53,13 @@
       "summary": "Combinar tabelas relacionadas sem duplicar ou perder linhas.",
       "topics": ["INNER JOIN", "LEFT JOIN", "Chaves estrangeiras", "Auto junção"],
       "challenge": "Listar clientes sem nenhum pedido usando LEFT JOIN.",
-      "success": "Você prevê quantas linhas um JOIN vai devolver antes de rodar."
+      "success": "Você prevê quantas linhas um JOIN vai devolver antes de rodar.",
+      "tasks": [
+        { "id": "inner", "title": "Resolver 5 exercícios com INNER JOIN" },
+        { "id": "left", "title": "Resolver 5 exercícios com LEFT JOIN" },
+        { "id": "sem-pedido", "title": "Listar clientes sem nenhum pedido" },
+        { "id": "prever", "title": "Prever o número de linhas antes de rodar", "note": "Anote a previsão e compare com o resultado." }
+      ]
     },
     {
       "id": "subqueries", "phase": "basico", "optional": true, "anchor": "joins", "title": "Subconsultas e CTEs",

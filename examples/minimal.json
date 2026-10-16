@@ -16,9 +16,14 @@
       "topics": ["Conceito A", "Conceito B"],
       "challenge": "Algo pequeno e verificável para fazer.",
       "success": "Como você sabe que terminou.",
+      "tasks": [
+        { "id": "ler", "title": "Ler a introdução", "status": "finished" },
+        { "id": "praticar", "title": "Fazer o exercício", "status": "working" },
+        { "id": "revisar", "title": "Revisar com o material de apoio" }
+      ],
       "links": [{ "title": "Documentação", "url": "https://example.com/" }]
     },
-    { "id": "segundo", "title": "Segundo tópico", "time": "Semana 2" },
+    { "id": "segundo", "title": "Segundo tópico", "time": "Semana 2", "status": "review" },
     { "id": "terceiro", "title": "Terceiro tópico", "time": "Semana 3" },
     { "id": "extra", "title": "Extra opcional", "optional": true, "anchor": "segundo", "summary": "Ramifica ao lado do tópico de origem e não conta no progresso." }
   ]

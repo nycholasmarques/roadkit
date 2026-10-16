@@ -29,6 +29,7 @@ Fonte formal: [`schema/roadmap.schema.json`](../schema/roadmap.schema.json). Reg
 | `tagline` | texto sob o logo; `\n` quebra linha |
 | `sidebarNote` | nota no rodapé da barra lateral; `\n` quebra linha |
 | `footer` | rodapé da página |
+| `defaultView` | tela aberta primeiro: `map` (padrão) ou `kanban`. A escolha de quem usa fica salva por roadmap |
 
 ## `theme`
 
@@ -68,6 +69,8 @@ A ordem do array define a ordem das fases.
 | `links` | `[{ "title": "…", "url": "https://…" }]` |
 | `optional` | `true` = ramo lateral, não conta no progresso |
 | `anchor` | obrigatório se `optional`: id de um tópico **principal** |
+| `status` | coluna inicial no kanban: `todo`, `working`, `review` ou `finished`. Se omitido, sai das tarefas (ou `todo`) |
+| `tasks` | lista de tarefas do tópico, exibidas como um kanban pequeno dentro do card (veja abaixo) |
 
 Todos os campos além de `id` e `title` são opcionais; seções vazias não aparecem.
 
@@ -76,3 +79,39 @@ Todos os campos além de `id` e `title` são opcionais; seções vazias não apa
 - Tópicos principais (não opcionais) descem pela coluna central **na ordem do array**, e precisam estar agrupados por fase na ordem das fases.
 - Opcionais ficam à direita do tópico âncora (vários na mesma âncora empilham). Podem estar em qualquer posição do array.
 - O layout é calculado no navegador a partir da altura real de cada card. Não existem coordenadas no JSON.
+
+## Kanban
+
+A interface tem duas telas para o mesmo roadmap: **Mapa** e **Kanban**. O kanban do roadmap tem quatro colunas (`todo`, `working`, `review`, `finished`, com os nomes em `labels`: `kanbanTodo`, `kanbanWorking`, `kanbanReview`, `kanbanFinished`) e cada tópico é um cartão que se arrasta entre elas. Tópico em `finished` conta como concluído no progresso e no mapa.
+
+Qualquer tópico pode ter `tasks`, que viram um kanban pequeno no painel de detalhes, com as mesmas quatro colunas:
+
+```jsonc
+{
+  "id": "setup",
+  "title": "Ambiente e projeto",
+  "tasks": [
+    { "id": "instalar-hub", "title": "Instalar o Hub e o editor", "status": "finished" },
+    { "id": "criar-projeto", "title": "Criar o projeto", "note": "Template 3D com URP." },
+    { "id": "primeiro-commit", "title": "Fazer o primeiro commit" }
+  ]
+}
+```
+
+| Campo da tarefa | Notas |
+|---|---|
+| `id` (obrigatório) | slug, único dentro do tópico |
+| `title` (obrigatório) | curto |
+| `note` | linha de apoio abaixo do título |
+| `status` | coluna inicial; o padrão é `todo` |
+
+Quando usar: quando o tópico tem passos concretos e verificáveis (de 3 a 8 funcionam bem). Tópicos sem `tasks` continuam sendo só um cartão.
+
+Como o estado do tópico e o das tarefas se relacionam:
+
+- Marcar o tópico como concluído (pelo botão, pelo cartão ou arrastando para `finished`) conclui todas as tarefas. Mover o tópico para `todo` zera todas. Tirar o tópico de `finished` reabre todas na coluna de destino.
+- Mover para `working` ou `review` (sem sair de `finished`) muda só o tópico.
+- Mover uma tarefa recalcula o tópico: todas concluídas é `finished`; todas em `todo` é `todo`; o restante em `review` ou `finished` é `review`; qualquer outra mistura é `working`.
+- Sem `status` no tópico, o estado inicial é calculado do mesmo jeito a partir das tarefas.
+
+O que a pessoa muda na interface fica salvo no navegador, por roadmap; o JSON só define o ponto de partida. As ordens dentro das colunas seguem a ordem do JSON.

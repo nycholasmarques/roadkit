@@ -41,5 +41,18 @@
   "importOk": "Progress imported successfully!",
   "importFail": "Could not import: ",
   "loadFail": "Could not load the roadmap",
-  "localFile": "local file"
+  "localFile": "local file",
+  "viewSwitch": "View",
+  "viewMap": "Map",
+  "viewKanban": "Kanban",
+  "kanbanTodo": "To do",
+  "kanbanWorking": "Working",
+  "kanbanReview": "Review",
+  "kanbanFinished": "Finished",
+  "kanbanEmpty": "Drop a card here",
+  "kanbanHint": "Drag cards between columns or use the arrows. Finishing a topic finishes all of its tasks.",
+  "tasks": "Tasks",
+  "status": "Status",
+  "moveLeft": "Move to the previous column",
+  "moveRight": "Move to the next column"
 }

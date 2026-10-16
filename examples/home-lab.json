@@ -29,7 +29,7 @@
   ],
   "nodes": [
     {
-      "id": "hardware", "phase": "base", "title": "Escolher o hardware", "time": "Semana 1",
+      "id": "hardware", "phase": "base", "title": "Escolher o hardware", "time": "Semana 1", "status": "finished",
       "summary": "Definir o que o servidor precisa fazer antes de comprar ou reaproveitar algo.",
       "topics": ["Consumo de energia", "Memória e armazenamento", "Placa de rede", "Ruído"],
       "challenge": "Uma lista com o que será usado, o custo e o consumo estimado.",
@@ -41,6 +41,12 @@
       "topics": ["Proxmox ou Debian", "Particionamento", "Atualizações", "Usuários e SSH"],
       "challenge": "Sistema instalado, atualizado e acessível por SSH com chave.",
       "success": "Você reinicia o servidor e ele volta sozinho, acessível.",
+      "tasks": [
+        { "id": "iso", "title": "Baixar a imagem e gravar no pendrive", "status": "finished" },
+        { "id": "instalar", "title": "Instalar e configurar o disco", "status": "finished" },
+        { "id": "ssh", "title": "Criar o usuário e a chave SSH", "status": "working" },
+        { "id": "atualizar", "title": "Atualizar o sistema e reiniciar" }
+      ],
       "links": [{ "title": "Documentação do Proxmox VE", "url": "https://pve.proxmox.com/pve-docs/" }]
     },
     {
@@ -48,7 +54,13 @@
       "summary": "IP fixo, nomes locais e acesso remoto seguro.",
       "topics": ["IP estático ou reserva no DHCP", "DNS local", "VPN", "Firewall"],
       "challenge": "Acessar o servidor pelo nome na rede de casa e de fora via VPN.",
-      "success": "Nenhum serviço fica exposto na internet sem necessidade."
+      "success": "Nenhum serviço fica exposto na internet sem necessidade.",
+      "tasks": [
+        { "id": "ip", "title": "Reservar um IP fixo no roteador" },
+        { "id": "dns", "title": "Criar os nomes locais" },
+        { "id": "vpn", "title": "Configurar a VPN para acesso remoto" },
+        { "id": "firewall", "title": "Revisar as regras do firewall" }
+      ]
     },
     {
       "id": "vpn-alt", "phase": "base", "optional": true, "anchor": "rede", "title": "Rede separada para o lab",
@@ -86,7 +98,13 @@
       "summary": "Três cópias, dois tipos de mídia, uma fora de casa.",
       "topics": ["O que entra no backup", "Agendamento", "Cópia externa", "Criptografia"],
       "challenge": "Backup automático rodando e uma restauração testada de verdade.",
-      "success": "Você restaura um serviço do zero a partir do backup."
+      "success": "Você restaura um serviço do zero a partir do backup.",
+      "tasks": [
+        { "id": "escopo", "title": "Listar o que entra no backup" },
+        { "id": "agendar", "title": "Agendar a execução automática" },
+        { "id": "externo", "title": "Enviar uma cópia para fora de casa" },
+        { "id": "restaurar", "title": "Restaurar um serviço de teste", "note": "Um backup que nunca foi restaurado não conta." }
+      ]
     },
     {
       "id": "monitoramento", "phase": "operacao", "title": "Monitoramento e alertas", "time": "Semana 10",

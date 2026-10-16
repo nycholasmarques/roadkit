@@ -45,6 +45,12 @@ O tema da interface pode ser claro, escuro ou automático (segue o sistema). O �
 
 O layout se adapta à tela: em telas grandes o mapa é ampliado e centralizado, e em telas estreitas (celular, janela pequena) vira uma linha do tempo em coluna única, com as fases como atalhos no topo.
 
+## Kanban
+
+Cada roadmap também pode ser visto como um quadro, pelo seletor **Mapa / Kanban** no topo. O quadro tem quatro colunas (a fazer, em andamento, em revisão, concluído) e cada tópico é um cartão que se arrasta entre elas, com o mouse ou pelo ícone de alça no toque. As setas no cartão fazem o mesmo para quem prefere teclado.
+
+Um tópico pode ter `tasks`: ele ganha um kanban pequeno no painel de detalhes, com as mesmas colunas, para quebrar o tópico em passos. Concluir o tópico conclui todas as tarefas, e mover tarefas atualiza o estado do tópico. As regras completas estão em [`docs/SCHEMA.md`](docs/SCHEMA.md#kanban).
+
 Os textos da interface ficam em `src/labels/` (`pt-BR` e `en`) e são escolhidos por `meta.language`. Para um idioma novo, copie um dos arquivos e traduza.
 
 ## Exemplos

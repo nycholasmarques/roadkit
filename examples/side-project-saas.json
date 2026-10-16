@@ -61,7 +61,13 @@
       "summary": "Choose boring tools you already know. Get auth, database and deploy working on day one.",
       "topics": ["Hosting", "Auth", "Database", "CI deploy"],
       "challenge": "A hello world with login and one table, deployed to a public URL.",
-      "success": "Pushing to main deploys automatically."
+      "success": "Pushing to main deploys automatically.",
+      "tasks": [
+        { "id": "hosting", "title": "Pick a host and create the project" },
+        { "id": "auth", "title": "Add sign up and login" },
+        { "id": "database", "title": "Create the first table and a migration" },
+        { "id": "ci", "title": "Deploy on every push to main", "note": "Keep the pipeline under five minutes." }
+      ]
     },
     {
       "id": "core-loop", "phase": "build", "title": "Core feature", "time": "Weeks 4 and 5",

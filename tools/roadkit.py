@@ -21,10 +21,12 @@ LABELS_DIR = ROOT / "src" / "labels"
 SLUG = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 HEX = re.compile(r"^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$")
 TOP_KEYS = {"$schema", "schemaVersion", "id", "meta", "theme", "labels", "phases", "nodes"}
-META_KEYS = {"title", "eyebrow", "subtitle", "description", "icon", "language", "brand", "tagline", "sidebarNote", "footer"}
+META_KEYS = {"title", "eyebrow", "subtitle", "description", "icon", "language", "brand", "tagline", "sidebarNote", "footer", "defaultView"}
 THEME_KEYS = {"accent", "brandAccent"}
 PHASE_KEYS = {"id", "title", "summary", "period", "color", "milestone"}
-NODE_KEYS = {"id", "title", "phase", "time", "summary", "topics", "challenge", "success", "links", "optional", "anchor"}
+NODE_KEYS = {"id", "title", "phase", "time", "summary", "topics", "challenge", "success", "links", "optional", "anchor", "status", "tasks"}
+STATUSES = ("todo", "working", "review", "finished")
+TASK_KEYS = {"id", "title", "note", "status"}
 
 
 def roadmap_files():
@@ -63,6 +65,8 @@ def validate(data, known_labels):
             warns.append(f"unknown meta key '{k}'")
     if "language" in meta and not (LABELS_DIR / f"{meta['language']}.json").exists():
         warns.append(f"meta.language '{meta['language']}' has no src/labels/ pack; falling back to pt-BR")
+    if "defaultView" in meta and meta["defaultView"] not in ("map", "kanban"):
+        errs.append("meta.defaultView must be map or kanban")
     theme = data.get("theme", {})
     for k, v in (theme.items() if isinstance(theme, dict) else []):
         if k not in THEME_KEYS:
@@ -143,6 +147,33 @@ def validate(data, known_labels):
             for j, l in enumerate(links):
                 if not (isinstance(l, dict) and l.get("title") and re.match(r"^https?://", str(l.get("url", "")))):
                     errs.append(f"{w}: links[{j}] needs 'title' and an http(s) 'url'")
+        if "status" in n and n["status"] not in STATUSES:
+            errs.append(f"{w}: status must be one of {list(STATUSES)}")
+        tasks = n.get("tasks", [])
+        if not isinstance(tasks, list):
+            errs.append(f"{w}: tasks must be a list")
+        else:
+            if len(tasks) > 10:
+                warns.append(f"{w}: {len(tasks)} tasks; a card kanban reads best with 3 to 8")
+            task_ids = set()
+            for j, t in enumerate(tasks):
+                tw = f"{w}: tasks[{j}]"
+                if not isinstance(t, dict):
+                    errs.append(f"{tw} must be an object")
+                    continue
+                for k in t:
+                    if k not in TASK_KEYS:
+                        warns.append(f"{tw}: unknown key {k}")
+                if not t.get("title"):
+                    errs.append(f"{tw}: title is required")
+                if not isinstance(t.get("id"), str) or not SLUG.match(t["id"]):
+                    errs.append(f"{tw}: id must be a lowercase slug")
+                elif t["id"] in task_ids:
+                    errs.append(f"{tw}: duplicate task id {t[id]}")
+                else:
+                    task_ids.add(t["id"])
+                if "status" in t and t["status"] not in STATUSES:
+                    errs.append(f"{tw}: status must be one of {list(STATUSES)}")
         if n.get("optional"):
             if not n.get("anchor"):
                 errs.append(f"{w}: optional nodes need an 'anchor' (id of a core node)")

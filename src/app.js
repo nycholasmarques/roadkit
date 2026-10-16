@@ -4,10 +4,17 @@
 
 const PALETTE = ['#3a68d1', '#d8a436', '#8854ba', '#168450', '#ce6e4c', '#2a9aa8'];
 const NS = 'http://www.w3.org/2000/svg';
-const KEY = { progress: id => `roadkit:v1:progress:${id}`, last: 'roadkit:v1:last' };
+const KEY = {
+  state: id => `roadkit:v2:state:${id}`,
+  progress: id => `roadkit:v1:progress:${id}`, // legacy, read once to migrate
+  view: id => `roadkit:v1:view:${id}`,
+  last: 'roadkit:v1:last',
+};
 const G = { spineX: 420, nodeW: 290, optX: 800, optW: 255, top: 110, gap: 56, msGap: 40, optGap: 14, mapW: 1135, msW: 210 };
 const NARROW_BELOW = 860;   // map viewport width (px) under which the compact vertical layout is used
 const MAX_SCALE = 1.4;      // the wide layout is scaled to fit the viewport, up to this factor
+const STATUSES = ['todo', 'working', 'review', 'finished'];
+const STATUS_LABEL = { todo: 'kanbanTodo', working: 'kanbanWorking', review: 'kanbanReview', finished: 'kanbanFinished' };
 
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -15,6 +22,15 @@ const br = s => esc(s).replace(/\n/g, '<br>');
 const str = v => (v == null ? '' : String(v));
 const arr = v => (Array.isArray(v) ? v : []);
 const hex = v => (/^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i.test(str(v)) ? v : '');
+const okStatus = v => (STATUSES.includes(v) ? v : 'todo');
+/* A node with tasks follows them: all finished is finished, all todo is todo, everything left
+   in review or finished is review, anything else is working. */
+function deriveStatus(sts) {
+  if (!sts.length || sts.every(s => s === 'todo')) return 'todo';
+  if (sts.every(s => s === 'finished')) return 'finished';
+  if (sts.includes('review') && sts.every(s => s === 'review' || s === 'finished')) return 'review';
+  return 'working';
+}
 const slug = s => str(s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
 const safeUrl = u => { try { const x = new URL(u, location.href); return /^https?:$/.test(x.protocol) ? x.href : '#'; } catch { return '#'; } };
 const store = {
@@ -29,8 +45,14 @@ async function getJson(url) {
 
 const S = {
   manifest: null, defaults: {}, L: {}, labelCache: {},
-  rm: null, localRm: null, progress: {}, selected: null, phase: 'all', search: '',
+  rm: null, localRm: null, state: { nodes: {}, tasks: {} }, view: 'map', selected: null, phase: 'all', search: '',
   links: [], legendEl: null, svg: null,
+};
+
+const ICON = {
+  left: '<svg viewBox="0 0 12 12" width="10" height="10" aria-hidden="true"><path d="M7.5 2.5L4 6l3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  right: '<svg viewBox="0 0 12 12" width="10" height="10" aria-hidden="true"><path d="M4.5 2.5L8 6l-3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  grip: '<svg viewBox="0 0 8 14" width="8" height="14" aria-hidden="true"><g fill="currentColor"><circle cx="2" cy="2" r="1.1"/><circle cx="6" cy="2" r="1.1"/><circle cx="2" cy="7" r="1.1"/><circle cx="6" cy="7" r="1.1"/><circle cx="2" cy="12" r="1.1"/><circle cx="6" cy="12" r="1.1"/></g></svg>',
 };
 
 /* ---------- theme: auto (follows the system), light or dark ---------- */
@@ -61,6 +83,21 @@ function normLinks(v) {
   }).filter(l => l.url);
 }
 
+function normTasks(v) {
+  const seen = new Set(), out = [];
+  arr(v).forEach((t, j) => {
+    if (typeof t === 'string') t = { title: t };
+    if (!t || typeof t !== 'object') return;
+    const title = str(t.title);
+    if (!title) return;
+    let id = str(t.id) || slug(title) || `t${j + 1}`;
+    if (seen.has(id)) id = `${id}-${j + 1}`;
+    seen.add(id);
+    out.push({ id, title, note: str(t.note), status: okStatus(t.status) });
+  });
+  return out;
+}
+
 function normalize(raw, fallbackId) {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw new Error('JSON must be an object');
   if (!Array.isArray(raw.nodes) || !raw.nodes.length) throw new Error('"nodes" must be a non-empty list');
@@ -84,8 +121,10 @@ function normalize(raw, fallbackId) {
       id, phase, title: str(r.title) || id, time: str(r.time), summary: str(r.summary),
       topics: arr(r.topics).map(String), challenge: str(r.challenge), success: str(r.success),
       links: normLinks(r.links), optional: !!r.optional, anchor: str(r.anchor),
+      tasks: normTasks(r.tasks),
     };
-    n.hay = [n.title, n.summary, ...n.topics].join(' ').toLocaleLowerCase();
+    n.status = STATUSES.includes(r.status) ? r.status : deriveStatus(n.tasks.map(t => t.status));
+    n.hay = [n.title, n.summary, ...n.topics, ...n.tasks.map(t => t.title)].join(' ').toLocaleLowerCase();
     byId[id] = n; nodes.push(n);
   });
   let core = nodes.filter(n => !n.optional);
@@ -107,8 +146,60 @@ function normalize(raw, fallbackId) {
     id: str(raw.id) || slug(fallbackId) || slug(meta.title) || 'roadmap', meta,
     theme: { accent: hex(th.accent) || '#233b65', brand: hex(th.brandAccent) || '#7549bd' },
     labels: raw.labels && typeof raw.labels === 'object' ? raw.labels : {},
+    defaultView: meta.defaultView === 'kanban' ? 'kanban' : 'map',
     phases, hasPhases, nodes, core, byId, phaseById, warn,
   };
+}
+
+/* ---------- state: node and task statuses (only the user's changes are stored) ---------- */
+const taskKey = (n, t) => `${n.id}/${t.id}`;
+const nodeStatus = n => S.state.nodes[n.id] ?? n.status;
+const taskStatus = (n, t) => S.state.tasks[taskKey(n, t)] ?? t.status;
+const isDone = n => nodeStatus(n) === 'finished';
+const finishedTasks = n => n.tasks.filter(t => taskStatus(n, t) === 'finished').length;
+const phaseDone = ph => ph.nodes.length > 0 && ph.nodes.every(isDone);
+
+function loadState(rm) {
+  const st = { nodes: {}, tasks: {} };
+  let saved = null;
+  try { saved = JSON.parse(store.get(KEY.state(rm.id)) || 'null'); } catch { /* corrupt entry */ }
+  if (saved && typeof saved === 'object') {
+    for (const [id, v] of Object.entries(saved.nodes || {})) if (rm.byId[id] && STATUSES.includes(v)) st.nodes[id] = v;
+    for (const n of rm.nodes) for (const t of n.tasks) { const v = saved.tasks?.[taskKey(n, t)]; if (STATUSES.includes(v)) st.tasks[taskKey(n, t)] = v; }
+  } else {
+    try {
+      const old = JSON.parse(store.get(KEY.progress(rm.id)) || '{}') || {};
+      for (const id of Object.keys(rm.byId)) if (old[id] === true) st.nodes[id] = 'finished';
+    } catch { /* ignore */ }
+  }
+  S.state = st;
+}
+
+const saveState = () => store.set(KEY.state(S.rm.id), JSON.stringify(S.state));
+
+const deriveNode = n => deriveStatus(n.tasks.map(t => taskStatus(n, t)));
+
+function setTaskStatus(n, t, st) {
+  if (taskStatus(n, t) === st) return;
+  S.state.tasks[taskKey(n, t)] = st;
+  S.state.nodes[n.id] = deriveNode(n);
+  changed();
+}
+
+/* Moving a node to finished or todo applies to all its tasks; leaving finished reopens them too. */
+function setNodeStatus(n, st) {
+  const prev = nodeStatus(n);
+  if (prev === st) return;
+  S.state.nodes[n.id] = st;
+  if (n.tasks.length && (st === 'finished' || st === 'todo' || prev === 'finished')) n.tasks.forEach(t => { S.state.tasks[taskKey(n, t)] = st; });
+  changed();
+}
+
+const toggleDone = n => setNodeStatus(n, isDone(n) ? 'todo' : 'finished');
+
+function changed() {
+  saveState();
+  refresh(); renderBoard(); renderDetail();
 }
 
 /* ---------- labels / chrome ---------- */
@@ -180,7 +271,9 @@ function buildSwitch() {
 }
 
 /* ---------- map build + layout ---------- */
-function phaseDone(ph) { return ph.nodes.length > 0 && ph.nodes.every(n => S.progress[n.id]); }
+function metaText(n) {
+  return [n.time, n.optional ? S.L.optionalTag : '', n.tasks.length ? `${finishedTasks(n)}/${n.tasks.length}` : ''].filter(Boolean).join(' | ');
+}
 
 function buildMap() {
   const { rm, L } = S, map = $('map');
@@ -211,13 +304,13 @@ function buildMap() {
     el.setAttribute('role', 'button');
     el.tabIndex = 0;
     const num = n.optional ? '+' : String(n.num).padStart(2, '0');
-    const meta = [n.time, n.optional ? L.optionalTag : ''].filter(Boolean).join(' | ');
+    const meta = metaText(n);
     el.innerHTML = `<span class="node-num">${num}</span><span class="node-txt"><span class="node-name">${esc(n.title)}</span>${meta ? `<span class="node-meta">${esc(meta)}</span>` : ''}</span><button class="node-check" title="${esc(L.toggleDone)}" aria-label="${esc(L.toggleDone)}: ${esc(n.title)}"><svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true"><path d="M2 6.5l2.5 2.5L10 3.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>`;
     el.addEventListener('click', () => select(n.id));
     el.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target === el) { e.preventDefault(); select(n.id); } });
-    el.querySelector('.node-check').addEventListener('click', e => { e.stopPropagation(); toggle(n.id); });
-    map.append(el); n.el = el;
-    n.isDone = () => !!S.progress[n.id];
+    el.querySelector('.node-check').addEventListener('click', e => { e.stopPropagation(); toggleDone(n); });
+    map.append(el); n.el = el; n.metaEl = el.querySelector('.node-meta');
+    n.isDone = () => isDone(n);
   });
   const lg = document.createElement('div');
   lg.className = 'legend';
@@ -236,7 +329,7 @@ function geometry() {
    line on the left, phase headers above their topics and optional topics nested below. */
 function layout() {
   const { rm } = S, map = $('map'), svg = S.svg;
-  if (!svg) return;
+  if (!svg || S.view === 'kanban') return;
   const geo = S.geo = geometry(), nw = geo.narrow;
   const nodeX = nw ? 44 : G.spineX, nodeW = nw ? geo.mapW - nodeX - 16 : G.nodeW, optW = nw ? nodeW - 22 : G.optW;
   const gap = nw ? 30 : G.gap, msGap = nw ? 22 : G.msGap, lineX = nw ? 24 : nodeX + nodeW / 2;
@@ -355,20 +448,65 @@ function refresh() {
   const { rm, L } = S;
   if (!rm) return;
   rm.nodes.forEach(n => {
-    const done = !!S.progress[n.id];
+    const st = nodeStatus(n), done = st === 'finished';
     n.el.classList.toggle('completed', done);
+    n.el.classList.toggle('st-working', st === 'working');
+    n.el.classList.toggle('st-review', st === 'review');
     n.el.classList.toggle('selected', S.selected === n.id);
     n.el.classList.toggle('dimmed', dimmed(n));
-    n.el.setAttribute('aria-label', `${n.title}, ${done ? L.statusDone : L.statusPending}`);
+    n.el.setAttribute('aria-label', `${n.title}, ${L[STATUS_LABEL[st]]}`);
     n.el.querySelector('.node-check').setAttribute('aria-pressed', String(done));
+    if (n.metaEl) n.metaEl.textContent = metaText(n);
   });
   rm.phases.forEach(ph => ph.msEl?.classList.toggle('reached', phaseDone(ph)));
   S.links.forEach(l => l.el.classList.toggle('done', !!(l.a.isDone() && l.b.isDone())));
-  const qty = rm.core.filter(n => S.progress[n.id]).length;
+  const qty = rm.core.filter(isDone).length;
   $('progressText').textContent = `${qty} / ${rm.core.length}`;
   $('barFill').style.width = (qty / rm.core.length * 100) + '%';
 }
 
+function applyFilters() {
+  refresh();
+  renderBoard();
+}
+
+/* ---------- roadmap kanban ---------- */
+function renderBoard() {
+  if (S.view !== 'kanban' || !S.rm) return;
+  const { rm, L } = S, board = $('board');
+  $('boardHint').textContent = L.kanbanHint;
+  const cols = Object.fromEntries(STATUSES.map(s => [s, []]));
+  rm.nodes.forEach(n => { if (!dimmed(n)) cols[nodeStatus(n)].push(n); });
+  board.innerHTML = STATUSES.map((s, i) => {
+    const cards = cols[s].map(n => {
+      const ph = rm.phaseById[n.phase], tot = n.tasks.length, fin = finishedTasks(n);
+      return `<div class="kcard${S.selected === n.id ? ' selected' : ''}" data-drag data-node="${esc(n.id)}" tabindex="0" style="--flag:${ph.color}">` +
+        `<span class="grip">${ICON.grip}</span>` +
+        `<div class="kc-top">${rm.hasPhases && ph.title ? `<span class="kc-phase">${esc(ph.title)}</span>` : ''}${n.optional ? `<span class="kc-opt">${esc(L.optionalTag)}</span>` : ''}</div>` +
+        `<div class="kc-title">${esc(n.title)}</div>` +
+        (n.time ? `<div class="kc-time">${esc(n.time)}</div>` : '') +
+        (tot ? `<div class="kc-prog"><span class="kc-bar"><i style="width:${Math.round(fin / tot * 100)}%"></i></span><span>${fin}/${tot}</span></div>` : '') +
+        moveButtons(i) + `</div>`;
+    }).join('');
+    return `<div class="kcol dropcol" data-col="${s}"><div class="kcol-h"><span class="kdot k-${s}"></span><span>${esc(L[STATUS_LABEL[s]])}</span><b>${cols[s].length}</b></div><div class="kcol-body">${cards || `<div class="kempty">${esc(L.kanbanEmpty)}</div>`}</div></div>`;
+  }).join('');
+}
+
+function moveButtons(i) {
+  const L = S.L;
+  return `<div class="mv-row"><button type="button" class="mv" data-move="-1" aria-label="${esc(L.moveLeft)}" title="${esc(L.moveLeft)}"${i === 0 ? ' disabled' : ''}>${ICON.left}</button><button type="button" class="mv" data-move="1" aria-label="${esc(L.moveRight)}" title="${esc(L.moveRight)}"${i === STATUSES.length - 1 ? ' disabled' : ''}>${ICON.right}</button></div>`;
+}
+
+function setView(v, persist = true) {
+  S.view = v === 'kanban' ? 'kanban' : 'map';
+  document.body.classList.toggle('view-kanban', S.view === 'kanban');
+  document.querySelectorAll('#viewSeg [data-view]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.view === S.view)));
+  if (persist && S.rm) store.set(KEY.view(S.rm.id), S.view);
+  if (S.view === 'kanban') renderBoard();
+  else if (S.svg) layout();
+}
+
+/* ---------- details panel, with the per-card task kanban ---------- */
 function renderDetail() {
   const { rm, L } = S, box = $('detailContent'), n = rm.byId[S.selected];
   if (!n) {
@@ -376,19 +514,28 @@ function renderDetail() {
     box.innerHTML = `${rm.meta.icon ? `<span class="big">${esc(rm.meta.icon)}</span>` : ''}<strong>${esc(L.placeholderTitle)}</strong><br>${esc(L.placeholderText)}`;
     return;
   }
-  const ph = rm.phaseById[n.phase];
+  const ph = rm.phaseById[n.phase], st = nodeStatus(n), done = st === 'finished';
   const kicker = n.optional ? L.optionalKicker : [n.time, ph.title].filter(Boolean).join(' | ');
-  const done = !!S.progress[n.id];
+  const tasks = n.tasks.length
+    ? `<h3>${esc(L.tasks)} <span class="h3-count">${finishedTasks(n)}/${n.tasks.length}</span></h3><div class="mini" data-dnd-root data-node="${esc(n.id)}">` +
+      STATUSES.map((s, i) => {
+        const items = n.tasks.filter(t => taskStatus(n, t) === s);
+        return `<div class="lane dropcol" data-col="${s}"><div class="lane-h"><span class="kdot k-${s}"></span><span>${esc(L[STATUS_LABEL[s]])}</span><b>${items.length}</b></div><div class="lane-body">` +
+          (items.map(t => `<div class="tcard" data-drag data-task="${esc(t.id)}" tabindex="0"><span class="grip">${ICON.grip}</span><div class="tc-body"><div class="tc-title">${esc(t.title)}</div>${t.note ? `<div class="tc-note">${esc(t.note)}</div>` : ''}</div>${moveButtons(i)}</div>`).join('') || `<div class="kempty">${esc(L.kanbanEmpty)}</div>`) +
+          `</div></div>`;
+      }).join('') + `</div>`
+    : '';
   box.className = '';
   box.innerHTML =
     `<div class="panel-kicker">${esc(kicker)}</div><h2>${esc(n.title)}</h2>` +
+    `<div class="statusbar" role="group" aria-label="${esc(L.status)}">${STATUSES.map(s => `<button type="button" data-status="${s}" class="s-${s}${s === st ? ' on' : ''}" aria-pressed="${s === st}">${esc(L[STATUS_LABEL[s]])}</button>`).join('')}</div>` +
     (n.summary ? `<p>${esc(n.summary)}</p>` : '') +
     (n.topics.length ? `<h3>${esc(L.topics)}</h3><div>${n.topics.map(t => `<span class="topic">${esc(t)}</span>`).join('')}</div>` : '') +
     (n.challenge ? `<h3>${esc(L.challenge)}</h3><div class="mission">${esc(n.challenge)}</div>` : '') +
+    tasks +
     (n.success ? `<h3>${esc(L.success)}</h3><p>${esc(n.success)}</p>` : '') +
     (n.links.length ? `<h3>${esc(L.resources)}</h3>${n.links.map(l => `<a class="resource" target="_blank" rel="noopener noreferrer" href="${esc(safeUrl(l.url))}">${esc(l.title)}</a>`).join('')}` : '') +
     `<button class="complete-action ${done ? 'done' : ''}" id="completeAction">${esc(done ? L.markUndone : L.markDone)}</button><p class="small-note">${esc(L.doneHint)}</p>`;
-  $('completeAction').addEventListener('click', () => toggle(n.id));
 }
 
 /* ---------- interactions ---------- */
@@ -400,7 +547,8 @@ function setDrawer(open) {
 function select(id, scroll = false) {
   S.selected = id;
   refresh(); renderDetail();
-  if (scroll) {
+  document.querySelectorAll('.kcard').forEach(c => c.classList.toggle('selected', c.dataset.node === id));
+  if (scroll && S.view === 'map') {
     const n = S.rm.byId[id], s = S.geo.scale;
     window.scrollTo({ top: Math.max(0, $('mapFrame').getBoundingClientRect().top + window.scrollY + n.y * s - (window.innerWidth < 800 ? 100 : 200)), behavior: 'smooth' });
     const view = $('mapViewport');
@@ -409,16 +557,11 @@ function select(id, scroll = false) {
   setDrawer(true);
 }
 
-function toggle(id) {
-  S.progress[id] = !S.progress[id];
-  store.set(KEY.progress(S.rm.id), JSON.stringify(S.progress));
-  refresh(); renderDetail();
-}
-
 function setPhase(key) {
   S.phase = key;
   document.querySelectorAll('[data-phase]').forEach(b => b.classList.toggle('active', b.dataset.phase === key));
-  refresh();
+  applyFilters();
+  if (S.view !== 'map') return;
   const ph = key === 'all' ? null : S.rm.phaseById[key], first = ph?.nodes[0];
   const target = first ? (ph.flagEl ? parseFloat(ph.flagEl.style.top) : first.y) * S.geo.scale : 0;
   const top = $('mapFrame').getBoundingClientRect().top + window.scrollY + (first ? target - (window.innerWidth < 800 ? 12 : 110) : 0);
@@ -426,13 +569,119 @@ function setPhase(key) {
 }
 
 function next() {
-  const n = S.rm.core.find(x => !S.progress[x.id]) || S.rm.core.at(-1);
+  const n = S.rm.core.find(x => !isDone(x)) || S.rm.core.at(-1);
   select(n.id, true);
+}
+
+/* A card (node or task) that was dropped on, or moved to, another column. */
+function moveCard(el, col) {
+  if (!STATUSES.includes(col)) return;
+  if (el.dataset.task) {
+    const n = S.rm.byId[el.closest('.mini').dataset.node], t = n?.tasks.find(x => x.id === el.dataset.task);
+    if (t) setTaskStatus(n, t, col);
+  } else {
+    const n = S.rm.byId[el.dataset.node];
+    if (n) setNodeStatus(n, col);
+  }
+}
+
+function moveBy(el, dir) {
+  const i = STATUSES.indexOf(el.closest('.dropcol').dataset.col) + dir;
+  if (i >= 0 && i < STATUSES.length) moveCard(el, STATUSES[i]);
+}
+
+/* ---------- drag and drop (pointer events: mouse, pen and touch via the grip) ---------- */
+const dnd = { st: null, suppress: false };
+const DRAG_START = 6, EDGE = 70;
+
+function dndTarget(x, y, root) {
+  const col = document.elementFromPoint(x, y)?.closest('.dropcol');
+  return col && col.closest('[data-dnd-root]') === root ? col : null;
+}
+
+function dndEnd(drop) {
+  const st = dnd.st;
+  dnd.st = null;
+  if (!st) return;
+  st.ghost?.remove();
+  st.el.classList.remove('is-dragging');
+  document.body.classList.remove('dnd-active');
+  document.querySelectorAll('.drop-over').forEach(c => c.classList.remove('drop-over'));
+  if (!st.started) return;
+  dnd.suppress = true;
+  setTimeout(() => { dnd.suppress = false; }, 60);
+  if (drop && st.col && st.col.dataset.col !== st.from) moveCard(st.el, st.col.dataset.col);
+}
+
+function wireDnd() {
+  document.addEventListener('pointerdown', e => {
+    const el = e.target.closest('[data-drag]');
+    if (!el || (e.pointerType === 'mouse' && e.button !== 0) || e.target.closest('button:not(.grip)')) return;
+    if (e.pointerType === 'touch' && !e.target.closest('.grip')) return;   // touch scrolls; the grip drags
+    dnd.st = { el, x: e.clientX, y: e.clientY, started: false, root: el.closest('[data-dnd-root]'), from: el.closest('.dropcol')?.dataset.col, col: null, ghost: null, ox: 0, oy: 0 };
+  });
+  document.addEventListener('pointermove', e => {
+    const st = dnd.st;
+    if (!st) return;
+    if (!st.started) {
+      if (Math.hypot(e.clientX - st.x, e.clientY - st.y) < DRAG_START) return;
+      const r = st.el.getBoundingClientRect();
+      st.started = true; st.ox = st.x - r.left; st.oy = st.y - r.top;
+      st.ghost = st.el.cloneNode(true);
+      st.ghost.classList.add('ghost');
+      st.ghost.style.width = r.width + 'px';
+      document.body.append(st.ghost);
+      st.el.classList.add('is-dragging');
+      document.body.classList.add('dnd-active');
+    }
+    e.preventDefault();
+    st.ghost.style.left = (e.clientX - st.ox) + 'px';
+    st.ghost.style.top = (e.clientY - st.oy) + 'px';
+    const col = dndTarget(e.clientX, e.clientY, st.root);
+    if (col !== st.col) {
+      st.col?.classList.remove('drop-over');
+      col?.classList.add('drop-over');
+      st.col = col;
+    }
+    if (e.clientY < EDGE) window.scrollBy(0, -16); else if (e.clientY > innerHeight - EDGE) window.scrollBy(0, 16);
+    if (st.root.id === 'board') {
+      const r = st.root.getBoundingClientRect();
+      if (e.clientX < r.left + EDGE) st.root.scrollLeft -= 16; else if (e.clientX > r.right - EDGE) st.root.scrollLeft += 16;
+    }
+  }, { passive: false });
+  document.addEventListener('pointerup', () => dndEnd(true));
+  document.addEventListener('pointercancel', () => dndEnd(false));
+  addEventListener('keydown', e => { if (e.key === 'Escape') dndEnd(false); });
+  document.addEventListener('click', e => { if (dnd.suppress) { e.stopPropagation(); e.preventDefault(); } }, true);
+  document.addEventListener('dragstart', e => { if (e.target.closest?.('[data-drag]')) e.preventDefault(); });
+
+  // activation and move buttons, for both kinds of cards
+  const onClick = e => {
+    const mv = e.target.closest('[data-move]');
+    if (mv) { e.stopPropagation(); moveBy(mv.closest('[data-drag]'), Number(mv.dataset.move)); }
+  };
+  $('board').addEventListener('click', e => {
+    onClick(e);
+    if (e.defaultPrevented || e.target.closest('[data-move]')) return;
+    const card = e.target.closest('.kcard');
+    if (card) select(card.dataset.node);
+  });
+  $('board').addEventListener('keydown', e => {
+    const card = e.target.closest('.kcard');
+    if (card && e.target === card && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); select(card.dataset.node); }
+  });
+  $('detailContent').addEventListener('click', e => {
+    onClick(e);
+    const sb = e.target.closest('[data-status]');
+    if (sb) { setNodeStatus(S.rm.byId[S.selected], sb.dataset.status); return; }
+    if (e.target.closest('#completeAction')) toggleDone(S.rm.byId[S.selected]);
+  });
 }
 
 /* ---------- roadmap loading ---------- */
 function showMessage(title, html) {
   S.svg = null;
+  document.body.classList.remove('view-kanban');
   $('map').replaceChildren();
   $('map').style.cssText = 'width:100%;height:420px';
   $('mapFrame').style.cssText = '';
@@ -446,16 +695,17 @@ async function setRoadmap(rm, { local = false } = {}) {
   S.L = { ...S.defaults, ...await loadLabels(rm.meta.language), ...rm.labels };
   S.rm = rm;
   if (local) S.localRm = rm;
-  let p = {};
-  try { p = JSON.parse(store.get(KEY.progress(rm.id)) || '{}') || {}; } catch { /* corrupt entry */ }
-  S.progress = p;
+  loadState(rm);
   S.selected = rm.core[0].id; S.phase = 'all'; S.search = '';
   $('search').value = '';
-  applyChrome(); buildSwitch(); buildMap(); layout(); renderDetail();
+  applyChrome(); buildSwitch(); buildMap(); renderDetail();
+  const saved = store.get(KEY.view(rm.id));
+  setView(saved === 'kanban' || saved === 'map' ? saved : rm.defaultView, false);
+  refresh();
   setDrawer(false);
   $('mapViewport').scrollLeft = 0;
   window.scrollTo({ top: 0 });
-  const relayout = () => { if (S.rm === rm && S.svg) layout(); };
+  const relayout = () => { if (S.rm === rm && S.svg && S.view === 'map') layout(); };
   requestAnimationFrame(relayout);
   document.fonts?.ready.then(relayout);
 }
@@ -484,7 +734,7 @@ async function openLocalFile(file) {
 /* ---------- progress import / export ---------- */
 function exportProgress() {
   const { rm } = S;
-  const blob = new Blob([JSON.stringify({ roadmap: rm.id, title: rm.meta.title, version: 1, exportedAt: new Date().toISOString(), progress: S.progress }, null, 2)], { type: 'application/json' });
+  const blob = new Blob([JSON.stringify({ roadmap: rm.id, title: rm.meta.title, version: 2, exportedAt: new Date().toISOString(), nodes: S.state.nodes, tasks: S.state.tasks }, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob), a = document.createElement('a');
   a.href = url; a.download = `${rm.id}-progress.json`; a.click();
   setTimeout(() => URL.revokeObjectURL(url), 300);
@@ -492,12 +742,18 @@ function exportProgress() {
 
 async function importProgress(file) {
   try {
-    const obj = JSON.parse(await file.text()), p = obj.progress || obj;
-    if (!p || typeof p !== 'object') throw new Error('invalid format');
-    S.progress = {};
-    for (const id of Object.keys(S.rm.byId)) if (typeof p[id] === 'boolean') S.progress[id] = p[id];
-    store.set(KEY.progress(S.rm.id), JSON.stringify(S.progress));
-    refresh(); renderDetail();
+    const obj = JSON.parse(await file.text());
+    if (!obj || typeof obj !== 'object') throw new Error('invalid format');
+    const st = { nodes: {}, tasks: {} };
+    if (obj.version === 2) {
+      for (const [id, v] of Object.entries(obj.nodes || {})) if (S.rm.byId[id] && STATUSES.includes(v)) st.nodes[id] = v;
+      for (const n of S.rm.nodes) for (const t of n.tasks) { const v = obj.tasks?.[taskKey(n, t)]; if (STATUSES.includes(v)) st.tasks[taskKey(n, t)] = v; }
+    } else {
+      const p = obj.progress || obj;   // version 1: { id: true }
+      for (const id of Object.keys(S.rm.byId)) if (p[id] === true) st.nodes[id] = 'finished';
+    }
+    S.state = st;
+    changed();
     alert(S.L.importOk);
   } catch (err) { alert(S.L.importFail + err.message); }
 }
@@ -509,13 +765,15 @@ function wire() {
   $('detailClose').addEventListener('click', () => setDrawer(false));
   $('scrim').addEventListener('click', () => setDrawer(false));
   addEventListener('keydown', e => { if (e.key === 'Escape') setDrawer(false); });
-  $('search').addEventListener('input', e => { S.search = e.target.value.toLocaleLowerCase().trim(); refresh(); });
+  $('search').addEventListener('input', e => { S.search = e.target.value.toLocaleLowerCase().trim(); applyFilters(); });
+  $('viewSeg').addEventListener('click', e => { const b = e.target.closest('[data-view]'); if (b) setView(b.dataset.view); });
   $('exportBtn').addEventListener('click', exportProgress);
   $('importBtn').addEventListener('click', () => $('importFile').click());
   $('importFile').addEventListener('change', async e => { const f = e.target.files?.[0]; if (f) await importProgress(f); e.target.value = ''; });
   $('resetBtn').addEventListener('click', () => {
     if (!confirm(S.L.confirmReset)) return;
-    S.progress = {}; store.set(KEY.progress(S.rm.id), '{}'); refresh(); renderDetail();
+    S.state = { nodes: {}, tasks: {} };
+    changed();
   });
   $('openFileBtn').addEventListener('click', () => $('openFile').click());
   $('themeBtn').addEventListener('click', () => { store.set(THEME_KEY, THEME_NEXT[themeMode()]); applyTheme(); });
@@ -523,7 +781,7 @@ function wire() {
   let frame = 0;
   addEventListener('resize', () => {
     cancelAnimationFrame(frame);
-    frame = requestAnimationFrame(() => { if (S.rm && S.svg) layout(); });
+    frame = requestAnimationFrame(() => { if (S.rm && S.svg && S.view === 'map') layout(); });
   });
   $('openFile').addEventListener('change', async e => { const f = e.target.files?.[0]; if (f) await openLocalFile(f); e.target.value = ''; });
   $('roadmapSelect').addEventListener('change', e => {
@@ -538,6 +796,7 @@ function wire() {
     const f = [...(e.dataTransfer?.files || [])].find(x => /\.json$/i.test(x.name));
     if (f) openLocalFile(f);
   });
+  wireDnd();
 }
 
 async function init() {

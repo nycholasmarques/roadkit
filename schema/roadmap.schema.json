@@ -29,7 +29,8 @@
         },
         "tagline": { "type": "string", "description": "Sidebar text under the logo. \\n = line break." },
         "sidebarNote": { "type": "string", "description": "Sidebar bottom note. \\n = line break." },
-        "footer": { "type": "string" }
+        "footer": { "type": "string" },
+        "defaultView": { "enum": ["map", "kanban"], "description": "View opened first. Default map." }
       }
     },
     "theme": {
@@ -86,6 +87,22 @@
               "required": ["title", "url"],
               "additionalProperties": false,
               "properties": { "title": { "type": "string" }, "url": { "type": "string", "pattern": "^https?://" } }
+            }
+          },
+          "status": { "enum": ["todo", "working", "review", "finished"], "description": "Initial column in the kanban. Default: derived from the tasks, or todo." },
+          "tasks": {
+            "type": "array",
+            "description": "Optional checklist shown as a small kanban inside the card. Finishing the topic finishes every task.",
+            "items": {
+              "type": "object",
+              "required": ["id", "title"],
+              "additionalProperties": false,
+              "properties": {
+                "id": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$" },
+                "title": { "type": "string" },
+                "note": { "type": "string" },
+                "status": { "enum": ["todo", "working", "review", "finished"] }
+              }
             }
           },
           "optional": { "type": "boolean", "description": "Side branch; does not count toward progress." },

@@ -36,6 +36,10 @@
         <p id="subtitle"></p>
       </div>
       <div class="controls">
+        <div class="seg" id="viewSeg" role="group" data-i18n-aria="viewSwitch">
+          <button type="button" data-view="map" aria-pressed="true" data-i18n="viewMap"></button>
+          <button type="button" data-view="kanban" aria-pressed="false" data-i18n="viewKanban"></button>
+        </div>
         <div class="progress-wrap">
           <div class="progress-txt"><span data-i18n="progress"></span><span id="progressText">0 / 0</span></div>
           <div class="bar"><div class="bar-fill" id="barFill"></div></div>
@@ -52,6 +56,10 @@
     </header>
     <section class="bodyline">
       <div class="map-viewport" id="mapViewport"><div class="map-frame" id="mapFrame"><div class="map" id="map"></div></div></div>
+      <section class="board-wrap" id="boardWrap">
+        <p class="board-hint" id="boardHint"></p>
+        <div class="board" id="board" data-dnd-root></div>
+      </section>
       <section class="detail" id="detail" aria-live="polite">
         <button class="detail-close" id="detailClose" data-i18n-aria="close">×</button>
         <div id="detailContent" class="detail-placeholder"></div>
