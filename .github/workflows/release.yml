@@ -1,22 +1,25 @@
 name: Release
 
-# Push a tag like v1.2.3 and this publishes the release, with the notes taken from
-# CHANGELOG.md, a source zip, and a Docker image on ghcr.io.
-# To redo a release for a tag that already exists, run it by hand from the Actions tab.
+# Two ways to publish a version, both end up here:
+#   1. Push a tag like v1.2.3.
+#   2. Actions > Release > Run workflow, typing 1.2.3. It creates the tag v1.2.3 on the branch
+#      you ran it from (or, if that tag already exists, releases it again).
+# The release body is built by .github/scripts/release_notes.py: your CHANGELOG.md section,
+# if there is one, plus every commit since the previous release.
 on:
   push:
     tags: ["v*"]
   workflow_dispatch:
     inputs:
-      tag:
-        description: "Existing tag to release again (for example v1.0.0)"
+      version:
+        description: "Version without the v, for example 1.2.3. Creates the tag v1.2.3 if it does not exist yet."
         required: true
 
 permissions:
   contents: read
 
 env:
-  TAG: ${{ inputs.tag || github.ref_name }}
+  TAG: ${{ github.event_name == 'workflow_dispatch' && format('v{0}', inputs.version) || github.ref_name }}
 
 jobs:
   release:
@@ -31,7 +34,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.tag || github.ref }}
           fetch-depth: 0
 
       - name: Check the tag
@@ -43,6 +45,19 @@ jobs:
           echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
           if [[ "$TAG" == *-* ]]; then echo "prerelease=true" >> "$GITHUB_OUTPUT"; else echo "prerelease=false" >> "$GITHUB_OUTPUT"; fi
 
+      - name: Create the tag (manual runs)
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          if git rev-parse -q --verify "refs/tags/$TAG" >/dev/null; then
+            echo "The tag $TAG already exists: releasing it again."
+            git checkout -q "$TAG"
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git tag -a "$TAG" -m "Roadkit ${TAG#v}"
+            git push origin "refs/tags/$TAG"
+          fi
+
       - name: The tag points at a commit that passed CI
         env:
           GH_TOKEN: ${{ github.token }}
@@ -53,23 +68,8 @@ jobs:
             echo "::warning::No successful 'check' run found for $sha. Releasing anyway, but look at the CI tab."
           fi
 
-      - name: Release notes from CHANGELOG.md
-        id: notes
-        env:
-          VERSION: ${{ steps.v.outputs.version }}
-        run: |
-          python3 - <<'PY'
-          import os, re, pathlib
-          v = os.environ["VERSION"]
-          text = pathlib.Path("CHANGELOG.md").read_text("utf-8")
-          m = re.search(r"^## \[" + re.escape(v) + r"\][^\n]*\n(.*?)(?=^## \[|^\[[^\]]+\]: |\Z)", text, re.S | re.M)
-          body = m.group(1).strip() if m else ""
-          pathlib.Path("notes.md").write_text(body + "\n" if body else "", "utf-8")
-          with open(os.environ["GITHUB_OUTPUT"], "a") as out:
-              out.write(f"found={'true' if body else 'false'}\n")
-          if not body:
-              print(f"::warning::CHANGELOG.md has no section for {v}; the notes will be generated from the commits.")
-          PY
+      - name: Release notes
+        run: python3 .github/scripts/release_notes.py "$TAG" "${{ github.repository }}" > notes.md
 
       - name: Source zip
         env:
@@ -83,8 +83,7 @@ jobs:
         with:
           tag_name: ${{ env.TAG }}
           name: Roadkit ${{ steps.v.outputs.version }}
-          body_path: ${{ steps.notes.outputs.found == 'true' && 'notes.md' || '' }}
-          generate_release_notes: ${{ steps.notes.outputs.found != 'true' }}
+          body_path: notes.md
           prerelease: ${{ steps.v.outputs.prerelease == 'true' }}
           files: |
             dist/roadkit-${{ steps.v.outputs.version }}.zip
@@ -100,7 +99,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.tag || github.ref }}
+          ref: ${{ env.TAG }}
 
       - uses: docker/setup-qemu-action@v3
       - uses: docker/setup-buildx-action@v3
