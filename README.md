@@ -23,7 +23,8 @@ Só precisa de Python 3, sem dependências e sem etapa de build. Abrir o `index.
 - O seletor **Roadmaps** na barra lateral lista os JSONs de `roadmaps/` (os seus, em seções por pasta) e os exemplos de `examples/`, agrupados por idioma.
 - `?r=<id>` na URL abre um roadmap específico, por exemplo `http://localhost:8765/?r=estudar-sql`.
 - Também dá para arrastar um arquivo `.json` para a página, ou usar "Abrir arquivo JSON", para ver um roadmap sem salvá-lo na pasta.
-- O progresso (as marcações nos tópicos) fica no `localStorage` do navegador, separado por roadmap, usando o `id` do JSON. Há botões para exportar e importar o progresso. Como o `localStorage` é por origem, mantenha a mesma porta.
+- O progresso (as marcações nos tópicos) é salvo no servidor, em `data/<id-do-roadmap>.json`, e também no `localStorage` do navegador, que funciona como cache. Assim ele vale em qualquer aparelho que abra a mesma instância, e o navegador continua funcionando se o servidor cair (sincroniza quando voltar). Ao abrir a página e ao voltar para a aba, o navegador busca a versão mais recente; em caso de conflito, vale a alteração mais nova. O progresso que você já tinha no navegador é enviado ao servidor na primeira vez. O botão de ajustes mostra o estado da sincronização. Os botões de exportar e importar continuam existindo.
+- Mudar a pasta de dados: `ROADKIT_DATA=/caminho python3 tools/roadkit.py serve`. Para exigir um token na leitura e na escrita do progresso, defina `ROADKIT_TOKEN`; o navegador pede o token uma vez e o guarda. Roadmaps abertos por arquivo ou arrastados para a página não são sincronizados.
 - O painel de detalhes (barra lateral direita) pode ser redimensionado arrastando a borda esquerda; duplo clique volta ao tamanho padrão. A largura também fica no `localStorage`.
 
 ## Organizar em seções
@@ -108,7 +109,8 @@ docker compose down
 ```
 
 - `./roadmaps` é montada no contêiner em modo somente leitura. Criou ou editou um JSON, recarregue a página, sem rebuild. A imagem leva só o motor e os exemplos.
-- A porta escuta apenas em `127.0.0.1`. Para acessar de outro dispositivo na rede, crie um `.env` com `BIND_ADDR=0.0.0.0` (e `PORT=...` para mudar a porta). O servidor é o `http.server` do Python e não tem autenticação, então não o exponha na internet.
+- A porta escuta apenas em `127.0.0.1`. Para acessar de outro dispositivo na rede, crie um `.env` com `BIND_ADDR=0.0.0.0` (e `PORT=...` para mudar a porta). O servidor é o `http.server` do Python. Se for abrir para a rede, defina `ROADKIT_TOKEN` no `.env` para proteger o progresso (os roadmaps em si continuam públicos), e não o exponha na internet.
+- O progresso fica no volume `roadkit-data` (montado em `/app/data`), então sobrevive a `down`, rebuild e recriação. Só `docker compose down -v` apaga. Backup: `docker run --rm -v roadkit_roadkit-data:/d -v "$PWD":/b alpine tar czf /b/progresso.tgz -C /d .`
 - Mudou algo em `src/` ou `tools/`? Rode o `up -d --build` de novo.
 
 ## Estrutura
@@ -118,6 +120,7 @@ index.html              casca da interface, sem conteúdo
 src/app.js, style.css   lê o JSON, calcula o layout e desenha
 src/labels/             textos da interface por idioma
 roadmaps/               seus roadmaps (cada subpasta vira uma seção)
+data/                   progresso salvo pelo servidor (criada ao usar)
 examples/pt-BR, en/       roadmaps de exemplo, por idioma
 schema/                 JSON Schema
 tools/roadkit.py        serve, check e index

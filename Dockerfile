@@ -12,8 +12,9 @@ COPY --chown=app:app schema ./schema
 COPY --chown=app:app tools ./tools
 COPY --chown=app:app examples ./examples
 # personal roadmaps are NOT baked into the image: compose mounts ./roadmaps here
+# data/ holds the saved progress (compose mounts a volume there, so it survives rebuilds)
 # manifest.json is regenerated at startup and on every load, so /app must stay writable by the app user
-RUN mkdir roadmaps && chown app:app /app roadmaps
+RUN mkdir roadmaps data && chown app:app /app roadmaps data
 
 USER app
 EXPOSE 8765

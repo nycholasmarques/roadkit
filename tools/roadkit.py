@@ -4,14 +4,21 @@
   python3 tools/roadkit.py serve [--port 8765] [--host 127.0.0.1]   serve the UI (manifest.json is rebuilt on every load)
   python3 tools/roadkit.py check [file.json ...]                    validate roadmaps and rebuild manifest.json
   python3 tools/roadkit.py index                                    rebuild manifest.json only
+
+Progress is saved on the server in data/<roadmap-id>.json (ROADKIT_DATA changes the folder).
+Set ROADKIT_TOKEN to require a bearer token for the progress API.
 """
 import argparse
 import functools
 import http.server
+import hmac
 import json
+import os
 import re
 import sys
+import tempfile
 from pathlib import Path
+from urllib.parse import unquote, urlsplit
 
 ROOT = Path(__file__).resolve().parent.parent
 ROADMAPS = ROOT / "roadmaps"
@@ -19,6 +26,10 @@ ROOT_TITLE = "Meus roadmaps"  # section for files placed directly in roadmaps/
 EXAMPLE_GROUPS = [("examples/pt-BR", "Exemplos em português"), ("examples/en", "Examples in English")]
 MANIFEST = ROOT / "manifest.json"
 LABELS_DIR = ROOT / "src" / "labels"
+DATA_DIR = Path(os.environ.get("ROADKIT_DATA") or ROOT / "data")  # saved progress, one JSON per roadmap
+TOKEN = os.environ.get("ROADKIT_TOKEN", "")                       # optional: require it for the progress API
+STATE_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$")
+MAX_STATE_BYTES = 1_000_000
 
 SLUG = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 HEX = re.compile(r"^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$")
@@ -317,18 +328,120 @@ def cmd_check(args):
     return 1 if failed else 0
 
 
+def valid_state(obj):
+    """Progress payload: {"updatedAt": ms, "state": {"nodes": {id: status}, "tasks": {key: status}}}."""
+    if not isinstance(obj, dict) or not isinstance(obj.get("updatedAt"), (int, float)):
+        return False
+    st = obj.get("state")
+    if not isinstance(st, dict):
+        return False
+    for part in ("nodes", "tasks"):
+        m = st.get(part, {})
+        if not isinstance(m, dict) or any(not isinstance(k, str) or v not in STATUSES for k, v in m.items()):
+            return False
+    return True
+
+
 class Handler(http.server.SimpleHTTPRequestHandler):
     def do_GET(self):
         path = self.path.split("?")[0]
-        if path.startswith("/.git") or path.startswith("/tools"):
+        if path.startswith("/api/"):
+            return self.state_get(path)
+        if path.startswith(("/.git", "/tools", "/data")):
             return self.send_error(404)
         if path == "/manifest.json":
             build_manifest()
         super().do_GET()
 
+    def do_PUT(self):
+        path = self.path.split("?")[0]
+        if path.startswith("/api/"):
+            return self.state_put(path)
+        self.send_error(405)
+
     def end_headers(self):
         self.send_header("Cache-Control", "no-store")
         super().end_headers()
+
+    # ---- progress API: GET/PUT /api/state/<roadmap-id> ----
+    def reply(self, code, obj=None):
+        body = b"" if obj is None else json.dumps(obj, ensure_ascii=False).encode("utf-8")
+        self.send_response(code)
+        if body:
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        if body and self.command != "HEAD":
+            self.wfile.write(body)
+
+    def api_allowed(self):
+        """Same-origin only (no CORS), plus the optional bearer token. Replies and returns False when refused."""
+        origin = self.headers.get("Origin")
+        if origin and urlsplit(origin).netloc != self.headers.get("Host"):
+            self.reply(403, {"error": "cross-origin request refused"})
+            return False
+        if TOKEN:
+            sent = self.headers.get("Authorization", "")
+            if not hmac.compare_digest(sent.encode(), f"Bearer {TOKEN}".encode()):
+                self.reply(401, {"error": "token required"})
+                return False
+        return True
+
+    def state_file(self, path):
+        m = re.fullmatch(r"/api/state/([^/]+)", path)
+        rid = unquote(m.group(1)) if m else ""
+        return DATA_DIR / f"{rid}.json" if STATE_ID.match(rid) else None
+
+    def state_get(self, path):
+        f = self.state_file(path)
+        if f is None:
+            return self.reply(404, {"error": "unknown endpoint"})
+        if not self.api_allowed():
+            return
+        try:
+            self.reply(200, json.loads(f.read_text("utf-8")))
+        except FileNotFoundError:
+            self.reply(204)
+        except (OSError, ValueError):
+            self.reply(500, {"error": "saved progress is unreadable"})
+
+    def state_put(self, path):
+        f = self.state_file(path)
+        if f is None:
+            return self.reply(404, {"error": "unknown endpoint"})
+        if not self.api_allowed():
+            return
+        if not (self.headers.get("Content-Type") or "").startswith("application/json"):
+            return self.reply(415, {"error": "send application/json"})
+        try:
+            size = int(self.headers.get("Content-Length") or 0)
+        except ValueError:
+            size = -1
+        if not 0 < size <= MAX_STATE_BYTES:
+            return self.reply(413, {"error": "bad or oversized body"})
+        try:
+            incoming = json.loads(self.rfile.read(size))
+        except ValueError:
+            return self.reply(400, {"error": "invalid JSON"})
+        if not valid_state(incoming):
+            return self.reply(400, {"error": "invalid progress payload"})
+        try:
+            current = json.loads(f.read_text("utf-8"))
+        except (OSError, ValueError):
+            current = None
+        if valid_state(current) and current["updatedAt"] > incoming["updatedAt"]:
+            return self.reply(409, current)  # the server already has newer progress; the client adopts it
+        out = {"updatedAt": incoming["updatedAt"], "state": {
+            "nodes": incoming["state"].get("nodes", {}), "tasks": incoming["state"].get("tasks", {})}}
+        try:
+            DATA_DIR.mkdir(parents=True, exist_ok=True)
+            fd, tmp = tempfile.mkstemp(dir=DATA_DIR, prefix=".tmp-", suffix=".json")
+            with os.fdopen(fd, "w", encoding="utf-8") as fh:
+                json.dump(out, fh, ensure_ascii=False, indent=2)
+            os.replace(tmp, f)  # atomic: a crash never leaves a half-written file
+        except OSError as e:
+            return self.reply(500, {"error": f"could not save: {e.strerror}"})
+        self.reply(200, out)
 
 
 def cmd_serve(args):
@@ -336,6 +449,7 @@ def cmd_serve(args):
     handler = functools.partial(Handler, directory=str(ROOT))
     with http.server.ThreadingHTTPServer((args.host, args.port), handler) as srv:
         print(f"Roadkit: http://localhost:{args.port}  (Ctrl+C to stop)")
+        print(f"progress is saved in {DATA_DIR}" + ("  (API token required)" if TOKEN else ""))
         try:
             srv.serve_forever()
         except KeyboardInterrupt:

@@ -13,8 +13,16 @@ services:
     volumes:
       # edit/add JSONs on the host and just reload the page: no rebuild needed
       - ./roadmaps:/app/roadmaps:ro
+      # saved progress (one JSON per roadmap); a named volume keeps it across rebuilds and recreates
+      - roadkit-data:/app/data
+    environment:
+      # optional: require this token to read/write progress (set it in .env when exposing on your LAN)
+      ROADKIT_TOKEN: ${ROADKIT_TOKEN:-}
     security_opt:
       - no-new-privileges:true
     cap_drop:
       - ALL
     mem_limit: 128m
+
+volumes:
+  roadkit-data:

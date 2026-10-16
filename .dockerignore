@@ -7,3 +7,4 @@ LICENSE
 Dockerfile
 compose.yaml
 **/__pycache__
+data

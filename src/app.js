@@ -7,8 +7,11 @@ const NS = 'http://www.w3.org/2000/svg';
 const KEY = {
   state: id => `roadkit:v2:state:${id}`,
   progress: id => `roadkit:v1:progress:${id}`, // legacy, read once to migrate
+  ts: id => `roadkit:v2:ts:${id}`,           // when the saved progress last changed (ms), used to sync with the server
+  backup: id => `roadkit:v2:backup:${id}`,   // local progress replaced by the server's, kept just in case
   view: id => `roadkit:v1:view:${id}`,
   last: 'roadkit:v1:last',
+  token: 'roadkit:v1:token',
 };
 const G = { spineX: 420, nodeW: 290, optX: 800, optW: 255, top: 110, gap: 56, msGap: 40, optGap: 14, mapW: 1135, msW: 210 };
 const NARROW_BELOW = 860;   // map viewport width (px) under which the compact vertical layout is used
@@ -195,13 +198,22 @@ const isDone = n => nodeStatus(n) === 'finished';
 const finishedTasks = n => n.tasks.filter(t => taskStatus(n, t) === 'finished').length;
 const phaseDone = ph => ph.nodes.length > 0 && ph.nodes.every(isDone);
 
+const emptyState = () => ({ nodes: {}, tasks: {} });
+const hasProgress = st => Object.keys(st.nodes).length > 0 || Object.keys(st.tasks).length > 0;
+
+/* Keeps only what still exists in the roadmap and has a valid status. */
+function cleanState(rm, saved) {
+  const st = emptyState();
+  for (const [id, v] of Object.entries(saved?.nodes || {})) if (rm.byId[id] && STATUSES.includes(v)) st.nodes[id] = v;
+  for (const n of rm.nodes) for (const t of n.tasks) { const v = saved?.tasks?.[taskKey(n, t)]; if (STATUSES.includes(v)) st.tasks[taskKey(n, t)] = v; }
+  return st;
+}
+
 function loadState(rm) {
-  const st = { nodes: {}, tasks: {} };
-  let saved = null;
+  let st = emptyState(), saved = null;
   try { saved = JSON.parse(store.get(KEY.state(rm.id)) || 'null'); } catch { /* corrupt entry */ }
   if (saved && typeof saved === 'object') {
-    for (const [id, v] of Object.entries(saved.nodes || {})) if (rm.byId[id] && STATUSES.includes(v)) st.nodes[id] = v;
-    for (const n of rm.nodes) for (const t of n.tasks) { const v = saved.tasks?.[taskKey(n, t)]; if (STATUSES.includes(v)) st.tasks[taskKey(n, t)] = v; }
+    st = cleanState(rm, saved);
   } else {
     try {
       const old = JSON.parse(store.get(KEY.progress(rm.id)) || '{}') || {};
@@ -209,9 +221,13 @@ function loadState(rm) {
     } catch { /* ignore */ }
   }
   S.state = st;
+  S.ts = Number(store.get(KEY.ts(rm.id))) || 0;
 }
 
-const saveState = () => store.set(KEY.state(S.rm.id), JSON.stringify(S.state));
+function saveState() {
+  store.set(KEY.state(S.rm.id), JSON.stringify(S.state));
+  store.set(KEY.ts(S.rm.id), String(S.ts));
+}
 
 const deriveNode = n => deriveStatus(n.tasks.map(t => taskStatus(n, t)));
 
@@ -234,9 +250,92 @@ function setNodeStatus(n, st) {
 const toggleDone = n => setNodeStatus(n, isDone(n) ? 'todo' : 'finished');
 
 function changed() {
+  S.ts = Date.now();
+  saveState();
+  refresh(); renderBoard(); renderDetail();
+  schedulePush();
+}
+
+/* ---------- sync: progress also lives on the server (data/<id>.json), localStorage is the offline cache ---------- */
+const SYNC_ID = /^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$/;
+const sync = { timer: 0, chain: Promise.resolve(), api: true, asked: false };
+
+function setSyncStatus(kind) {
+  sync.status = kind;
+  const el = $('syncStatus');
+  if (!el) return;
+  el.dataset.kind = kind;
+  el.textContent = S.L?.['sync_' + kind] ?? '';
+}
+
+const syncEnabled = () => !!S.rm && !S.isLocal && sync.api && SYNC_ID.test(S.rm.id);
+
+async function api(method, rm, body, keepalive = false) {
+  const call = () => fetch(`api/state/${encodeURIComponent(rm.id)}`, {
+    method, keepalive, cache: 'no-store',
+    headers: { ...(body ? { 'Content-Type': 'application/json' } : {}), ...(store.get(KEY.token) ? { Authorization: `Bearer ${store.get(KEY.token)}` } : {}) },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  let r = await call();
+  if (r.status === 401 && !sync.asked) {
+    sync.asked = true;   // ask once per page load
+    const t = prompt(S.L.syncTokenPrompt);
+    if (t) { store.set(KEY.token, t.trim()); r = await call(); }
+  }
+  return r;
+}
+
+/* Replaces the local progress with the server's (keeping a backup of unsynced local data). */
+function adopt(rm, remote) {
+  if (S.rm !== rm) return;
+  if (S.ts === 0 && hasProgress(S.state)) store.set(KEY.backup(rm.id), JSON.stringify(S.state));
+  S.state = cleanState(rm, remote.state);
+  S.ts = remote.updatedAt;
   saveState();
   refresh(); renderBoard(); renderDetail();
 }
+
+function schedulePush() {
+  if (!syncEnabled()) return setSyncStatus('local');
+  clearTimeout(sync.timer);
+  sync.timer = setTimeout(() => { sync.timer = 0; push(); }, 500);
+}
+
+function queue(fn) { return (sync.chain = sync.chain.then(fn, fn)); }
+
+const push = (keepalive = false) => queue(async () => {
+  const rm = S.rm;
+  if (!syncEnabled()) return;
+  if (!S.ts) { S.ts = Date.now(); saveState(); }   // progress saved before sync existed: give it a date
+  try {
+    const r = await api('PUT', rm, { updatedAt: S.ts, state: S.state }, keepalive);
+    if (r.status === 409) { adopt(rm, await r.json()); setSyncStatus('on'); }
+    else if (r.ok) setSyncStatus('on');
+    else if (r.status === 401) setSyncStatus('auth');
+    else if ([404, 405, 501].includes(r.status)) { sync.api = false; setSyncStatus('local'); }
+    else setSyncStatus('offline');
+  } catch { setSyncStatus('offline'); }
+});
+
+const pull = () => queue(async () => {
+  const rm = S.rm;
+  if (!syncEnabled() || sync.timer) return;   // a pending push will reconcile anyway
+  try {
+    const r = await api('GET', rm);
+    if (S.rm !== rm) return;
+    if (r.status === 401) return setSyncStatus('auth');
+    if ([404, 405, 501].includes(r.status)) { sync.api = false; return setSyncStatus('local'); }
+    if (r.status === 204) {   // nothing on the server yet: send what this browser has
+      if (hasProgress(S.state)) { setSyncStatus('syncing'); push(); } else setSyncStatus('on');
+      return;
+    }
+    if (!r.ok) return setSyncStatus('offline');
+    const remote = await r.json();
+    if (remote.updatedAt > S.ts) adopt(rm, remote);
+    if (remote.updatedAt < S.ts) { setSyncStatus('syncing'); push(); return; }
+    setSyncStatus('on');
+  } catch { setSyncStatus('offline'); }
+});
 
 /* ---------- labels / chrome ---------- */
 async function loadLabels(lang) {
@@ -823,8 +922,11 @@ function showMessage(title, html) {
 async function setRoadmap(rm, { local = false } = {}) {
   S.L = { ...S.defaults, ...await loadLabels(rm.meta.language), ...rm.labels };
   S.rm = rm;
+  S.isLocal = local;
   if (local) S.localRm = rm;
   loadState(rm);
+  clearTimeout(sync.timer); sync.timer = 0;
+  setSyncStatus('local');
   S.warnOpen = new Set();
   S.selected = rm.core[0].id; S.phase = 'all'; S.search = '';
   $('search').value = '';
@@ -838,6 +940,7 @@ async function setRoadmap(rm, { local = false } = {}) {
   const relayout = () => { if (S.rm === rm && S.svg && S.view === 'map') layout(); };
   requestAnimationFrame(relayout);
   document.fonts?.ready.then(relayout);
+  pull();
 }
 
 async function openEntry(entry) {
@@ -930,6 +1033,11 @@ function wire() {
     const f = [...(e.dataTransfer?.files || [])].find(x => /\.json$/i.test(x.name));
     if (f) openLocalFile(f);
   });
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') { if (sync.timer) { clearTimeout(sync.timer); sync.timer = 0; push(true); } }
+    else pull();
+  });
+  addEventListener('online', () => { if (sync.status === 'offline') pull(); });
   wireDnd();
   wireDetailResize();
 }
