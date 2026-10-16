@@ -637,6 +637,7 @@ function buildJson(model, base, preview = false) {
     if (links.length) o.links = links; else delete o.links;
     return o;
   });
+  if (preview) for (const p of phases) if (!nodes.some(n => n.phase === p.id)) nodes.push({ id: `ghost-${p.id}`, title: S.L.edGhostTitle, phase: p.id, summary: S.L.edGhostSummary });   // a phase with no topics yet still shows up
   if (phases.length) { const idx = id => phases.findIndex(p => p.id === id); nodes = nodes.map((n, i) => [n, i]).sort((a, b) => idx(a[0].phase) - idx(b[0].phase) || a[1] - b[1]).map(x => x[0]); }
   const id = base?.id || (preview ? 'draft' : fresh(used, model.title, 'roadmap'));
   const { phases: _p, nodes: _n, ...rest } = base || {};
@@ -725,6 +726,7 @@ async function rebuildPreview(first = false) {
     return;
   }
   await setRoadmap(rm, { preview: true, keep: !first && !!S.rm && S.preview });
+  rm.nodes.filter(n => n.id.startsWith('ghost-')).forEach(n => n.el.classList.add('ghost'));
 }
 
 let previewTimer = 0;
@@ -1062,9 +1064,10 @@ function refresh() {
   });
   rm.phases.forEach(ph => ph.msEl?.classList.toggle('reached', phaseDone(ph)));
   S.links.forEach(l => l.el.classList.toggle('done', !!(l.a.isDone() && l.b.isDone())));
-  const qty = rm.core.filter(isDone).length;
-  $('progressText').textContent = `${qty} / ${rm.core.length}`;
-  $('barFill').style.width = (qty / rm.core.length * 100) + '%';
+  const real = S.preview ? rm.core.filter(n => !n.id.startsWith('ghost-')) : rm.core;   // editor placeholders don't count
+  const qty = real.filter(isDone).length;
+  $('progressText').textContent = `${qty} / ${real.length}`;
+  $('barFill').style.width = (real.length ? qty / real.length * 100 : 0) + '%';
   updatePickerBtn();
 }
 
