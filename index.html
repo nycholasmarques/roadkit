@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#f6f7fb">
   <title>Roadkit</title>
-  <script>try{var m=localStorage.getItem('roadkit:v1:theme');document.documentElement.dataset.theme=m==='dark'||(m!=='light'&&matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light';var f={small:.95,normal:1.1,large:1.25,xlarge:1.4}[localStorage.getItem('roadkit:v1:fs')];if(f)document.documentElement.style.setProperty('--fs',f);if(localStorage.getItem('roadkit:v1:side')==='collapsed')document.documentElement.dataset.side='collapsed';var w=parseInt(localStorage.getItem('roadkit:v1:sidew'),10);if(w)document.documentElement.style.setProperty('--side-open',Math.min(Math.max(w,200),420)+'px')}catch(e){}</script>
+  <script>try{var m=localStorage.getItem('roadkit:v1:theme'),s=m==='dark'||(m!=='light'&&matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light',p=localStorage.getItem('roadkit:v1:palette-'+s),k={light:['light','mist','paper'],dark:['night','graphite','plum','black']}[s];document.documentElement.dataset.theme=s;document.documentElement.dataset.palette=k.indexOf(p)>=0?p:k[0];var f={small:.95,normal:1.1,large:1.25,xlarge:1.4}[localStorage.getItem('roadkit:v1:fs')];if(f)document.documentElement.style.setProperty('--fs',f);if(localStorage.getItem('roadkit:v1:side')==='collapsed')document.documentElement.dataset.side='collapsed';var w=parseInt(localStorage.getItem('roadkit:v1:sidew'),10);if(w)document.documentElement.style.setProperty('--side-open',Math.min(Math.max(w,200),420)+'px')}catch(e){}</script>
   <link rel="stylesheet" href="src/style.css">
 </head>
 <body>
@@ -93,6 +93,9 @@
               <button type="button" data-theme-mode="light" data-i18n="themeLight"></button>
               <button type="button" data-theme-mode="dark" data-i18n="themeDark"></button>
             </div></div>
+          <div class="set-row" id="paletteRow"><span class="set-label" data-i18n="palette"></span>
+            <div class="pal-group" data-scheme="light"><span class="pal-sub" data-i18n="paletteLight"></span><div class="pal-grid"></div></div>
+            <div class="pal-group" data-scheme="dark"><span class="pal-sub" data-i18n="paletteDark"></span><div class="pal-grid"></div></div></div>
           <div class="set-row"><span class="set-label" data-i18n="fontSize"></span>
             <div class="seg small" id="fontSeg">
               <button type="button" data-fs="small" class="fs-s" data-i18n="fontSmall"></button>

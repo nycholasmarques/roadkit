@@ -48,7 +48,21 @@ At the bottom of the picker is **Manage roadmaps**, the full list. From there yo
 
 ## Settings
 
-The button in the top right corner opens the settings: theme (light, dark or auto), text size, interface language and the skipped topic tolerance. With the language on "Automatic", it follows the `meta.language` of the open roadmap. Picking a fixed language applies to every roadmap.
+The button in the top right corner opens the settings: mode (light, dark or auto), theme, text size, interface language and the skipped topic tolerance. With the language on "Automatic", it follows the `meta.language` of the open roadmap. Picking a fixed language applies to every roadmap.
+
+The mode says whether the screen is light or dark, and the theme picks the colors for each. There are three light themes and four dark ones:
+
+| Theme | Mode | What it is for |
+|---|---|---|
+| Light | light | the default, white with a hint of blue |
+| Mist | light | soft gray: less glare on large monitors |
+| Paper | light | warm sepia, easy on the eyes for long reading |
+| Night | dark | the default, dark with a blue tint |
+| Graphite | dark | neutral dark, no blue tint |
+| Plum | dark | dark with a touch of violet |
+| Black | dark | true black, for OLED screens and dark rooms |
+
+In auto mode both rows show up: you pick one theme for when the system is light and another for when it is dark. In every theme green still means "done" and amber "review", and the roadmap's own colors (`theme.accent`) still apply. Your choice is saved in the browser.
 
 The last line of the settings shows where progress is being saved: on the server or only in this browser.
 

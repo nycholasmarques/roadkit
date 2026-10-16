@@ -87,7 +87,7 @@ O botão **Criar com IA** monta um prompt a partir do que você quer aprender. V
 
 ### Organizar
 
-Cada subpasta de `roadmaps/` vira uma seção no seletor, e o seletor mostra o andamento de cada roadmap. Dá para ocultar, duplicar, exportar com o progresso num `.zip` e importar de volta. As barras laterais se ajustam ou recolhem, e o tema é claro, escuro ou automático.
+Cada subpasta de `roadmaps/` vira uma seção no seletor, e o seletor mostra o andamento de cada roadmap. Dá para ocultar, duplicar, exportar com o progresso num `.zip` e importar de volta. As barras laterais se ajustam ou recolhem, e há sete temas, três claros e quatro escuros, que podem seguir o modo claro ou escuro do sistema.
 
 ## Seus roadmaps
 

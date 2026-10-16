@@ -48,7 +48,21 @@ No rodapé do seletor está **Gerenciar roadmaps**, a lista completa. Dali dá p
 
 ## Ajustes
 
-O botão no canto superior direito abre os ajustes: tema (claro, escuro ou automático), tamanho do texto, idioma da interface e a tolerância do aviso de pulados. O idioma em "automático" segue o `meta.language` do roadmap aberto. Escolher um idioma fixo vale para qualquer roadmap.
+O botão no canto superior direito abre os ajustes: modo (claro, escuro ou automático), tema, tamanho do texto, idioma da interface e a tolerância do aviso de pulados. O idioma em "automático" segue o `meta.language` do roadmap aberto. Escolher um idioma fixo vale para qualquer roadmap.
+
+O modo diz se a tela é clara ou escura, e o tema escolhe as cores de cada um. Há três temas claros e quatro escuros:
+
+| Tema | Modo | Para quê |
+|---|---|---|
+| Claro | claro | o padrão, branco e azulado |
+| Névoa | claro | cinza suave: menos brilho em monitores grandes |
+| Papel | claro | sépia quente, bom para ler por muito tempo |
+| Noite | escuro | o padrão, escuro puxado para o azul |
+| Grafite | escuro | escuro neutro, sem tom de azul |
+| Ameixa | escuro | escuro com um toque de violeta |
+| Breu | escuro | preto de verdade, para telas OLED e salas escuras |
+
+No modo automático aparecem as duas fileiras: você escolhe um tema para quando o sistema está claro e outro para quando está escuro. Em todos eles o verde continua sendo "concluído" e o amarelo, "em revisão", e as cores do roadmap (`theme.accent`) continuam valendo. A escolha fica salva no navegador.
 
 Na última linha dos ajustes aparece o estado do salvamento: se o progresso está sendo guardado no servidor ou só neste navegador.
 

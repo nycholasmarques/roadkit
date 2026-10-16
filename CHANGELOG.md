@@ -4,6 +4,14 @@ Todas as mudanças relevantes ficam aqui, da mais nova para a mais antiga. O for
 
 Cada release no GitHub também lista automaticamente os commits desde a versão anterior; este arquivo é onde ficam os destaques escritos à mão. Para publicar uma versão, veja [`docs/publicando-versoes.md`](docs/publicando-versoes.md).
 
+## [1.1.0] - não lançada
+
+### Temas
+- Sete temas no lugar de só claro e escuro: Claro, Névoa e Papel no modo claro; Noite, Grafite, Ameixa e Breu no modo escuro.
+- Os ajustes separam o modo (claro, escuro ou automático) do tema, com uma prévia de cada um. No automático dá para escolher um tema para cada modo do sistema.
+- Névoa e Breu pensados para telas grandes: menos brilho no claro, preto de verdade no escuro.
+- Quem já usava o Roadkit continua com o mesmo visual: os temas padrão são o Claro e o Noite de antes.
+
 ## [1.0.0] - 2026-10-16
 
 A primeira versão estável. O formato do JSON dos roadmaps e a API do servidor passam a seguir o versionamento semântico: mudanças que quebrem roadmaps existentes só entram numa versão 2.
@@ -32,4 +40,5 @@ A primeira versão estável. O formato do JSON dos roadmaps e a API do servidor 
 - Imagem Docker com volume para os dados e a pasta `roadmaps/` somente leitura.
 - Documentação em `docs/` e GIFs gerados por um script.
 
+[1.1.0]: https://github.com/nycholasmarques/roadkit/releases/tag/v1.1.0
 [1.0.0]: https://github.com/nycholasmarques/roadkit/releases/tag/v1.0.0

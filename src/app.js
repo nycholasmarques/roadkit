@@ -65,20 +65,53 @@ const ICON = {
   grip: '<svg viewBox="0 0 8 14" width="8" height="14" aria-hidden="true"><g fill="currentColor"><circle cx="2" cy="2" r="1.1"/><circle cx="6" cy="2" r="1.1"/><circle cx="2" cy="7" r="1.1"/><circle cx="6" cy="7" r="1.1"/><circle cx="2" cy="12" r="1.1"/><circle cx="6" cy="12" r="1.1"/></g></svg>',
 };
 
-/* ---------- theme: auto (follows the system), light or dark ---------- */
+/* ---------- theme: a mode (auto follows the system, light or dark) and a palette for each scheme ---------- */
 const THEME_KEY = 'roadkit:v1:theme', LANG_KEY = 'roadkit:v1:lang';
 const darkQuery = matchMedia('(prefers-color-scheme: dark)');
 const themeMode = () => { const m = store.get(THEME_KEY); return m === 'light' || m === 'dark' ? m : 'auto'; };
+/* The first palette of each scheme is the default. Colors here only paint the swatches and the browser chrome:
+   the real palettes are in style.css, and index.html repeats the ids so the first paint has no flash. */
+const PALETTES = {
+  light: [
+    { id: 'light', bg: '#f6f7fb', paper: '#ffffff', node: '#394454' },
+    { id: 'mist', bg: '#e6e9ee', paper: '#f1f3f6', node: '#394454' },
+    { id: 'paper', bg: '#f4efe6', paper: '#fbf8f2', node: '#4a3f30' },
+  ],
+  dark: [
+    { id: 'night', bg: '#0e131b', paper: '#161d28', node: '#6b788c' },
+    { id: 'graphite', bg: '#151515', paper: '#1e1e1e', node: '#767676' },
+    { id: 'plum', bg: '#141119', paper: '#1c1823', node: '#7a6e8c' },
+    { id: 'black', bg: '#000000', paper: '#0b0b0d', node: '#5e5e68' },
+  ],
+};
+const paletteKey = scheme => `roadkit:v1:palette-${scheme}`;
+const palette = scheme => PALETTES[scheme].find(p => p.id === store.get(paletteKey(scheme))) || PALETTES[scheme][0];
+const scheme = () => { const m = themeMode(); return m === 'dark' || (m === 'auto' && darkQuery.matches) ? 'dark' : 'light'; };
+
+function renderPalettes(L) {
+  for (const group of document.querySelectorAll('#paletteRow .pal-group')) {
+    group.querySelector('.pal-grid').innerHTML = PALETTES[group.dataset.scheme].map(p => {
+      const name = esc(L[`palette_${p.id}`] || p.id);
+      return `<button type="button" class="pal" data-pal="${p.id}" data-scheme="${group.dataset.scheme}" title="${name}">` +
+        `<span class="pal-sw" style="--b:${p.bg};--p:${p.paper};--n:${p.node}"></span><span class="pal-name">${name}</span></button>`;
+    }).join('');
+  }
+  updateThemeBtn();
+}
 
 function updateThemeBtn() {
   const m = themeMode();
   document.querySelectorAll('#themeSeg [data-theme-mode]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.themeMode === m)));
+  // auto shows both groups (one for when the system is light, one for dark); a fixed mode shows its own
+  document.querySelectorAll('#paletteRow .pal-group').forEach(g => { g.hidden = m !== 'auto' && g.dataset.scheme !== m; });
+  document.querySelectorAll('#paletteRow .pal').forEach(b => b.setAttribute('aria-pressed', String(palette(b.dataset.scheme).id === b.dataset.pal)));
 }
 
 function applyTheme() {
-  const m = themeMode(), dark = m === 'dark' || (m === 'auto' && darkQuery.matches);
-  document.documentElement.dataset.theme = dark ? 'dark' : 'light';
-  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', dark ? '#0e131b' : '#f6f7fb');
+  const s = scheme(), p = palette(s);
+  document.documentElement.dataset.theme = s;
+  document.documentElement.dataset.palette = p.id;
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', p.bg);
   updateThemeBtn();
 }
 
@@ -401,7 +434,7 @@ function applyI18n() {
   document.querySelectorAll('[data-i18n-placeholder]').forEach(el => { el.placeholder = L[el.dataset.i18nPlaceholder] ?? ''; });
   document.querySelectorAll('[data-i18n-title]').forEach(el => { el.title = L[el.dataset.i18nTitle] ?? ''; });
   document.querySelectorAll('[data-i18n-aria]').forEach(el => el.setAttribute('aria-label', L[el.dataset.i18nAria] ?? ''));
-  updateThemeBtn();
+  renderPalettes(L);
   if (S.manifest) buildLangSel();
   dispatchEvent(new Event('labelschange'));
 }
@@ -1875,6 +1908,7 @@ function wire() {
   $('settingsBtn').addEventListener('click', () => setSettingsOpen($('settings').hidden));
   addEventListener('keydown', e => { if (e.key === 'Escape') setSettingsOpen(false); });
   $('themeSeg').addEventListener('click', e => { const b = e.target.closest('[data-theme-mode]'); if (b) { store.set(THEME_KEY, b.dataset.themeMode); applyTheme(); } });
+  $('paletteRow').addEventListener('click', e => { const b = e.target.closest('[data-pal]'); if (b) { store.set(paletteKey(b.dataset.scheme), b.dataset.pal); applyTheme(); } });
   $('fontSeg').addEventListener('click', e => { const b = e.target.closest('[data-fs]'); if (b) { store.set(FS_KEY, b.dataset.fs); applyFont(); metricsChanged(); } });
   $('langSel').addEventListener('change', async e => {
     store.set(LANG_KEY, e.target.value);
