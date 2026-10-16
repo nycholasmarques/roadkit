@@ -57,6 +57,18 @@ Some limits, to be clear about what this is and what it is not:
 - Without HTTPS, the token travels in plain text on your network. On a home network the risk is small, but it is worth knowing.
 - Writes are only accepted from pages served by the server itself: requests coming from another site are refused. That protects you from some random page trying to change your progress while Roadkit is open.
 
+## Trying a branch before it reaches main
+
+If you keep an always-on instance on 8765 (built from `main` or from a release), you do not see the features that are still on a branch. [`compose.preview.yaml`](../../compose.preview.yaml) starts a second instance on **8766**, with the code of the branch you have checked out and the examples, so you can try things without touching the other one:
+
+```bash
+git switch feat/my-feature
+docker compose -f compose.preview.yaml up -d --build     # http://localhost:8766
+docker compose -f compose.preview.yaml down -v           # stop it and drop the test progress
+```
+
+It has its own name, image, container and volume, so progress checked off there never mixes with the real instance. Switched branches? Run the same `up -d --build` again. Another port: `PREVIEW_PORT=8767`.
+
 ## Without Docker
 
 ```bash
