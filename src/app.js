@@ -65,7 +65,7 @@ const ICON = {
 };
 
 /* ---------- theme: auto (follows the system), light or dark ---------- */
-const THEME_KEY = 'roadkit:v1:theme';
+const THEME_KEY = 'roadkit:v1:theme', LANG_KEY = 'roadkit:v1:lang';
 const darkQuery = matchMedia('(prefers-color-scheme: dark)');
 const themeMode = () => { const m = store.get(THEME_KEY); return m === 'light' || m === 'dark' ? m : 'auto'; };
 
@@ -83,6 +83,8 @@ function applyTheme() {
 
 /* ---------- settings: text size and skipped-topic warning ---------- */
 const fontName = () => { const v = store.get(FS_KEY); return FONT_SCALE[v] ? v : 'normal'; };
+const langSetting = () => { const v = store.get(LANG_KEY); return v && (S.manifest?.languages || []).includes(v) ? v : 'auto'; };
+const uiLang = rm => (langSetting() !== 'auto' ? langSetting() : rm?.meta.language) || 'pt-BR';
 const skipSetting = () => { const v = store.get(SKIP_KEY); return v === 'off' || v === '3' || v === '5' ? v : '0'; };
 const skipTolerance = () => (skipSetting() === 'off' ? Infinity : Number(skipSetting()));
 const toolbarHeight = () => $('toolbar').offsetHeight;
@@ -227,6 +229,7 @@ function loadState(rm) {
 }
 
 function saveState() {
+  if (S.preview) return;   // editor drafts are never stored
   store.set(KEY.state(S.rm.id), JSON.stringify(S.state));
   store.set(KEY.ts(S.rm.id), String(S.ts));
 }
@@ -270,7 +273,7 @@ function setSyncStatus(kind) {
   el.textContent = S.L?.['sync_' + kind] ?? '';
 }
 
-const syncEnabled = () => !!S.rm && !S.isLocal && sync.api && SYNC_ID.test(S.rm.id);
+const syncEnabled = () => !!S.rm && !S.isLocal && !S.preview && sync.api && SYNC_ID.test(S.rm.id);
 
 async function apiFetch(method, path, body, keepalive = false) {
   const call = () => fetch(path, {
@@ -348,6 +351,16 @@ async function loadLabels(lang) {
   return S.labelCache[pick];
 }
 
+function buildLangSel() {
+  const sel = $('langSel');
+  sel.replaceChildren(...['auto', ...(S.manifest.languages || [])].map(c => {
+    const o = document.createElement('option');
+    o.value = c; o.textContent = c === 'auto' ? S.L.langAuto : (LANG_NAMES[c] || c);
+    return o;
+  }));
+  sel.value = langSetting();
+}
+
 function applyI18n() {
   const L = S.L;
   document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = L[el.dataset.i18n] ?? ''; });
@@ -355,11 +368,12 @@ function applyI18n() {
   document.querySelectorAll('[data-i18n-title]').forEach(el => { el.title = L[el.dataset.i18nTitle] ?? ''; });
   document.querySelectorAll('[data-i18n-aria]').forEach(el => el.setAttribute('aria-label', L[el.dataset.i18nAria] ?? ''));
   updateThemeBtn();
+  if (S.manifest) buildLangSel();
 }
 
 function applyChrome() {
   const { rm, L } = S, m = rm.meta;
-  document.documentElement.lang = m.language || 'pt-BR';
+  document.documentElement.lang = uiLang(rm);
   document.documentElement.style.setProperty('--accent', rm.theme.accent);
   document.documentElement.style.setProperty('--brand', rm.theme.brand);
   document.title = m.title;
@@ -389,6 +403,7 @@ function applyChrome() {
 }
 
 /* ---------- roadmap picker (sidebar) ---------- */
+const groupTitle = g => ({ roadmaps: S.L.groupMine, 'examples/pt-BR': S.L['groupExamples_pt-BR'], 'examples/en': S.L.groupExamples_en })[g.id] || g.title;
 const entryById = id => S.manifest?.roadmaps.find(r => r.id === id);
 const visibleRoadmaps = () => S.manifest.roadmaps.filter(r => !r.hidden);
 
@@ -449,7 +464,7 @@ function rmRowHtml(r, { manage = false } = {}) {
 
 function renderPicker() {
   const groups = (S.manifest.groups || []).map(g => ({ g, items: visibleRoadmaps().filter(r => r.group === g.id) })).filter(x => x.items.length);
-  let html = groups.map(({ g, items }) => `<div class="rm-group">${esc(g.title)}</div>${items.map(r => rmRowHtml(r)).join('')}`).join('');
+  let html = groups.map(({ g, items }) => `<div class="rm-group">${esc(groupTitle(g))}</div>${items.map(r => rmRowHtml(r)).join('')}`).join('');
   if (S.localRm) html += `<div class="rm-group">${esc(S.L.localFile)}</div><button type="button" class="rm-item${S.isLocal ? ' on' : ''}" role="menuitem" data-open="__local__"><span class="rm-ico" aria-hidden="true">${esc(S.localRm.meta.icon || '▦')}</span><span class="rm-meta"><span class="rm-t">${esc(S.localRm.meta.title)}</span></span></button>`;
   if (!html) html = `<p class="rm-empty">${esc(S.L.rmNone)}</p>`;
   $('rmPop').innerHTML = `<div class="rm-list">${html}</div><div class="rm-foot"><button type="button" class="rm-foot-btn" data-act="new">+ ${esc(S.L.newRoadmap)}</button><button type="button" class="rm-foot-btn" data-act="manage">${esc(S.L.manageRoadmaps)}</button></div>`;
@@ -485,7 +500,7 @@ function renderManage() {
   const L = S.L, hidden = S.manifest.roadmaps.filter(r => r.hidden);
   const groups = (S.manifest.groups || []).map(g => ({ g, items: visibleRoadmaps().filter(r => r.group === g.id) })).filter(x => x.items.length);
   let html = needServer() ? `<p class="dlg-note warn">${esc(L.rmNoServer)}</p>` : `<p class="dlg-note">${esc(L.rmHideHint)}</p>`;
-  html += groups.map(({ g, items }) => `<div class="rm-group">${esc(g.title)}</div>${items.map(r => rmRowHtml(r, { manage: true })).join('')}`).join('');
+  html += groups.map(({ g, items }) => `<div class="rm-group">${esc(groupTitle(g))}</div>${items.map(r => rmRowHtml(r, { manage: true })).join('')}`).join('');
   if (!groups.length) html += `<p class="rm-empty">${esc(L.rmNone)}</p>`;
   if (hidden.length) html += `<div class="rm-group">${esc(L.rmHidden)} (${hidden.length})</div>${hidden.map(r => rmRowHtml(r, { manage: true })).join('')}`;
   const body = $('manageBody'), top = body.scrollTop;
@@ -567,7 +582,7 @@ async function duplicateRoadmap(entry) {
   } catch (err) { alert(err.message); }
 }
 
-/* ---------- editor dialog: a form for the common fields, plus the raw JSON ---------- */
+/* ---------- editor screen: a form (or the raw JSON) on the left, a live preview on the right ---------- */
 const LANG_NAMES = { 'pt-BR': 'Português (Brasil)', en: 'English' };
 const ed = { id: null, base: null, model: null, mode: 'form', dirty: false, n: 0 };
 const NODE_TEXT = ['time', 'summary', 'challenge', 'success'];
@@ -579,7 +594,7 @@ function modelFromJson(j) {
     language: str(m.language) || S.rm?.meta.language || 'pt-BR',
     phases: arr(j.phases).map(p => ({ key: str(p.id) || `p${ed.n++}`, orig: p, title: str(p.title), period: str(p.period) })),
     nodes: arr(j.nodes).map(n => ({
-      orig: n, title: str(n.title), phase: str(n.phase), open: false,
+      orig: n, tmp: `t${ed.n++}`, title: str(n.title), phase: str(n.phase), open: false,
       ...Object.fromEntries(NODE_TEXT.map(k => [k, str(n[k])])),
       topics: arr(n.topics).map(str).join('\n'), tasks: arr(n.tasks).map(t => str(t?.title)).join('\n'),
       links: arr(n.links).map(l => `${str(l?.title)} | ${str(l?.url)}`).join('\n'),
@@ -587,35 +602,36 @@ function modelFromJson(j) {
   };
 }
 
-const blankNode = phase => ({ orig: null, title: '', phase, open: false, time: '', summary: '', challenge: '', success: '', topics: '', tasks: '', links: '' });
+const blankNode = phase => ({ orig: null, tmp: `t${ed.n++}`, title: '', phase, open: false, time: '', summary: '', challenge: '', success: '', topics: '', tasks: '', links: '' });
 const lines = t => str(t).split('\n').map(x => x.trim()).filter(Boolean);
 
-function buildJson(model, base) {
+/* preview: ids are the rows' temporary keys, so they stay put while you type; saving makes real slugs. */
+function buildJson(model, base, preview = false) {
   const used = new Set((S.manifest?.roadmaps || []).map(r => r.id));
   const fresh = (set, text, fallback) => { const b = slug(text) || fallback; let id = b, i = 2; while (set.has(id)) id = `${b}-${i++}`; set.add(id); return id; };
-  const meta = { ...(base?.meta || {}), title: model.title.trim(), language: model.language };
+  const meta = { ...(base?.meta || {}), title: model.title.trim() || (preview ? S.L.edTitleNew : ''), language: model.language };
   for (const k of ['subtitle', 'description', 'icon']) { const v = model[k].trim(); if (v) meta[k] = v; else delete meta[k]; }
   const phaseIds = new Set(model.phases.map(p => p.orig?.id).filter(Boolean)), idOf = {};
   const phases = model.phases.filter(p => p.title.trim()).map(p => {
-    const o = { ...(p.orig || {}), id: p.orig?.id || fresh(phaseIds, p.title, 'fase'), title: p.title.trim() };
+    const o = { ...(p.orig || {}), id: p.orig?.id || (preview ? p.key : fresh(phaseIds, p.title, 'fase')), title: p.title.trim() };
     if (p.period.trim()) o.period = p.period.trim(); else delete o.period;
     idOf[p.key] = o.id;
     return o;
   });
   const nodeIds = new Set(model.nodes.map(n => n.orig?.id).filter(Boolean));
   let nodes = model.nodes.filter(n => n.title.trim()).map(n => {
-    const o = { ...(n.orig || {}), id: n.orig?.id || fresh(nodeIds, n.title, 'topico'), title: n.title.trim() };
+    const o = { ...(n.orig || {}), id: n.orig?.id || (preview ? n.tmp : fresh(nodeIds, n.title, 'topico')), title: n.title.trim() };
     if (phases.length) o.phase = idOf[n.phase] || phases[0].id; else delete o.phase;
     for (const k of NODE_TEXT) { const v = n[k].trim(); if (v) o[k] = v; else delete o[k]; }
     const topics = lines(n.topics); if (topics.length) o.topics = topics; else delete o.topics;
-    const old = arr(n.orig?.tasks), taskIds = new Set(old.map(t => t.id)), tasks = lines(n.tasks).map(t => old.find(x => x.title === t) || { id: fresh(taskIds, t, 'tarefa'), title: t });
+    const old = arr(n.orig?.tasks), taskIds = new Set(old.map(t => t.id)), tasks = lines(n.tasks).map((t, k) => old.find(x => x.title === t) || { id: preview ? `k${k}` : fresh(taskIds, t, 'tarefa'), title: t });
     if (tasks.length) o.tasks = tasks; else delete o.tasks;
     const links = lines(n.links).map(l => { const i = l.indexOf('|'); return i < 0 ? { title: l, url: l } : { title: l.slice(0, i).trim() || l.slice(i + 1).trim(), url: l.slice(i + 1).trim() }; });
     if (links.length) o.links = links; else delete o.links;
     return o;
   });
   if (phases.length) { const idx = id => phases.findIndex(p => p.id === id); nodes = nodes.map((n, i) => [n, i]).sort((a, b) => idx(a[0].phase) - idx(b[0].phase) || a[1] - b[1]).map(x => x[0]); }
-  const id = base?.id || fresh(used, model.title, 'roadmap');
+  const id = base?.id || (preview ? 'draft' : fresh(used, model.title, 'roadmap'));
   const { phases: _p, nodes: _n, ...rest } = base || {};
   const out = { ...rest, schemaVersion: 1, id, meta };
   if (phases.length) out.phases = phases;
@@ -634,7 +650,7 @@ function renderForm() {
   $('editBody').innerHTML =
     `<div class="ed-grid">${fld(L.edName, inp('title', m.title), 'wide')}${fld(L.edLanguage, `<select data-f="language">${langs.map(c => `<option value="${esc(c)}"${c === m.language ? ' selected' : ''}>${esc(LANG_NAMES[c] || c)}</option>`).join('')}</select>`)}${fld(L.edIcon, inp('icon', m.icon, '🚀', 'maxlength="8"'))}${fld(L.edSubtitle, inp('subtitle', m.subtitle), 'wide')}${fld(L.edDescription, inp('description', m.description), 'wide')}</div>` +
     `<h3 class="ed-h">${esc(L.edPhases)}</h3><div data-list="phases">${m.phases.map((p, i) => `<div class="ed-row" data-i="${i}">${inp('title', p.title, L.edPhaseTitle)}${inp('period', p.period, L.edPhasePeriod)}${rowBtns(L)}</div>`).join('')}</div><button type="button" class="secondary ed-add" data-do="add-phase">+ ${esc(L.edAddPhase)}</button>` +
-    `<h3 class="ed-h">${esc(L.edTopics)}</h3><div data-list="nodes">${m.nodes.map((n, i) => `<div class="ed-card${n.open ? ' open' : ''}" data-i="${i}"><div class="ed-row"><span class="ed-num">${i + 1}</span>${inp('title', n.title, L.edTopicTitle)}${m.phases.length ? `<select data-f="phase" aria-label="${esc(L.edPhaseOf)}">${phaseOpts(n.phase || m.phases[0].key)}</select>` : ''}${inp('time', n.time, L.edTime)}${rowBtns(L)}</div>` +
+    `<h3 class="ed-h">${esc(L.edTopics)}</h3><div data-list="nodes">${m.nodes.map((n, i) => `<div class="ed-card${n.open ? ' open' : ''}" data-i="${i}"><div class="ed-row"><span class="ed-num">${i + 1}</span>${inp('title', n.title, L.edTopicTitle)}${rowBtns(L)}<span class="ed-br"></span>${m.phases.length ? `<select data-f="phase" aria-label="${esc(L.edPhaseOf)}">${phaseOpts(n.phase || m.phases[0].key)}</select>` : ''}${inp('time', n.time, L.edTime)}</div>` +
       `<button type="button" class="ed-more" data-do="more" aria-expanded="${n.open}">${n.open ? '▾' : '▸'} ${esc(L.edDetails)}${n.orig?.optional ? ` · ${esc(L.edOptionalTag)}` : ''}</button>` +
       (n.open ? `<div class="ed-det">${fld(L.edSummary, area('summary', n.summary, 2), 'wide')}${fld(L.edStudy, area('topics', n.topics))}${fld(L.edTasks, area('tasks', n.tasks))}${fld(L.edChallenge, area('challenge', n.challenge, 2))}${fld(L.edSuccess, area('success', n.success, 2))}${fld(L.edLinks, area('links', n.links), 'wide')}</div>` : '') + '</div>').join('')}</div>` +
     `<button type="button" class="secondary ed-add" data-do="add-node">+ ${esc(L.edAddTopic)}</button><p class="ed-hint">${esc(L.edHint)}</p>`;
@@ -661,22 +677,80 @@ function setEditMode(mode) {
   $('editMode').querySelectorAll('[data-mode]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.mode === mode)));
 }
 
+/* ---- live preview ---- */
+function showPreviewHint() {
+  S.preview = true;
+  showMessage(S.L.edPreviewEmptyTitle, esc(S.L.edPreviewEmptyText));
+}
+
+async function rebuildPreview(first = false) {
+  let rm = null;
+  try {
+    const json = ed.mode === 'json' ? JSON.parse($('edJson').value) : buildJson(ed.model, ed.base, true);
+    if (json && Array.isArray(json.nodes) && json.nodes.length) rm = normalize(json, 'draft');
+  } catch { /* half-typed JSON or no topic yet: keep what is on screen */ }
+  if (!rm) { if (first) showPreviewHint(); return; }
+  await setRoadmap(rm, { preview: true, keep: !first && !!S.preview });
+}
+
+let previewTimer = 0;
+const schedulePreview = () => { clearTimeout(previewTimer); previewTimer = setTimeout(() => S.editing && rebuildPreview(), 250); };
+
+/* Clicking a topic in the preview scrolls the form to its row. */
+function focusEditorRow(id) {
+  if (ed.mode !== 'form') return;
+  const i = ed.model.nodes.findIndex(r => (r.orig?.id || r.tmp) === id), card = $('editBody').querySelector(`[data-list=nodes] .ed-card[data-i="${i}"]`);
+  if (!card || card.contains(document.activeElement)) return;
+  card.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  card.classList.add('flash');
+  setTimeout(() => card.classList.remove('flash'), 900);
+}
+
+/* ---- enter / leave ---- */
 async function openEditor(entry = null) {
+  if (S.editing) return;
   const L = S.L;
   let base = null;
   if (entry) {
     try { base = JSON.parse(await getText(entry.file)); } catch (err) { return alert(err.message); }
   }
   ed.id = entry ? entry.id : null; ed.base = base; ed.dirty = false; ed.mode = 'form';
+  ed.prev = S.rm ? { id: S.rm.id, local: S.isLocal } : null;
   ed.model = base ? modelFromJson(base) : { ...modelFromJson({ meta: {}, nodes: [] }), nodes: [blankNode('')] };
+  if (!base) ed.model.language = S.rm?.meta.language || 'pt-BR';
   $('editTitle').textContent = entry ? L.edTitleEdit : L.edTitleNew;
   $('editBody').replaceChildren();
   showEditErr([]);
   if ($('manageDlg').open) $('manageDlg').close();
-  setPicker(false);
-  $('editDlg').showModal();
+  setPicker(false); setDrawer(false);
+  S.editing = true;
+  document.body.classList.add('editing');
+  $('editorPane').hidden = false;
   setEditMode('form');
   $('editBody').scrollTop = 0;
+  await rebuildPreview(true);
+  window.scrollTo({ top: 0 });
+  $('editBody').querySelector('input')?.focus();
+}
+
+async function leaveEditor(savedId = null) {
+  clearTimeout(previewTimer);
+  S.editing = false; S.preview = false; ed.dirty = false;
+  document.body.classList.remove('editing', 'edit-preview');
+  $('editorPane').hidden = true;
+  const visible = visibleRoadmaps();
+  const back = savedId ? entryById(savedId) : ed.prev && !ed.prev.local ? entryById(ed.prev.id) : null;
+  if (back) return openEntry(back);
+  if (ed.prev?.local && S.localRm) return setRoadmap(S.localRm, { local: true });
+  if (visible[0]) return openEntry(visible[0]);
+  S.rm = null;
+  updatePickerBtn();
+  showMessage(S.L.rmNone, `<button type="button" class="primary" data-act="new">${esc(S.L.newRoadmap)}</button>`);
+}
+
+function closeEditor() {
+  if (ed.dirty && !confirm(S.L.edDiscard)) return;
+  leaveEditor();
 }
 
 async function saveEditor() {
@@ -694,21 +768,19 @@ async function saveEditor() {
     const r = await apiFetch(ed.id ? 'PUT' : 'POST', ed.id ? `api/roadmaps/${encodeURIComponent(ed.id)}` : 'api/roadmaps', json);
     const j = await r.json().catch(() => ({}));
     if (!r.ok) return showEditErr(j.errors || [j.error || (r.status === 404 || r.status === 405 ? S.L.rmNoServer : `HTTP ${r.status}`)]);
-    ed.dirty = false;
-    $('editDlg').close();
     await reloadManifest();
-    const entry = entryById(json.id);
-    if (entry) await openEntry(entry);
+    await leaveEditor(json.id);
   } catch { showEditErr([S.L.rmNoServer]); }
   finally { $('editSave').disabled = false; }
 }
 
 function wireEditor() {
-  const dlg = $('editDlg'), body = $('editBody');
+  const body = $('editBody');
   const move = (list, i, d) => { const j = i + d; if (j >= 0 && j < list.length) [list[i], list[j]] = [list[j], list[i]]; };
   const rerender = () => { const top = body.scrollTop; renderForm(); body.scrollTop = top; };
   body.addEventListener('input', e => {
     ed.dirty = true;
+    schedulePreview();
     const f = e.target.dataset.f, card = e.target.closest('[data-i]');
     if (!f || !card || ed.mode !== 'form') return;
     const kind = e.target.closest('[data-list]').dataset.list, row = ed.model[kind][+card.dataset.i];
@@ -716,7 +788,9 @@ function wireEditor() {
     if (kind === 'phases' && f === 'title') body.querySelectorAll(`select[data-f=phase] option[value="${CSS.escape(row.key)}"]`).forEach(o => { o.textContent = row.title || S.L.edPhaseTitle; });
   });
   body.addEventListener('change', e => {
-    if (e.target.dataset.f && !e.target.closest('[data-i]')) { ed.dirty = true; ed.model[e.target.dataset.f] = e.target.value; }
+    const f = e.target.dataset.f;
+    if (f && !e.target.closest('[data-i]')) { ed.dirty = true; ed.model[f] = e.target.value; schedulePreview(); }
+    else if (f === 'phase') schedulePreview();
   });
   body.addEventListener('click', e => {
     const b = e.target.closest('[data-do]');
@@ -735,15 +809,24 @@ function wireEditor() {
       case 'add-node': m.nodes.push(blankNode(m.phases.at(-1)?.key || '')); break;
     }
     rerender();
+    if (b.dataset.do !== 'more') schedulePreview();
     if (b.dataset.do === 'add-node') body.querySelector('[data-list=nodes] .ed-card:last-child input')?.focus();
     if (b.dataset.do === 'add-phase') body.querySelector('[data-list=phases] .ed-row:last-child input')?.focus();
   });
-  $('editMode').addEventListener('click', e => { const b = e.target.closest('[data-mode]'); if (b) setEditMode(b.dataset.mode); });
+  /* the topic you are editing is the one selected in the preview */
+  body.addEventListener('focusin', e => {
+    const card = e.target.closest('.ed-card');
+    if (!card || !S.rm) return;
+    const row = ed.model.nodes[+card.dataset.i], id = row && (row.orig?.id || row.tmp);
+    if (id && S.rm.byId[id] && S.selected !== id) select(id, true, { drawer: false });
+  });
+  $('editMode').addEventListener('click', e => { const b = e.target.closest('[data-mode]'); if (b) { setEditMode(b.dataset.mode); schedulePreview(); } });
   $('editSave').addEventListener('click', saveEditor);
-  const close = () => { if (!ed.dirty || confirm(S.L.edDiscard)) { ed.dirty = false; dlg.close(); } };
-  dlg.addEventListener('cancel', e => { e.preventDefault(); close(); });
-  dlg.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click', close));
-  body.addEventListener('input', e => { if (e.target.id === 'edJson') ed.dirty = true; });
+  $('edBack').addEventListener('click', closeEditor);
+  $('edCancel').addEventListener('click', closeEditor);
+  $('edPreviewBtn').addEventListener('click', () => { document.body.classList.add('edit-preview'); window.scrollTo({ top: 0 }); S.rm && S.view === 'map' && layout(); });
+  $('edBackEdit').addEventListener('click', () => document.body.classList.remove('edit-preview'));
+  addEventListener('beforeunload', e => { if (S.editing && ed.dirty) e.preventDefault(); });
 }
 
 /* ---------- map build + layout ---------- */
@@ -995,7 +1078,7 @@ function setView(v, persist = true) {
   S.view = v === 'kanban' ? 'kanban' : 'map';
   document.body.classList.toggle('view-kanban', S.view === 'kanban');
   document.querySelectorAll('#viewSeg [data-view]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.view === S.view)));
-  if (persist && S.rm) store.set(KEY.view(S.rm.id), S.view);
+  if (persist && S.rm && !S.preview) store.set(KEY.view(S.rm.id), S.view);
   if (S.view === 'kanban') renderBoard();
   else if (S.svg) layout();
 }
@@ -1074,7 +1157,7 @@ function wireDetailResize() {
   });
 }
 
-function select(id, scroll = false) {
+function select(id, scroll = false, { drawer = true } = {}) {
   S.selected = id;
   refresh(); renderDetail();
   document.querySelectorAll('.kcard').forEach(c => c.classList.toggle('selected', c.dataset.node === id));
@@ -1084,7 +1167,8 @@ function select(id, scroll = false) {
     const view = $('mapViewport');
     view.scrollTo({ left: Math.max(0, n.x * s - (view.clientWidth - n.el.offsetWidth * s) / 2), behavior: 'smooth' });
   }
-  setDrawer(true);
+  if (drawer) setDrawer(true);
+  if (S.editing) focusEditorRow(id);
 }
 
 function setPhase(key) {
@@ -1260,28 +1344,38 @@ function showMessage(title, html) {
   $('map').append(d);
 }
 
-async function setRoadmap(rm, { local = false } = {}) {
-  S.L = { ...S.defaults, ...await loadLabels(rm.meta.language), ...rm.labels };
+/* keep: rebuild in place (language change, live preview) without resetting selection, view or scroll.
+   preview: a draft from the editor, never saved or synced. */
+async function setRoadmap(rm, { local = false, keep = false, preview = false } = {}) {
+  S.L = { ...S.defaults, ...await loadLabels(uiLang(rm)), ...rm.labels };
   S.rm = rm;
   S.isLocal = local;
+  S.preview = preview;
   if (local) S.localRm = rm;
-  loadState(rm);
+  if (!(keep && preview)) loadState(rm);
   clearTimeout(sync.timer); sync.timer = 0;
   setSyncStatus('local');
-  S.warnOpen = new Set();
-  S.selected = rm.core[0].id; S.phase = 'all'; S.search = '';
-  $('search').value = '';
+  if (keep) {
+    if (!rm.byId[S.selected]) S.selected = rm.core[0].id;
+    if (S.phase !== 'all' && !rm.phaseById[S.phase]) S.phase = 'all';
+  } else {
+    S.warnOpen = new Set();
+    S.selected = rm.core[0].id; S.phase = 'all'; S.search = '';
+    $('search').value = '';
+  }
   applyChrome(); buildSwitch(); buildMap(); renderDetail();
   const saved = store.get(KEY.view(rm.id));
-  setView(saved === 'kanban' || saved === 'map' ? saved : rm.defaultView, false);
+  setView(keep ? S.view : (saved === 'kanban' || saved === 'map' ? saved : rm.defaultView), false);
   refresh();
-  setDrawer(false);
-  $('mapViewport').scrollLeft = 0;
-  window.scrollTo({ top: 0 });
+  if (!keep) {
+    setDrawer(false);
+    $('mapViewport').scrollLeft = 0;
+    window.scrollTo({ top: 0 });
+  }
   const relayout = () => { if (S.rm === rm && S.svg && S.view === 'map') layout(); };
   requestAnimationFrame(relayout);
   document.fonts?.ready.then(relayout);
-  pull();
+  if (!preview) pull();
 }
 
 /* Builds a roadmap from its JSON text, keeping the text and file name for export. */
@@ -1466,6 +1560,14 @@ function wire() {
   addEventListener('keydown', e => { if (e.key === 'Escape') setSettingsOpen(false); });
   $('themeSeg').addEventListener('click', e => { const b = e.target.closest('[data-theme-mode]'); if (b) { store.set(THEME_KEY, b.dataset.themeMode); applyTheme(); } });
   $('fontSeg').addEventListener('click', e => { const b = e.target.closest('[data-fs]'); if (b) { store.set(FS_KEY, b.dataset.fs); applyFont(); metricsChanged(); } });
+  $('langSel').addEventListener('change', async e => {
+    store.set(LANG_KEY, e.target.value);
+    if (S.rm) await setRoadmap(S.rm, { local: S.isLocal, keep: true, preview: S.preview });
+    else { S.L = { ...S.defaults, ...await loadLabels(uiLang(null)) }; applyI18n(); }
+    buildLangSel(); renderManage();
+    if (!$('rmPop').hidden) renderPicker();
+    if (S.editing) { $('editTitle').textContent = ed.id ? S.L.edTitleEdit : S.L.edTitleNew; if (ed.mode === 'form') renderForm(); }
+  });
   $('skipSel').addEventListener('change', e => { store.set(SKIP_KEY, e.target.value); applyFilters(); renderDetail(); });
   new ResizeObserver(syncToolbarHeight).observe($('toolbar'));
   $('importFile').addEventListener('change', async e => { const f = e.target.files?.[0]; if (f) await importBundle(f); e.target.value = ''; });
@@ -1493,7 +1595,7 @@ function wire() {
   addEventListener('drop', e => {
     e.preventDefault(); document.body.classList.remove('dragging');
     const f = [...(e.dataTransfer?.files || [])].find(x => /\.json$/i.test(x.name));
-    if (f) openLocalFile(f);
+    if (f && !S.editing) openLocalFile(f);
   });
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'hidden') { if (sync.timer) { clearTimeout(sync.timer); sync.timer = 0; push(true); } }
@@ -1516,7 +1618,7 @@ async function init() {
     showMessage('Servidor não encontrado', 'Abra pelo servidor local: <code>python3 tools/roadkit.py serve</code> e acesse <code>http://localhost:8765</code>.<br>(Abrir o <code>index.html</code> direto do disco não funciona: o navegador bloqueia a leitura dos JSONs.)');
     return;
   }
-  S.L = S.defaults;
+  S.L = langSetting() === 'auto' ? S.defaults : { ...S.defaults, ...await loadLabels(langSetting()) };
   applyI18n();
   buildSwitch();
   const asked = new URLSearchParams(location.search).get('r'), last = store.get(KEY.last), visible = visibleRoadmaps();

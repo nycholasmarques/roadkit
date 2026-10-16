@@ -27,6 +27,7 @@
     <nav id="phaseNav"></nav>
     <div class="tools">
       <div class="aside-label" data-i18n="tools"></div>
+      <button class="nav-btn" data-act="new" data-i18n="newRoadmap"></button>
       <button class="nav-btn" data-act="export" data-i18n="exportProgress"></button>
       <button class="nav-btn" data-act="import" data-i18n="importProgress"></button>
       <button class="nav-btn" data-act="reset" data-i18n="resetProgress"></button>
@@ -37,6 +38,21 @@
       <div class="credit credit-side"><span data-i18n="madeBy"></span> <a href="https://github.com/nycholasmarques" target="_blank" rel="noopener noreferrer">nycholasmarques</a> <span class="credit-sep">|</span> <a href="https://github.com/nycholasmarques/roadkit" target="_blank" rel="noopener noreferrer" data-i18n="sourceCode"></a></div>
     </div>
   </aside>
+  <section class="editor-pane" id="editorPane" hidden aria-labelledby="editTitle">
+    <div class="ep-head">
+      <button type="button" class="secondary" id="edBack"><span aria-hidden="true">←</span> <span data-i18n="edBack"></span></button>
+      <h2 id="editTitle"></h2>
+      <div class="seg small" id="editMode" role="group"><button type="button" data-mode="form" data-i18n="edForm"></button><button type="button" data-mode="json" data-i18n="edJson"></button></div>
+      <button type="button" class="secondary ep-toggle" id="edPreviewBtn" data-i18n="edPreview"></button>
+    </div>
+    <div class="ep-body" id="editBody"></div>
+    <div class="ep-foot">
+      <div class="dlg-err" id="editErr" role="alert"></div>
+      <button type="button" class="secondary" id="edCancel" data-i18n="rmCancel"></button>
+      <button type="button" class="primary" id="editSave" data-i18n="edSave"></button>
+    </div>
+  </section>
+  <button type="button" class="primary ed-back-edit" id="edBackEdit" data-i18n="edEditBack"></button>
   <main class="workspace">
     <header class="toolbar" id="toolbar">
       <div class="top-left">
@@ -75,6 +91,8 @@
               <button type="button" data-fs="large" class="fs-l" data-i18n="fontLarge"></button>
               <button type="button" data-fs="xlarge" class="fs-xl" data-i18n="fontXLarge"></button>
             </div></div>
+          <div class="set-row"><label class="set-label" for="langSel" data-i18n="language"></label>
+            <div class="sel-wrap"><select id="langSel"></select></div></div>
           <div class="set-row"><label class="set-label" for="skipSel" data-i18n="skipWarn"></label>
             <div class="sel-wrap"><select id="skipSel">
               <option value="0" data-i18n="skipWarnAlways"></option>
@@ -85,6 +103,7 @@
             <span class="set-hint" data-i18n="skipWarnHint"></span></div>
           <p class="sync-note" id="syncStatus" aria-live="polite"></p>
           <div class="set-tools">
+            <button type="button" class="secondary" data-act="new" data-i18n="newRoadmap"></button>
             <button type="button" class="secondary" data-act="export" data-i18n="exportProgress"></button>
             <button type="button" class="secondary" data-act="import" data-i18n="importProgress"></button>
             <button type="button" class="secondary" data-act="reset" data-i18n="resetProgress"></button>
@@ -119,21 +138,6 @@
       <button type="button" class="secondary" data-act="import" data-i18n="importProgress"></button>
     </div>
     <div class="dlg-body" id="manageBody"></div>
-  </div>
-</dialog>
-<dialog class="dlg dlg-wide" id="editDlg" aria-labelledby="editTitle">
-  <div class="dlg-in">
-    <div class="dlg-head">
-      <h2 id="editTitle"></h2>
-      <div class="seg small" id="editMode" role="group"><button type="button" data-mode="form" data-i18n="edForm"></button><button type="button" data-mode="json" data-i18n="edJson"></button></div>
-      <button type="button" class="dlg-x" data-close data-i18n-aria="rmClose">×</button>
-    </div>
-    <div class="dlg-body" id="editBody"></div>
-    <div class="dlg-foot">
-      <div class="dlg-err" id="editErr" role="alert"></div>
-      <button type="button" class="secondary" data-close data-i18n="rmCancel"></button>
-      <button type="button" class="primary" id="editSave" data-i18n="edSave"></button>
-    </div>
   </div>
 </dialog>
 <div class="scrim" id="scrim"></div>
