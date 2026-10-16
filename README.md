@@ -2,7 +2,11 @@
 
 Uma interface única para roadmaps interativos, no estilo do roadmap.sh, em que todo o conteúdo vem de arquivos JSON. Título, fases, tópicos, desafios, links, cores e idioma ficam no arquivo. Trocou o JSON, trocou o roadmap.
 
-![Demonstração do Roadkit com um roadmap de Argo CD](docs/demo.gif)
+<p align="center">
+  <video src="https://github.com/nycholasmarques/roadkit/raw/main/docs/demo.mp4" controls muted loop autoplay playsinline width="100%"></video>
+</p>
+
+Se o vídeo não aparecer, [assista à demonstração aqui](docs/demo.mp4).
 
 ## Por que existe
 
