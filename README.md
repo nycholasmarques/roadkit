@@ -61,7 +61,7 @@ Cada tópico passa por a fazer, em andamento, em revisão e concluído, no **map
 
 ### Criar com uma IA
 
-O botão **Criar com IA** monta um prompt a partir do que você quer aprender. Você leva até a IA que preferir, cola a resposta de volta, e o roadmap abre no editor para ajustar. Não precisa de chave de API. Quem usa o Claude Code ainda ganha uma [skill](.claude/skills/roadkit/SKILL.md) que conduz essa conversa.
+O botão **Criar com IA** monta um prompt a partir do que você quer aprender. Você leva até a IA que preferir, cola a resposta de volta, e o roadmap abre no editor para ajustar. Não precisa de chave de API. Quem usa um agente de código (Claude Code, Codex...) ainda ganha uma [skill](.agents/skills/roadkit/SKILL.md) que conduz essa conversa.
 
 <p align="center">
   <img src="docs/media/criar-com-ia.gif" alt="Descrevendo um objetivo, copiando o prompt e trazendo a resposta da IA para o editor" width="100%">

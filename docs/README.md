@@ -8,7 +8,7 @@ Se é a primeira vez, comece pelo passeio na interface. Se você só quer criar 
 |---|---|
 | [Usando a interface](usando-a-interface.md) | A tela, o mapa, o kanban, como o progresso é marcado e onde ficam os ajustes |
 | [Criando roadmaps](criar-roadmaps.md) | Três jeitos de criar um, e o que faz um roadmap ser bom de usar |
-| [Criando com IA](criar-com-ia.md) | O botão "Criar com IA" e a skill para quem usa o Claude Code |
+| [Criando com IA](criar-com-ia.md) | O botão "Criar com IA" e a skill para agentes de código |
 | [Como funciona](como-funciona.md) | O que roda onde, onde cada coisa é guardada e como o código se organiza |
 | [Docker e rede](docker-e-rede.md) | Subir com Compose, volumes, backup e abrir para outros aparelhos |
 | [Formato do JSON](SCHEMA.md) | Referência de cada campo de um roadmap |

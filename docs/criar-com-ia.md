@@ -21,9 +21,9 @@ A partir daí é o editor de sempre. A linha de problemas embaixo roda a valida�
 
 O texto do prompt está em [`src/ai-prompt.txt`](../src/ai-prompt.txt). Se quiser que a IA escreva de outro jeito (mais direta, mais detalhada), é só editar esse arquivo.
 
-## Pela skill do Claude Code
+## Pela skill do agente
 
-Se você usa o Claude Code, o repositório traz uma skill em [`.claude/skills/roadkit/`](../.claude/skills/roadkit/SKILL.md). Ela é uma conversa guiada em vez de um prompt único.
+Se você usa um agente de código, o repositório traz uma skill em [`.agents/skills/roadkit/`](../.agents/skills/roadkit/SKILL.md). Ela é uma conversa guiada em vez de um prompt único. O Claude Code procura skills em `.claude/skills/`, então lá existe um link simbólico para a mesma pasta, e as duas ferramentas leem o mesmo arquivo.
 
 Abra o Claude Code dentro da pasta do Roadkit e peça algo como "monta um roadmap para eu aprender Rust" (ou chame direto com `/roadkit`). A skill faz o seguinte:
 
@@ -34,7 +34,7 @@ Abra o Claude Code dentro da pasta do Roadkit e peça algo como "monta um roadma
 
 Para evoluir um roadmap que já existe ela lê o arquivo antes, preserva o que você não pediu para mudar e não mexe nos `id`, para o progresso salvo continuar valendo.
 
-Outras ferramentas que leem instruções de um arquivo do projeto podem aproveitar o mesmo texto: o `SKILL.md` é só Markdown.
+Quem usa outra ferramenta que não lê essa pasta pode aproveitar o mesmo texto: o `SKILL.md` é só Markdown.
 
 ## O que a IA acerta e o que ela erra
 
