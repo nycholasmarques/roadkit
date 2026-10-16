@@ -1,0 +1,100 @@
+{
+  "$schema": "../schema/roadmap.schema.json",
+  "schemaVersion": 1,
+  "id": "primeira-meia-maratona",
+  "meta": {
+    "title": "Primeira meia maratona",
+    "eyebrow": "Meta pessoal, 12 semanas",
+    "subtitle": "Sair de 5 km para 21 km sem se machucar",
+    "description": "Plano de 12 semanas para correr a primeira meia maratona. Sem relação com tecnologia: o formato serve para qualquer meta.",
+    "brand": { "plain": "meia", "accent": ".trilha" },
+    "tagline": "Um bloco por vez.\nConstância vale mais que intensidade.",
+    "sidebarNote": "Plano genérico de exemplo.\nAjuste com um profissional se tiver qualquer dor ou doença.",
+    "footer": "Roadmap de exemplo que acompanha o Roadkit."
+  },
+  "theme": { "accent": "#a63d2a", "brandAccent": "#d9822b" },
+  "labels": {
+    "topics": "No plano",
+    "challenge": "Treino chave",
+    "success": "Como saber que foi bem",
+    "markDone": "Marcar bloco como feito",
+    "markUndone": "Desmarcar bloco",
+    "doneHint": "Marque depois de cumprir o treino chave, mesmo que mais devagar que o planejado.",
+    "legendHint": "Clique em um bloco para ver o treino chave e como avaliar o resultado."
+  },
+  "phases": [
+    { "id": "base", "title": "Base", "period": "Semanas 1 a 4", "color": "#d9822b", "summary": "Criar o hábito e consolidar 5 a 8 km confortáveis.", "milestone": "8 km sem parar" },
+    { "id": "volume", "title": "Volume", "period": "Semanas 5 a 9", "color": "#a63d2a", "summary": "Aumentar o longão aos poucos e aprender a se alimentar durante a corrida.", "milestone": "16 km no longão" },
+    { "id": "prova", "title": "Prova", "period": "Semanas 10 a 12", "color": "#3f6e9a", "summary": "Reduzir a carga, descansar e chegar bem ao dia.", "milestone": "Linha de chegada" }
+  ],
+  "nodes": [
+    {
+      "id": "avaliacao", "phase": "base", "title": "Ponto de partida", "time": "Semana 1",
+      "summary": "Medir onde você está e escolher tênis, horários e dias fixos.",
+      "topics": ["Teste de 5 km", "Tênis adequado", "Três dias de treino", "Check-up médico"],
+      "challenge": "Correr 5 km no seu ritmo e anotar o tempo e como se sentiu.",
+      "success": "Você tem os três dias da semana reservados na agenda."
+    },
+    {
+      "id": "rodagem", "phase": "base", "title": "Rodagens leves", "time": "Semanas 2 e 3",
+      "summary": "Correr devagar, em um ritmo em que ainda dá para conversar.",
+      "topics": ["Ritmo de conversa", "Aquecimento", "Alongamento ao final"],
+      "challenge": "Três treinos de 30 a 40 minutos em ritmo leve.",
+      "success": "Você termina cada treino sentindo que poderia continuar."
+    },
+    {
+      "id": "forca", "phase": "base", "title": "Força e mobilidade", "time": "Semana 4",
+      "summary": "Fortalecer pernas e core para reduzir o risco de lesão.",
+      "topics": ["Agachamento", "Prancha", "Panturrilha", "Mobilidade de quadril"],
+      "challenge": "Duas sessões de 20 minutos por semana ao longo do bloco.",
+      "success": "Você faz a sequência sem pausas e sem dor."
+    },
+    {
+      "id": "nutricao-leve", "phase": "base", "optional": true, "anchor": "forca", "title": "Rotina de sono e alimentação",
+      "summary": "Ajustes simples que melhoram a recuperação."
+    },
+    {
+      "id": "longao", "phase": "volume", "title": "Longão progressivo", "time": "Semanas 5 a 8",
+      "summary": "Um treino mais longo por semana, aumentando de 10 para 16 km.",
+      "topics": ["Aumento de até 10 por cento", "Semana de descanso a cada quatro", "Hidratação"],
+      "challenge": "Fazer 16 km em ritmo leve no fim do bloco.",
+      "success": "Você termina com energia para caminhar sem dor até em casa."
+    },
+    {
+      "id": "ritmo", "phase": "volume", "title": "Treinos de ritmo", "time": "Semanas 6 a 9",
+      "summary": "Um treino por semana em ritmo mais forte, para aprender o ritmo de prova.",
+      "topics": ["Ritmo de prova", "Intervalos curtos", "Controle da respiração"],
+      "challenge": "Correr 5 km mantendo o ritmo que você pretende usar na prova.",
+      "success": "Os quilômetros finais saem tão regulares quanto os primeiros."
+    },
+    {
+      "id": "alimentacao-prova", "phase": "volume", "title": "Alimentação durante a corrida", "time": "Semana 8",
+      "summary": "Testar géis, bebidas e horários nos longões, nunca só no dia da prova.",
+      "topics": ["Carboidrato por hora", "Água e sais", "Teste de tolerância"],
+      "challenge": "Fazer um longão usando exatamente o que vai levar na prova.",
+      "success": "Nenhum incômodo no estômago nem queda de energia."
+    },
+    {
+      "id": "ritmo-extra", "phase": "volume", "optional": true, "anchor": "ritmo", "title": "Treino em subida",
+      "summary": "Ganhar força de perna com repetições em subidas curtas."
+    },
+    {
+      "id": "polimento", "phase": "prova", "title": "Redução de carga", "time": "Semana 10 e 11",
+      "summary": "Diminuir o volume mantendo um pouco de intensidade para chegar descansado.",
+      "topics": ["Redução de 30 a 50 por cento", "Sono", "Alimentação"],
+      "challenge": "Um treino de 10 km em ritmo de prova na semana 10.",
+      "success": "Você se sente com mais energia, não com menos."
+    },
+    {
+      "id": "dia-da-prova", "phase": "prova", "title": "Dia da prova", "time": "Semana 12",
+      "summary": "Chegar cedo, aquecer pouco e começar mais devagar do que parece necessário.",
+      "topics": ["Kit e roupa testados", "Ritmo dos primeiros 5 km", "Estratégia de hidratação"],
+      "challenge": "Completar os 21 km.",
+      "success": "Você cruza a linha de chegada e já sabe qual será a próxima meta."
+    },
+    {
+      "id": "recuperacao", "phase": "prova", "optional": true, "anchor": "dia-da-prova", "title": "Semana de recuperação",
+      "summary": "Voltar aos poucos, com caminhadas e treinos leves."
+    }
+  ]
+}

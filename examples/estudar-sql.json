@@ -1,0 +1,110 @@
+{
+  "$schema": "../schema/roadmap.schema.json",
+  "schemaVersion": 1,
+  "id": "estudar-sql",
+  "meta": {
+    "title": "Estudar SQL na prática",
+    "eyebrow": "Trilha de estudo, do básico ao desempenho",
+    "subtitle": "Consultas, modelagem e índices usando PostgreSQL",
+    "description": "Roadmap de estudo de SQL com PostgreSQL, em oito semanas.",
+    "brand": { "plain": "sql", "accent": ".trilha" },
+    "tagline": "Aprender consultando de verdade.\nUm banco local e dados de exemplo.",
+    "sidebarNote": "Escreva a consulta antes de olhar a resposta.\nUma sessão curta por dia rende mais que uma longa por semana.",
+    "footer": "Roadmap de exemplo que acompanha o Roadkit."
+  },
+  "theme": { "accent": "#1f4e79", "brandAccent": "#2f7fb8" },
+  "phases": [
+    { "id": "basico", "title": "Consultar dados", "period": "Semanas 1 e 2", "color": "#2f7fb8", "summary": "Ler dados de uma tabela e de várias tabelas ao mesmo tempo.", "milestone": "Consultas do dia a dia" },
+    { "id": "modelagem", "title": "Modelar e escrever", "period": "Semanas 3 a 5", "color": "#7a8f2a", "summary": "Criar tabelas, relacionar e alterar dados com segurança.", "milestone": "Banco próprio funcionando" },
+    { "id": "desempenho", "title": "Desempenho", "period": "Semanas 6 a 8", "color": "#b5651d", "summary": "Entender por que uma consulta é lenta e como acelerar.", "milestone": "Consultas rápidas e confiáveis" }
+  ],
+  "nodes": [
+    {
+      "id": "ambiente", "phase": "basico", "title": "Banco local e dados de exemplo", "time": "Semana 1",
+      "summary": "Suba um PostgreSQL local e carregue um conjunto de dados para praticar.",
+      "topics": ["PostgreSQL local", "psql ou cliente gráfico", "Importar um dump"],
+      "challenge": "Ter um banco rodando com pelo menos três tabelas com dados.",
+      "success": "Você consegue conectar, listar as tabelas e contar as linhas de cada uma.",
+      "links": [{ "title": "Documentação do PostgreSQL", "url": "https://www.postgresql.org/docs/current/" }]
+    },
+    {
+      "id": "select", "phase": "basico", "title": "SELECT, filtros e ordenação", "time": "Semana 1",
+      "summary": "A base de tudo: escolher colunas, filtrar linhas e ordenar o resultado.",
+      "topics": ["SELECT e WHERE", "ORDER BY e LIMIT", "LIKE e IN", "NULL"],
+      "challenge": "Responder dez perguntas sobre os dados usando apenas uma tabela.",
+      "success": "Você escreve as consultas sem copiar exemplos.",
+      "links": [{ "title": "SQLBolt", "url": "https://sqlbolt.com/" }]
+    },
+    {
+      "id": "agregacao", "phase": "basico", "title": "Agregações e agrupamento", "time": "Semana 2",
+      "summary": "Resumir dados: contagens, somas, médias e grupos.",
+      "topics": ["COUNT, SUM, AVG", "GROUP BY", "HAVING", "DISTINCT"],
+      "challenge": "Montar um relatório de vendas por mês e por categoria.",
+      "success": "Você explica a diferença entre WHERE e HAVING com um exemplo."
+    },
+    {
+      "id": "joins", "phase": "basico", "title": "JOINs", "time": "Semana 2",
+      "summary": "Combinar tabelas relacionadas sem duplicar ou perder linhas.",
+      "topics": ["INNER JOIN", "LEFT JOIN", "Chaves estrangeiras", "Auto junção"],
+      "challenge": "Listar clientes sem nenhum pedido usando LEFT JOIN.",
+      "success": "Você prevê quantas linhas um JOIN vai devolver antes de rodar."
+    },
+    {
+      "id": "subqueries", "phase": "basico", "optional": true, "anchor": "joins", "title": "Subconsultas e CTEs",
+      "summary": "Quebrar consultas grandes em partes nomeadas e legíveis.",
+      "topics": ["Subconsultas", "WITH", "EXISTS"]
+    },
+    {
+      "id": "ddl", "phase": "modelagem", "title": "Criar tabelas e tipos", "time": "Semana 3",
+      "summary": "Definir a estrutura dos dados escolhendo tipos e restrições.",
+      "topics": ["CREATE TABLE", "Tipos de dados", "PRIMARY KEY", "NOT NULL e UNIQUE"],
+      "challenge": "Criar o esquema de uma biblioteca com livros, autores e empréstimos.",
+      "success": "O banco recusa dados inválidos sem ajuda da aplicação."
+    },
+    {
+      "id": "normalizacao", "phase": "modelagem", "title": "Relacionamentos e normalização", "time": "Semana 4",
+      "summary": "Evitar repetição de dados e decidir quando separar em outra tabela.",
+      "topics": ["Um para muitos", "Muitos para muitos", "Formas normais", "Chaves estrangeiras"],
+      "challenge": "Normalizar uma planilha com dados repetidos em tabelas relacionadas.",
+      "success": "Você justifica cada tabela e cada chave do seu modelo."
+    },
+    {
+      "id": "dml", "phase": "modelagem", "title": "INSERT, UPDATE, DELETE e transações", "time": "Semana 5",
+      "summary": "Alterar dados com segurança e desfazer quando algo der errado.",
+      "topics": ["INSERT", "UPDATE e DELETE com WHERE", "BEGIN, COMMIT, ROLLBACK", "Isolamento"],
+      "challenge": "Fazer uma transferência entre contas que nunca deixa o saldo inconsistente.",
+      "success": "Uma falha no meio da operação não deixa dados pela metade."
+    },
+    {
+      "id": "views", "phase": "modelagem", "optional": true, "anchor": "dml", "title": "Views e funções",
+      "summary": "Reaproveitar consultas e lógica dentro do próprio banco.",
+      "topics": ["VIEW", "Funções em SQL", "Gatilhos"]
+    },
+    {
+      "id": "indices", "phase": "desempenho", "title": "Índices", "time": "Semana 6",
+      "summary": "Como o banco encontra linhas e quando um índice ajuda ou atrapalha.",
+      "topics": ["B-tree", "Índices compostos", "Seletividade", "Custo de escrita"],
+      "challenge": "Criar um índice que reduza uma consulta lenta de segundos para milissegundos.",
+      "success": "Você explica por que um índice específico foi escolhido.",
+      "links": [{ "title": "Use The Index, Luke", "url": "https://use-the-index-luke.com/" }]
+    },
+    {
+      "id": "explain", "phase": "desempenho", "title": "Planos de execução", "time": "Semana 7",
+      "summary": "Ler o resultado do EXPLAIN para achar o gargalo de uma consulta.",
+      "topics": ["EXPLAIN ANALYZE", "Seq Scan e Index Scan", "Estimativas de linhas", "Tipos de join"],
+      "challenge": "Pegar três consultas lentas, achar a causa de cada uma e corrigir.",
+      "success": "Você aponta no plano o passo que mais custa."
+    },
+    {
+      "id": "janelas", "phase": "desempenho", "title": "Funções de janela", "time": "Semana 8",
+      "summary": "Rankings, totais acumulados e comparações entre linhas sem perder o detalhe.",
+      "topics": ["OVER e PARTITION BY", "ROW_NUMBER e RANK", "LAG e LEAD", "Totais acumulados"],
+      "challenge": "Calcular o ranking mensal de produtos e a variação em relação ao mês anterior.",
+      "success": "Você resolve sem recorrer a subconsultas aninhadas."
+    },
+    {
+      "id": "particoes", "phase": "desempenho", "optional": true, "anchor": "indices", "title": "Particionamento",
+      "summary": "Dividir tabelas muito grandes para manter as consultas rápidas."
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "$schema": "../schema/roadmap.schema.json",
+  "schemaVersion": 1,
+  "id": "exemplo-minimo",
+  "meta": {
+    "title": "Exemplo mínimo",
+    "subtitle": "O menor roadmap válido: sem fases, só tópicos em sequência",
+    "description": "Uma lista de tópicos e um opcional, sem fases."
+  },
+  "nodes": [
+    {
+      "id": "primeiro",
+      "title": "Primeiro tópico",
+      "time": "Semana 1",
+      "summary": "Só id e title são obrigatórios em cada tópico. O resto aparece no painel lateral quando existir.",
+      "topics": ["Conceito A", "Conceito B"],
+      "challenge": "Algo pequeno e verificável para fazer.",
+      "success": "Como você sabe que terminou.",
+      "links": [{ "title": "Documentação", "url": "https://example.com/" }]
+    },
+    { "id": "segundo", "title": "Segundo tópico", "time": "Semana 2" },
+    { "id": "terceiro", "title": "Terceiro tópico", "time": "Semana 3" },
+    { "id": "extra", "title": "Extra opcional", "optional": true, "anchor": "segundo", "summary": "Ramifica ao lado do tópico de origem e não conta no progresso." }
+  ]
+}

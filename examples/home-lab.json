@@ -1,0 +1,110 @@
+{
+  "$schema": "../schema/roadmap.schema.json",
+  "schemaVersion": 1,
+  "id": "home-lab",
+  "meta": {
+    "title": "Montar um home lab",
+    "eyebrow": "Projeto pessoal, do primeiro servidor ao ambiente estável",
+    "subtitle": "Hardware, virtualização, serviços e backup",
+    "description": "Projeto de montar um servidor doméstico com serviços úteis e backup.",
+    "brand": { "plain": "home", "accent": ".lab" },
+    "tagline": "Um servidor em casa, passo a passo.\nCada fase termina com algo funcionando.",
+    "sidebarNote": "Anote o que você mudou.\nFaça backup antes de mexer em algo que funciona.",
+    "footer": "Roadmap de exemplo que acompanha o Roadkit."
+  },
+  "theme": { "accent": "#2d3a4a", "brandAccent": "#c2571a" },
+  "labels": {
+    "topics": "O que envolve",
+    "challenge": "Entrega",
+    "success": "Pronto quando",
+    "markDone": "Marcar como entregue",
+    "markUndone": "Desmarcar como entregue",
+    "doneHint": "Marque apenas quando a entrega estiver funcionando e anotada.",
+    "legendHint": "Clique em uma etapa para ver o que envolve, a entrega e as referências."
+  },
+  "phases": [
+    { "id": "base", "title": "Base", "period": "Mês 1", "color": "#c2571a", "summary": "Escolher o equipamento e deixar o sistema instalado e acessível.", "milestone": "Servidor acessível pela rede" },
+    { "id": "servicos", "title": "Serviços", "period": "Mês 2", "color": "#2f7fb8", "summary": "Colocar no ar os serviços que você realmente vai usar.", "milestone": "Serviços no ar" },
+    { "id": "operacao", "title": "Operação", "period": "Mês 3", "color": "#4a8a4f", "summary": "Backup, monitoramento e rotina de manutenção.", "milestone": "Ambiente confiável" }
+  ],
+  "nodes": [
+    {
+      "id": "hardware", "phase": "base", "title": "Escolher o hardware", "time": "Semana 1",
+      "summary": "Definir o que o servidor precisa fazer antes de comprar ou reaproveitar algo.",
+      "topics": ["Consumo de energia", "Memória e armazenamento", "Placa de rede", "Ruído"],
+      "challenge": "Uma lista com o que será usado, o custo e o consumo estimado.",
+      "success": "Você sabe quantos serviços cabem no equipamento escolhido."
+    },
+    {
+      "id": "instalacao", "phase": "base", "title": "Instalar o sistema", "time": "Semana 2",
+      "summary": "Instalar o hipervisor ou o sistema base e deixar tudo atualizado.",
+      "topics": ["Proxmox ou Debian", "Particionamento", "Atualizações", "Usuários e SSH"],
+      "challenge": "Sistema instalado, atualizado e acessível por SSH com chave.",
+      "success": "Você reinicia o servidor e ele volta sozinho, acessível.",
+      "links": [{ "title": "Documentação do Proxmox VE", "url": "https://pve.proxmox.com/pve-docs/" }]
+    },
+    {
+      "id": "rede", "phase": "base", "title": "Rede e acesso", "time": "Semana 3",
+      "summary": "IP fixo, nomes locais e acesso remoto seguro.",
+      "topics": ["IP estático ou reserva no DHCP", "DNS local", "VPN", "Firewall"],
+      "challenge": "Acessar o servidor pelo nome na rede de casa e de fora via VPN.",
+      "success": "Nenhum serviço fica exposto na internet sem necessidade."
+    },
+    {
+      "id": "vpn-alt", "phase": "base", "optional": true, "anchor": "rede", "title": "Rede separada para o lab",
+      "summary": "Isolar o lab do restante da rede com uma VLAN."
+    },
+    {
+      "id": "containers", "phase": "servicos", "title": "Containers com Docker", "time": "Semana 5",
+      "summary": "Rodar os serviços em containers descritos em arquivos versionados.",
+      "topics": ["Docker e Compose", "Volumes", "Redes", "Atualização de imagens"],
+      "challenge": "Um serviço de teste rodando por Compose, com os dados em volume.",
+      "success": "Você recria o container e os dados continuam lá.",
+      "links": [{ "title": "Documentação do Docker", "url": "https://docs.docker.com/" }]
+    },
+    {
+      "id": "proxy", "phase": "servicos", "title": "Proxy reverso e certificados", "time": "Semana 6",
+      "summary": "Um único ponto de entrada com HTTPS para os serviços.",
+      "topics": ["Proxy reverso", "Certificados", "Nomes de host", "Redirecionamentos"],
+      "challenge": "Dois serviços acessíveis por nomes diferentes, ambos com HTTPS.",
+      "success": "Adicionar um serviço novo leva poucos minutos."
+    },
+    {
+      "id": "dns-adblock", "phase": "servicos", "title": "DNS com bloqueio de anúncios", "time": "Semana 7",
+      "summary": "Um servidor DNS próprio para toda a casa.",
+      "topics": ["Pi-hole", "Listas de bloqueio", "DNS upstream", "Lista de exceções"],
+      "challenge": "Todos os dispositivos da casa usando o DNS do lab.",
+      "success": "Você consegue ver quais consultas foram bloqueadas e liberar uma.",
+      "links": [{ "title": "Documentação do Pi-hole", "url": "https://docs.pi-hole.net/" }]
+    },
+    {
+      "id": "midia", "phase": "servicos", "optional": true, "anchor": "dns-adblock", "title": "Servidor de mídia",
+      "summary": "Organizar fotos, músicas e vídeos em um serviço próprio."
+    },
+    {
+      "id": "backup", "phase": "operacao", "title": "Backup 3-2-1", "time": "Semana 9",
+      "summary": "Três cópias, dois tipos de mídia, uma fora de casa.",
+      "topics": ["O que entra no backup", "Agendamento", "Cópia externa", "Criptografia"],
+      "challenge": "Backup automático rodando e uma restauração testada de verdade.",
+      "success": "Você restaura um serviço do zero a partir do backup."
+    },
+    {
+      "id": "monitoramento", "phase": "operacao", "title": "Monitoramento e alertas", "time": "Semana 10",
+      "summary": "Saber que algo quebrou antes de perceber pelo uso.",
+      "topics": ["Uso de disco e memória", "Disponibilidade dos serviços", "Alertas no celular"],
+      "challenge": "Um painel simples e um alerta quando o disco passar de 85 por cento.",
+      "success": "Você recebe o alerta ao simular uma falha."
+    },
+    {
+      "id": "documentacao", "phase": "operacao", "title": "Documentar e automatizar", "time": "Semana 11",
+      "summary": "Deixar o ambiente reproduzível por quem for mexer nele, inclusive você daqui a seis meses.",
+      "topics": ["Diagrama da rede", "Arquivos Compose versionados", "Rotina de atualização"],
+      "challenge": "Um repositório com a configuração e um README de recuperação.",
+      "success": "Alguém consegue reconstruir o ambiente seguindo só o README."
+    },
+    {
+      "id": "ansible", "phase": "operacao", "optional": true, "anchor": "documentacao", "title": "Automação com Ansible",
+      "summary": "Descrever a configuração do servidor como código."
+    }
+  ]
+}

@@ -1,0 +1,103 @@
+{
+  "$schema": "../schema/roadmap.schema.json",
+  "schemaVersion": 1,
+  "id": "side-project-saas",
+  "meta": {
+    "title": "Launch a Side Project",
+    "eyebrow": "Project roadmap, from idea to first paying user",
+    "subtitle": "Validate, build the MVP, launch and learn",
+    "description": "A project roadmap in English, with colors and labels overridden.",
+    "language": "en",
+    "brand": { "plain": "ship", "accent": ".map" },
+    "tagline": "From idea to first paying user.\nExample roadmap for a small product.",
+    "sidebarNote": "Ship small, ship often.\nCut scope before cutting quality.",
+    "footer": "Example roadmap bundled with Roadkit."
+  },
+  "theme": { "accent": "#0f5e55", "brandAccent": "#e0603a" },
+  "labels": {
+    "topics": "What to cover",
+    "challenge": "Deliverable",
+    "success": "Definition of done",
+    "resources": "References",
+    "markDone": "Mark as shipped",
+    "markUndone": "Unmark as shipped",
+    "doneHint": "Only mark this once the deliverable exists and someone else could use it."
+  },
+  "phases": [
+    { "id": "validate", "title": "Validate", "period": "Weeks 1 and 2", "color": "#e0603a", "summary": "Prove that someone has the problem before writing code.", "milestone": "Problem validated" },
+    { "id": "build", "title": "Build the MVP", "period": "Weeks 3 to 6", "color": "#0f5e55", "summary": "The smallest product that solves one painful job end to end.", "milestone": "MVP in users' hands" },
+    { "id": "launch", "title": "Launch", "period": "Weeks 7 and 8", "color": "#3a68d1", "summary": "Get the first users, charge them, and listen.", "milestone": "First paying user" }
+  ],
+  "nodes": [
+    {
+      "id": "interviews", "phase": "validate", "title": "Customer interviews", "time": "Week 1",
+      "summary": "Talk to people who have the problem. Ask about what they did in the past, not what they think of your idea.",
+      "topics": ["Interview script", "Past behavior vs. opinions", "Finding 8 to 10 candidates"],
+      "challenge": "Run 8 interviews and write a one page summary of the 3 most repeated pains.",
+      "success": "At least 5 interviewees described the same pain without being prompted.",
+      "links": [{ "title": "The Mom Test", "url": "https://www.momtestbook.com/" }]
+    },
+    {
+      "id": "landing", "phase": "validate", "title": "Landing page and waitlist", "time": "Week 2",
+      "summary": "A one page promise and a way to sign up, to measure real interest.",
+      "topics": ["Value proposition", "Waitlist form", "Simple analytics"],
+      "challenge": "Publish a landing page and send 100 relevant people to it.",
+      "success": "You know your visitor to signup rate and have at least 20 emails."
+    },
+    {
+      "id": "pricing-test", "phase": "validate", "optional": true, "anchor": "landing", "title": "Pre-sell test",
+      "summary": "Ask for money before the product exists.",
+      "challenge": "Offer 5 interviewees a paid early access spot."
+    },
+    {
+      "id": "scope", "phase": "build", "title": "MVP scope", "time": "Week 3",
+      "summary": "Pick one user, one job and one happy path. Everything else goes on the later list.",
+      "topics": ["Jobs to be done", "Must, should, later", "Wireframes"],
+      "challenge": "A one page scope doc with a single user story and clickable wireframes.",
+      "success": "A stranger can say what the product does after 30 seconds with the wireframes."
+    },
+    {
+      "id": "stack", "phase": "build", "title": "Stack and skeleton", "time": "Week 3",
+      "summary": "Choose boring tools you already know. Get auth, database and deploy working on day one.",
+      "topics": ["Hosting", "Auth", "Database", "CI deploy"],
+      "challenge": "A hello world with login and one table, deployed to a public URL.",
+      "success": "Pushing to main deploys automatically."
+    },
+    {
+      "id": "core-loop", "phase": "build", "title": "Core feature", "time": "Weeks 4 and 5",
+      "summary": "Build the happy path end to end, with an ugly UI if needed.",
+      "topics": ["Core user flow", "Error states", "Seed data"],
+      "challenge": "A user can sign up and complete the main job without help.",
+      "success": "Two testers complete the main job while you stay silent."
+    },
+    {
+      "id": "billing", "phase": "build", "title": "Payments", "time": "Week 6",
+      "summary": "Charge from day one, even if it is a single plan.",
+      "topics": ["Checkout", "Webhooks", "Plan limits"],
+      "challenge": "A test mode payment unlocks the product.",
+      "success": "Subscribing, cancelling and failed payments all behave correctly in test mode."
+    },
+    {
+      "id": "onboarding", "phase": "build", "optional": true, "anchor": "core-loop", "title": "Guided onboarding",
+      "summary": "A checklist or short tour that gets users to their first success faster."
+    },
+    {
+      "id": "beta", "phase": "launch", "title": "Private beta", "time": "Week 7",
+      "summary": "Invite the waitlist in small batches and watch how people actually use it.",
+      "topics": ["Invite batches", "Feedback channel", "Bug triage"],
+      "challenge": "Onboard 10 users and talk to at least 5 of them.",
+      "success": "A prioritized list of fixes, backed by what real users did."
+    },
+    {
+      "id": "public-launch", "phase": "launch", "title": "Public launch", "time": "Week 8",
+      "summary": "Announce where your users already spend time and ask for the first payment.",
+      "topics": ["Launch post", "Communities", "Pricing page"],
+      "challenge": "Post the launch in three places and reply to every comment.",
+      "success": "Your first paying user, and a retention number to track from here."
+    },
+    {
+      "id": "referrals", "phase": "launch", "optional": true, "anchor": "public-launch", "title": "Referral loop",
+      "summary": "Let happy users bring others."
+    }
+  ]
+}
