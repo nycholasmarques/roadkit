@@ -591,8 +591,9 @@ function modelFromJson(j) {
   const m = j.meta || {};
   return {
     title: str(m.title), subtitle: str(m.subtitle), description: str(m.description), icon: str(m.icon),
+    accent: hex(j.theme?.accent) || '', brandColor: hex(j.theme?.brandAccent) || '', logoPlain: str(m.brand?.plain), logoAccent: str(m.brand?.accent),
     language: str(m.language) || S.rm?.meta.language || 'pt-BR',
-    phases: arr(j.phases).map(p => ({ key: str(p.id) || `p${ed.n++}`, orig: p, title: str(p.title), period: str(p.period) })),
+    phases: arr(j.phases).map(p => ({ key: str(p.id) || `p${ed.n++}`, orig: p, title: str(p.title), period: str(p.period), color: hex(p.color) || '' })),
     nodes: arr(j.nodes).map(n => ({
       orig: n, tmp: `t${ed.n++}`, title: str(n.title), phase: str(n.phase), open: false,
       ...Object.fromEntries(NODE_TEXT.map(k => [k, str(n[k])])),
@@ -611,10 +612,16 @@ function buildJson(model, base, preview = false) {
   const fresh = (set, text, fallback) => { const b = slug(text) || fallback; let id = b, i = 2; while (set.has(id)) id = `${b}-${i++}`; set.add(id); return id; };
   const meta = { ...(base?.meta || {}), title: model.title.trim() || (preview ? S.L.edTitleNew : ''), language: model.language };
   for (const k of ['subtitle', 'description', 'icon']) { const v = model[k].trim(); if (v) meta[k] = v; else delete meta[k]; }
+  const brand = { ...(base?.meta?.brand || {}) };
+  for (const [k, v] of [['plain', model.logoPlain.trim()], ['accent', model.logoAccent.trim()]]) { if (v) brand[k] = v; else delete brand[k]; }
+  if (Object.keys(brand).length) meta.brand = brand; else delete meta.brand;
+  const theme = { ...(base?.theme || {}) };
+  for (const [k, v] of [['accent', model.accent], ['brandAccent', model.brandColor]]) { if (v) theme[k] = v; else delete theme[k]; }
   const phaseIds = new Set(model.phases.map(p => p.orig?.id).filter(Boolean)), idOf = {};
   const phases = model.phases.filter(p => p.title.trim()).map(p => {
     const o = { ...(p.orig || {}), id: p.orig?.id || (preview ? p.key : fresh(phaseIds, p.title, 'fase')), title: p.title.trim() };
     if (p.period.trim()) o.period = p.period.trim(); else delete o.period;
+    if (p.color) o.color = p.color; else delete o.color;
     idOf[p.key] = o.id;
     return o;
   });
@@ -633,7 +640,9 @@ function buildJson(model, base, preview = false) {
   if (phases.length) { const idx = id => phases.findIndex(p => p.id === id); nodes = nodes.map((n, i) => [n, i]).sort((a, b) => idx(a[0].phase) - idx(b[0].phase) || a[1] - b[1]).map(x => x[0]); }
   const id = base?.id || (preview ? 'draft' : fresh(used, model.title, 'roadmap'));
   const { phases: _p, nodes: _n, ...rest } = base || {};
-  const out = { ...rest, schemaVersion: 1, id, meta };
+  const { theme: _t, ...rest2 } = rest;
+  const out = { ...rest2, schemaVersion: 1, id, meta };
+  if (Object.keys(theme).length) out.theme = theme;
   if (phases.length) out.phases = phases;
   out.nodes = nodes;
   return out;
@@ -642,6 +651,10 @@ function buildJson(model, base, preview = false) {
 const fld = (label, inner, cls = '') => `<label class="ed-f ${cls}"><span>${esc(label)}</span>${inner}</label>`;
 const inp = (f, v, ph = '', extra = '') => `<input type="text" data-f="${f}" value="${esc(v)}" placeholder="${esc(ph)}" ${extra}>`;
 const area = (f, v, rows = 3) => `<textarea data-f="${f}" rows="${rows}">${esc(v)}</textarea>`;
+const DEFAULT_ACCENT = '#233b65', DEFAULT_BRAND = '#7549bd';
+/* A color picker that stays empty (the default) until you choose one; the arrow clears it again. */
+const colorField = (f, v, dflt, label = '', kind = 'top') => `<span class="ed-color${v ? ' set' : ''}"><input type="color" data-f="${f}" value="${esc(v || dflt)}"${label ? ` aria-label="${esc(label)}" title="${esc(label)}"` : ''}><button type="button" data-do="reset-color" data-kind="${kind}" data-f="${f}" title="${esc(S.L.edColorReset)}" aria-label="${esc(S.L.edColorReset)}">↺</button></span>`;
+const logoHtml = m => `${esc(m.logoPlain || 'road')}<b style="color:${esc(m.brandColor || DEFAULT_BRAND)}">${esc(m.logoAccent || 'kit')}</b>`;
 const rowBtns = L => `<span class="ed-btns"><button type="button" data-do="up" title="${esc(L.edMoveUp)}" aria-label="${esc(L.edMoveUp)}">↑</button><button type="button" data-do="down" title="${esc(L.edMoveDown)}" aria-label="${esc(L.edMoveDown)}">↓</button><button type="button" data-do="rm" class="x" title="${esc(L.edRemove)}" aria-label="${esc(L.edRemove)}">×</button></span>`;
 
 function renderForm() {
@@ -649,7 +662,8 @@ function renderForm() {
   const phaseOpts = sel => m.phases.map(p => `<option value="${esc(p.key)}"${p.key === sel ? ' selected' : ''}>${esc(p.title || L.edPhaseTitle)}</option>`).join('');
   $('editBody').innerHTML =
     `<div class="ed-grid">${fld(L.edName, inp('title', m.title), 'wide')}${fld(L.edLanguage, `<select data-f="language">${langs.map(c => `<option value="${esc(c)}"${c === m.language ? ' selected' : ''}>${esc(LANG_NAMES[c] || c)}</option>`).join('')}</select>`)}${fld(L.edIcon, inp('icon', m.icon, '🚀', 'maxlength="8"'))}${fld(L.edSubtitle, inp('subtitle', m.subtitle), 'wide')}${fld(L.edDescription, inp('description', m.description), 'wide')}</div>` +
-    `<h3 class="ed-h">${esc(L.edPhases)}</h3><div data-list="phases">${m.phases.map((p, i) => `<div class="ed-row" data-i="${i}">${inp('title', p.title, L.edPhaseTitle)}${inp('period', p.period, L.edPhasePeriod)}${rowBtns(L)}</div>`).join('')}</div><button type="button" class="secondary ed-add" data-do="add-phase">+ ${esc(L.edAddPhase)}</button>` +
+    `<h3 class="ed-h">${esc(L.edColors)}</h3><div class="ed-grid">${fld(L.edAccent, colorField('accent', m.accent, DEFAULT_ACCENT))}${fld(L.edBrandColor, colorField('brandColor', m.brandColor, DEFAULT_BRAND))}${fld(L.edLogo, `<span class="ed-logo-row">${inp('logoPlain', m.logoPlain, 'road')}${inp('logoAccent', m.logoAccent, 'kit')}<span class="ed-logo" id="logoMini">${logoHtml(m)}</span></span>`, 'wide')}</div><p class="ed-hint">${esc(L.edColorsHint)}</p>` +
+    `<h3 class="ed-h">${esc(L.edPhases)}</h3><div data-list="phases">${m.phases.map((p, i) => `<div class="ed-row" data-i="${i}">${inp('title', p.title, L.edPhaseTitle)}${inp('period', p.period, L.edPhasePeriod)}${colorField('color', p.color, PALETTE[i % PALETTE.length], L.edPhaseColor, 'phase')}${rowBtns(L)}</div>`).join('')}</div><button type="button" class="secondary ed-add" data-do="add-phase">+ ${esc(L.edAddPhase)}</button>` +
     `<h3 class="ed-h">${esc(L.edTopics)}</h3><div data-list="nodes">${m.nodes.map((n, i) => `<div class="ed-card${n.open ? ' open' : ''}" data-i="${i}"><div class="ed-row"><span class="ed-num">${i + 1}</span>${inp('title', n.title, L.edTopicTitle)}${rowBtns(L)}<span class="ed-br"></span>${m.phases.length ? `<select data-f="phase" aria-label="${esc(L.edPhaseOf)}">${phaseOpts(n.phase || m.phases[0].key)}</select>` : ''}${inp('time', n.time, L.edTime)}</div>` +
       `<button type="button" class="ed-more" data-do="more" aria-expanded="${n.open}">${n.open ? '▾' : '▸'} ${esc(L.edDetails)}${n.orig?.optional ? ` · ${esc(L.edOptionalTag)}` : ''}</button>` +
       (n.open ? `<div class="ed-det">${fld(L.edSummary, area('summary', n.summary, 2), 'wide')}${fld(L.edStudy, area('topics', n.topics))}${fld(L.edTasks, area('tasks', n.tasks))}${fld(L.edChallenge, area('challenge', n.challenge, 2))}${fld(L.edSuccess, area('success', n.success, 2))}${fld(L.edLinks, area('links', n.links), 'wide')}</div>` : '') + '</div>').join('')}</div>` +
@@ -684,7 +698,7 @@ async function showPreviewHint() {
   S.rm = null; S.preview = true; S.state = emptyState();
   applyI18n();
   const L = S.L, m = ed.model, form = ed.mode === 'form', root = document.documentElement;
-  root.style.setProperty('--accent', '#233b65'); root.style.setProperty('--brand', '#7549bd');
+  root.style.setProperty('--accent', (form && m.accent) || DEFAULT_ACCENT); root.style.setProperty('--brand', (form && m.brandColor) || DEFAULT_BRAND);
   root.lang = uiLang({ meta: { language: m?.language } });
   const title = (form && m.title.trim()) || L.edTitleNew;
   document.title = title;
@@ -803,10 +817,16 @@ function wireEditor() {
     ed.dirty = true;
     schedulePreview();
     const f = e.target.dataset.f, card = e.target.closest('[data-i]');
-    if (f && !card && ed.mode === 'form') { ed.model[f] = e.target.value; return; }   // name, subtitle, icon...
+    if (f && !card && ed.mode === 'form') {   // name, subtitle, icon, colors...
+      ed.model[f] = e.target.value;
+      if (e.target.type === 'color') e.target.closest('.ed-color').classList.add('set');
+      if (/^(logo|brandColor)/.test(f)) $('logoMini').innerHTML = logoHtml(ed.model);
+      return;
+    }
     if (!f || !card || ed.mode !== 'form') return;
     const kind = e.target.closest('[data-list]').dataset.list, row = ed.model[kind][+card.dataset.i];
     row[f] = e.target.value;
+    if (e.target.type === 'color') e.target.closest('.ed-color').classList.add('set');
     if (kind === 'phases' && f === 'title') body.querySelectorAll(`select[data-f=phase] option[value="${CSS.escape(row.key)}"]`).forEach(o => { o.textContent = row.title || S.L.edPhaseTitle; });
   });
   body.addEventListener('change', e => {
@@ -827,7 +847,8 @@ function wireEditor() {
         if (kind === 'nodes' && !m.nodes.length) m.nodes.push(blankNode(m.phases[0]?.key || ''));
         break;
       case 'more': m.nodes[i].open = !m.nodes[i].open; break;
-      case 'add-phase': m.phases.push({ key: `p${ed.n++}`, orig: null, title: '', period: '' }); break;
+      case 'reset-color': if (b.dataset.kind === 'phase') m.phases[i].color = ''; else m[b.dataset.f] = ''; break;
+      case 'add-phase': m.phases.push({ key: `p${ed.n++}`, orig: null, title: '', period: '', color: '' }); break;
       case 'add-node': m.nodes.push(blankNode(m.phases.at(-1)?.key || '')); break;
     }
     rerender();
