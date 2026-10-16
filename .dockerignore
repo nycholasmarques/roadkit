@@ -2,7 +2,7 @@
 .gitignore
 .env
 docs
-README.md
+README*.md
 LICENSE
 Dockerfile
 compose.yaml

@@ -10,6 +10,12 @@ docker compose down
 
 A imagem é a `python:3.12-slim` com o Roadkit por cima, sem nenhuma dependência. O serviço reinicia sozinho (`restart: unless-stopped`), roda como um usuário sem privilégios, sem capabilities extras e com 128 MB de memória, que sobra.
 
+Também existe uma imagem publicada, construída para amd64 e arm64 a cada release:
+
+```bash
+docker pull ghcr.io/nycholasmarques/roadkit:1
+```
+
 ## O que fica onde
 
 | Dentro do contêiner | De onde vem | Para que serve |

@@ -1,105 +1,127 @@
 <h1 align="center">Roadkit</h1>
 
 <p align="center">
-  Roadmaps interativos que saem de um arquivo JSON.<br>
-  Mapa, kanban e progresso salvo, num servidor que cabe em um arquivo Python.
+  <b>English</b> · <a href="README.pt-BR.md">Português</a>
+</p>
+
+<p align="center">
+  Interactive roadmaps that come out of a JSON file.<br>
+  Map, kanban and saved progress, from a server that fits in a single Python file.
+</p>
+
+<p align="center">
+  <a href="https://github.com/nycholasmarques/roadkit/releases/latest"><img src="https://img.shields.io/github/v/release/nycholasmarques/roadkit" alt="Latest release"></a>
+  <a href="https://github.com/nycholasmarques/roadkit/actions/workflows/ci.yml"><img src="https://github.com/nycholasmarques/roadkit/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/nycholasmarques/roadkit" alt="MIT license"></a>
 </p>
 
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/media/mapa-escuro.png">
-    <img src="docs/media/mapa-claro.png" alt="O roadmap de GitOps com Argo CD aberto no Roadkit" width="100%">
+    <img src="docs/media/mapa-claro.png" alt="The GitOps with Argo CD roadmap open in Roadkit" width="100%">
   </picture>
 </p>
 
 <p align="center">
-  <a href="#rodando">Rodando</a> ·
-  <a href="#o-que-dá-pra-fazer">O que dá pra fazer</a> ·
-  <a href="docs/README.md">Documentação</a> ·
-  <a href="docs/criar-com-ia.md">Criar com IA</a>
+  <a href="#running-it">Running it</a> ·
+  <a href="#what-you-can-do">What you can do</a> ·
+  <a href="docs/en/README.md">Documentation</a> ·
+  <a href="docs/en/creating-with-ai.md">Create with AI</a>
 </p>
 
-## Por que existe
+## Why it exists
 
-Eu queria ter vários roadmaps, tanto de projetos que quero tocar quanto de coisas que quero estudar, todos com a mesma cara e sem refazer a interface a cada um. A interface não sabe nada sobre o assunto: ela só desenha o que está no JSON. Para um roadmap novo, basta um arquivo, ou o editor que vem junto.
+I wanted to keep several roadmaps, both for projects I want to build and for things I want to learn, all looking the same and without rebuilding the interface for each one. The interface knows nothing about the subject: it only draws what is in the JSON. A new roadmap is just a file, or the editor that comes with it.
 
-## Rodando
+The interface speaks English and Portuguese, and follows the language of each roadmap unless you pick one in **Settings**.
+
+## Running it
 
 ```bash
 python3 tools/roadkit.py serve
 ```
 
-Abra `http://localhost:8765`. Só precisa de Python 3: sem dependências, sem build. Os exemplos já aparecem na lista.
+Open `http://localhost:8765`. All it needs is Python 3: no dependencies, no build. The examples are already in the list. To skip cloning, download the zip from the [latest release](https://github.com/nycholasmarques/roadkit/releases/latest).
 
 <details>
-<summary><b>Com Docker</b></summary>
+<summary><b>With Docker</b></summary>
+
+With the published image:
+
+```bash
+docker run -d -p 127.0.0.1:8765:8765 -v roadkit-data:/app/data ghcr.io/nycholasmarques/roadkit:1
+```
+
+Or from the source, with Compose:
 
 ```bash
 docker compose up -d --build
 ```
 
-O progresso e os roadmaps criados pela interface ficam num volume, então sobrevivem a rebuilds. A pasta `./roadmaps` é montada somente leitura. Para abrir para o celular ou outro computador da rede, o token e as outras opções estão em [Docker e rede](docs/docker-e-rede.md).
+Progress and the roadmaps created in the interface live in a volume, so they survive rebuilds. With Compose, the `./roadmaps` folder is mounted read-only. To open it to your phone or another computer on your network, the token and the other options are in [Docker and network](docs/en/docker-and-network.md).
 </details>
 
-## O que dá pra fazer
+## What you can do
 
-### Acompanhar
+### Track
 
-Cada tópico passa por a fazer, em andamento, em revisão e concluído, no **mapa** ou no **kanban**, e os dois mostram o mesmo estado. Tópicos têm tarefas e subtópicos; concluir o de cima conclui o que está embaixo. O progresso é salvo no servidor, então o que você marca no notebook aparece no celular.
-
-<p align="center">
-  <img src="docs/media/visao-geral.gif" alt="Marcando um tópico, movendo um cartão no kanban e trocando para o tema escuro" width="100%">
-</p>
-
-### Criar, vendo o resultado
-
-**Novo roadmap** abre um editor com o formulário de um lado e o roadmap de verdade do outro, que se desenha enquanto você escreve. Dá para montar fases, tópicos, subtópicos até dois níveis, opcionais, cores, logo e categoria. Uma linha embaixo avisa o que está errado na hora.
+Each topic moves through to do, working, review and finished, on the **map** or on the **kanban**, and both show the same state. Topics have tasks and sub-topics; finishing the one above finishes what is below it. Progress is saved on the server, so what you check off on your laptop shows up on your phone.
 
 <p align="center">
-  <img src="docs/media/criar-roadmap.gif" alt="Montando um roadmap no editor, com a prévia ao lado" width="100%">
+  <img src="docs/media/visao-geral.gif" alt="Checking off a topic, moving a card on the kanban and switching to the dark theme" width="100%">
 </p>
 
-### Criar com uma IA
+### Create, watching the result
 
-O botão **Criar com IA** monta um prompt a partir do que você quer aprender. Você leva até a IA que preferir, cola a resposta de volta, e o roadmap abre no editor para ajustar. Não precisa de chave de API. Quem usa um agente de código (Claude Code, Codex...) ainda ganha uma [skill](.agents/skills/roadkit/SKILL.md) que conduz essa conversa.
+**New roadmap** opens an editor with the form on one side and the real roadmap on the other, drawing itself as you type. You can build phases, topics, sub-topics up to two levels deep, optional topics, colors, logo and category. A line at the bottom tells you what is wrong as you go.
 
 <p align="center">
-  <img src="docs/media/criar-com-ia.gif" alt="Descrevendo um objetivo, copiando o prompt e trazendo a resposta da IA para o editor" width="100%">
+  <img src="docs/media/criar-roadmap.gif" alt="Building a roadmap in the editor, with the preview next to it" width="100%">
 </p>
 
-### Organizar
+### Create with an AI
 
-Cada subpasta de `roadmaps/` vira uma seção no seletor, e o seletor mostra o andamento de cada roadmap. Dá para ocultar, duplicar, exportar com o progresso num `.zip` e importar de volta. As barras laterais se ajustam ou recolhem, e o tema é claro, escuro ou automático.
+The **Create with AI** button builds a prompt from what you want to learn. You take it to whichever AI you like, paste the answer back, and the roadmap opens in the editor for you to adjust. No API key needed. If you use a coding agent (Claude Code, Codex...), there is also a [skill](.agents/skills/roadkit/SKILL.md) that guides that conversation.
 
-## Seus roadmaps
+<p align="center">
+  <img src="docs/media/criar-com-ia.gif" alt="Describing a goal, copying the prompt and bringing the AI's answer into the editor" width="100%">
+</p>
 
-Um roadmap é um arquivo JSON. O mínimo cabe em poucas linhas:
+### Organize
+
+Each subfolder of `roadmaps/` becomes a section in the picker, and the picker shows how far along each roadmap is. You can hide, duplicate, export with progress as a `.zip` and import it back. The sidebars resize or collapse, and the theme is light, dark or auto.
+
+## Your roadmaps
+
+A roadmap is a JSON file. The minimum fits in a few lines:
 
 ```json
 {
-  "id": "meu-roadmap",
-  "meta": { "title": "Meu roadmap" },
+  "id": "my-roadmap",
+  "meta": { "title": "My roadmap", "language": "en" },
   "nodes": [
-    { "id": "primeiro", "title": "Primeiro tópico", "time": "Semana 1" },
-    { "id": "segundo", "title": "Segundo tópico", "time": "Semana 2" }
+    { "id": "first", "title": "First topic", "time": "Week 1" },
+    { "id": "second", "title": "Second topic", "time": "Week 2" }
   ]
 }
 ```
 
-Salve em `roadmaps/` (ou numa subpasta, que vira a categoria) e rode `python3 tools/roadkit.py check` para validar. Recarregue a página e ele aparece. Os exemplos em [`examples/`](examples/) mostram fases, tarefas, subtópicos, cores e rótulos próprios, em português e em inglês.
+Save it in `roadmaps/` (or in a subfolder, which becomes its category) and run `python3 tools/roadkit.py check` to validate it. Reload the page and it is there. The examples in [`examples/`](examples/) show phases, tasks, sub-topics, colors and custom labels, in English and Portuguese.
 
-## Documentação
+## Documentation
 
 | | |
 |---|---|
-| [Usando a interface](docs/usando-a-interface.md) | um passeio pela tela |
-| [Criando roadmaps](docs/criar-roadmaps.md) | três jeitos de criar, categorias e o que faz um bom roadmap |
-| [Criando com IA](docs/criar-com-ia.md) | o botão e a skill |
-| [Como funciona](docs/como-funciona.md) | o que roda onde, onde ficam os dados, a API |
-| [Docker e rede](docs/docker-e-rede.md) | volumes, backup, token, outros aparelhos |
-| [Formato do JSON](docs/SCHEMA.md) | referência de cada campo |
-| [Publicando versões](docs/publicando-versoes.md) | versionamento, releases automáticas e [CHANGELOG](CHANGELOG.md) |
+| [Using the interface](docs/en/using-the-interface.md) | a tour of the screen |
+| [Creating roadmaps](docs/en/creating-roadmaps.md) | three ways to create one, categories and what makes a good roadmap |
+| [Creating with AI](docs/en/creating-with-ai.md) | the button and the skill |
+| [How it works](docs/en/how-it-works.md) | what runs where, where the data lives, the API |
+| [Docker and network](docs/en/docker-and-network.md) | volumes, backups, token, other devices |
+| [JSON format](docs/en/SCHEMA.md) | reference for every field |
+| [Releasing versions](docs/en/releasing.md) | versioning, automated releases and the [CHANGELOG](CHANGELOG.md) |
 
-## Licença
+The documentation is also available [in Portuguese](docs/README.md).
 
-MIT. Veja [`LICENSE`](LICENSE).
+## License
+
+MIT. See [`LICENSE`](LICENSE).
