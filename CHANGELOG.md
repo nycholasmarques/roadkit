@@ -4,7 +4,7 @@ Todas as mudanças relevantes ficam aqui, da mais nova para a mais antiga. O for
 
 Cada release no GitHub também lista automaticamente os commits desde a versão anterior; este arquivo é onde ficam os destaques escritos à mão. Para publicar uma versão, veja [`docs/publicando-versoes.md`](docs/publicando-versoes.md).
 
-## [1.1.0] - não lançada
+## [1.1.0] - 2026-10-16
 
 ### Temas
 - Sete temas no lugar de só claro e escuro: Claro, Névoa e Papel no modo claro; Noite, Grafite, Ameixa e Breu no modo escuro.
