@@ -15,7 +15,13 @@
     <div class="side-sub" id="tagline"></div>
     <div class="roadmap-switch">
       <div class="aside-label" data-i18n="roadmaps"></div>
-      <div class="sel-wrap"><select id="roadmapSelect" aria-label="Roadmap"></select></div>
+      <button type="button" class="rm-current" id="rmBtn" aria-haspopup="true" aria-expanded="false" aria-controls="rmPop">
+        <span class="rm-ico" id="rmIcon" aria-hidden="true"></span>
+        <span class="rm-name" id="rmName"></span>
+        <span class="rm-chip" id="rmChip"></span>
+        <svg class="rm-chev" viewBox="0 0 12 12" width="11" height="11" aria-hidden="true"><path d="M2.5 4.5L6 8l3.5-3.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <div class="rm-pop" id="rmPop" hidden></div>
     </div>
     <div class="aside-label" data-i18n="journey"></div>
     <nav id="phaseNav"></nav>
@@ -105,6 +111,31 @@
     </footer>
   </main>
 </div>
+<dialog class="dlg" id="manageDlg" aria-labelledby="manageTitle">
+  <div class="dlg-in">
+    <div class="dlg-head"><h2 id="manageTitle" data-i18n="manageRoadmaps"></h2><button type="button" class="dlg-x" data-close data-i18n-aria="rmClose">×</button></div>
+    <div class="dlg-tools">
+      <button type="button" class="primary" data-act="new" data-i18n="newRoadmap"></button>
+      <button type="button" class="secondary" data-act="import" data-i18n="importProgress"></button>
+    </div>
+    <div class="dlg-body" id="manageBody"></div>
+  </div>
+</dialog>
+<dialog class="dlg dlg-wide" id="editDlg" aria-labelledby="editTitle">
+  <div class="dlg-in">
+    <div class="dlg-head">
+      <h2 id="editTitle"></h2>
+      <div class="seg small" id="editMode" role="group"><button type="button" data-mode="form" data-i18n="edForm"></button><button type="button" data-mode="json" data-i18n="edJson"></button></div>
+      <button type="button" class="dlg-x" data-close data-i18n-aria="rmClose">×</button>
+    </div>
+    <div class="dlg-body" id="editBody"></div>
+    <div class="dlg-foot">
+      <div class="dlg-err" id="editErr" role="alert"></div>
+      <button type="button" class="secondary" data-close data-i18n="rmCancel"></button>
+      <button type="button" class="primary" id="editSave" data-i18n="edSave"></button>
+    </div>
+  </div>
+</dialog>
 <div class="scrim" id="scrim"></div>
 <div class="dock" id="dock" hidden></div>
 <input type="file" id="importFile" accept=".zip,.json,application/zip,application/json">

@@ -42,6 +42,7 @@ const safeUrl = u => { try { const x = new URL(u, location.href); return /^https
 const store = {
   get(k) { try { return localStorage.getItem(k); } catch { return null; } },
   set(k, v) { try { localStorage.setItem(k, v); } catch { /* storage blocked */ } },
+  del(k) { try { localStorage.removeItem(k); } catch { /* storage blocked */ } },
 };
 async function getText(url) {
   const r = await fetch(url, { cache: 'no-store' });
@@ -271,8 +272,8 @@ function setSyncStatus(kind) {
 
 const syncEnabled = () => !!S.rm && !S.isLocal && sync.api && SYNC_ID.test(S.rm.id);
 
-async function api(method, rm, body, keepalive = false) {
-  const call = () => fetch(`api/state/${encodeURIComponent(rm.id)}`, {
+async function apiFetch(method, path, body, keepalive = false) {
+  const call = () => fetch(path, {
     method, keepalive, cache: 'no-store',
     headers: { ...(body ? { 'Content-Type': 'application/json' } : {}), ...(store.get(KEY.token) ? { Authorization: `Bearer ${store.get(KEY.token)}` } : {}) },
     body: body ? JSON.stringify(body) : undefined,
@@ -285,6 +286,7 @@ async function api(method, rm, body, keepalive = false) {
   }
   return r;
 }
+const api = (method, rm, body, keepalive = false) => apiFetch(method, `api/state/${encodeURIComponent(rm.id)}`, body, keepalive);
 
 /* Replaces the local progress with the server's (keeping a backup of unsynced local data). */
 function adopt(rm, remote) {
@@ -386,25 +388,362 @@ function applyChrome() {
   if (rm.hasPhases) rm.phases.filter(p => p.nodes.length).forEach(p => addNav(p.id, `${String(p.index + 1).padStart(2, '0')} | ${p.title}`, p.color));
 }
 
-function buildSwitch() {
-  const sel = $('roadmapSelect');
-  sel.replaceChildren();
-  const groups = {};
-  (S.manifest.groups || []).forEach(g => {
-    const og = document.createElement('optgroup'); og.label = g.title; groups[g.id] = og; sel.append(og);
-  });
-  S.manifest.roadmaps.forEach(r => {
-    const o = document.createElement('option');
-    o.value = r.id; o.textContent = `${r.icon ? r.icon + ' ' : ''}${r.title}`;
-    (groups[r.group] || sel).append(o);
-  });
-  if (S.localRm) {
-    const o = document.createElement('option');
-    o.value = '__local__'; o.textContent = `${S.localRm.meta.title} (${S.L.localFile})`;
-    sel.append(o);
+/* ---------- roadmap picker (sidebar) ---------- */
+const entryById = id => S.manifest?.roadmaps.find(r => r.id === id);
+const visibleRoadmaps = () => S.manifest.roadmaps.filter(r => !r.hidden);
+
+/* How far along a roadmap is: the open one uses live state, the others the server's copy or this browser's. */
+function progressOf(entry) {
+  let nodes;
+  if (S.rm?.id === entry.id) nodes = S.state.nodes;
+  else {
+    const remote = S.remote?.[entry.id];
+    let local = null;
+    try { local = JSON.parse(store.get(KEY.state(entry.id)) || 'null'); } catch { /* ignore */ }
+    nodes = (remote && remote.updatedAt >= (Number(store.get(KEY.ts(entry.id))) || 0) ? remote.nodes : local?.nodes) ?? remote?.nodes ?? {};
   }
-  [...sel.querySelectorAll('optgroup')].forEach(g => { if (!g.children.length) g.remove(); });
-  sel.value = S.rm?.id === S.localRm?.id && S.localRm ? '__local__' : (S.rm?.id ?? '');
+  const dflt = new Set(entry.doneByDefault || []);
+  const total = entry.topics || 0;
+  const done = (entry.coreIds || []).filter(id => (nodes[id] ?? (dflt.has(id) ? 'finished' : 'todo')) === 'finished').length;
+  return { done, total, complete: total > 0 && done >= total };
+}
+
+async function loadRemoteStates() {
+  try {
+    const r = await apiFetch('GET', 'api/states');
+    if (r.ok) S.remote = await r.json();
+  } catch { /* offline: this browser's copy is used */ }
+}
+
+const progressChip = pr => pr.complete
+  ? `<span class="chip-done" title="${esc(S.L.rmDone)}">✓ ${esc(S.L.rmDone)}</span>`
+  : `<span class="chip-n">${pr.done}/${pr.total}</span>`;
+
+function updatePickerBtn() {
+  if (!S.rm) { $('rmIcon').textContent = '▦'; $('rmName').textContent = '—'; $('rmChip').textContent = ''; return; }
+  const entry = entryById(S.rm.id), local = S.isLocal;
+  $('rmIcon').textContent = S.rm.meta.icon || '▦';
+  $('rmName').textContent = S.rm.meta.title + (local ? ` (${S.L.localFile})` : '');
+  const pr = entry && !local ? progressOf(entry) : { done: S.rm.core.filter(isDone).length, total: S.rm.core.length };
+  pr.complete = pr.total > 0 && pr.done >= pr.total;
+  $('rmChip').innerHTML = pr.complete ? `<span class="chip-done" title="${esc(S.L.rmDone)}">✓</span>` : `<span class="chip-n">${pr.done}/${pr.total}</span>`;
+}
+
+function rmRowHtml(r, { manage = false } = {}) {
+  const pr = progressOf(r), open = S.rm?.id === r.id && !S.isLocal;
+  const pct = pr.total ? Math.round(pr.done / pr.total * 100) : 0;
+  const head = `<span class="rm-ico" aria-hidden="true">${esc(r.icon || '▦')}</span><span class="rm-meta"><span class="rm-t">${esc(r.title)}${r.editable ? ` <span class="rm-tag">${esc(S.L.rmMadeHere)}</span>` : ''}</span>` +
+    (manage && r.description ? `<span class="rm-sub">${esc(r.description)}</span>` : '') +
+    `<span class="rm-bar${pr.complete ? ' full' : ''}"><i style="width:${pct}%"></i></span></span><span class="rm-prog">${progressChip(pr)}</span>`;
+  if (!manage) return `<button type="button" class="rm-item${open ? ' on' : ''}" role="menuitem" data-open="${esc(r.id)}"${open ? ' aria-current="true"' : ''}>${head}</button>`;
+  const btn = (act, label, cls = '') => `<button type="button" class="rm-act ${cls}" data-rm="${act}" data-id="${esc(r.id)}">${esc(label)}</button>`;
+  const L = S.L;
+  if (S.confirmDel === r.id) {
+    return `<div class="rm-row confirm"><div class="rm-line">${head}</div><div class="rm-ask"><p>${esc(fmt(L.rmDeleteAsk, { title: r.title }))}</p><div class="rm-acts">` +
+      btn('delete-progress', L.rmDeleteWith, 'danger') + btn('delete-keep', L.rmDeleteKeep, 'danger') + btn('cancel', L.rmCancel) + '</div></div></div>';
+  }
+  return `<div class="rm-row${r.hidden ? ' is-hidden' : ''}"><div class="rm-line">${head}</div><div class="rm-acts">` +
+    (r.hidden ? btn('restore', L.rmRestore) : btn('open', L.rmOpen) + (r.editable ? btn('edit', L.rmEdit) : '') + btn('duplicate', L.rmDuplicate)) +
+    (r.editable ? btn('delete', L.rmDelete, 'danger') : (r.hidden ? '' : btn('hide', L.rmHide))) + '</div></div>';
+}
+
+function renderPicker() {
+  const groups = (S.manifest.groups || []).map(g => ({ g, items: visibleRoadmaps().filter(r => r.group === g.id) })).filter(x => x.items.length);
+  let html = groups.map(({ g, items }) => `<div class="rm-group">${esc(g.title)}</div>${items.map(r => rmRowHtml(r)).join('')}`).join('');
+  if (S.localRm) html += `<div class="rm-group">${esc(S.L.localFile)}</div><button type="button" class="rm-item${S.isLocal ? ' on' : ''}" role="menuitem" data-open="__local__"><span class="rm-ico" aria-hidden="true">${esc(S.localRm.meta.icon || '▦')}</span><span class="rm-meta"><span class="rm-t">${esc(S.localRm.meta.title)}</span></span></button>`;
+  if (!html) html = `<p class="rm-empty">${esc(S.L.rmNone)}</p>`;
+  $('rmPop').innerHTML = `<div class="rm-list">${html}</div><div class="rm-foot"><button type="button" class="rm-foot-btn" data-act="new">+ ${esc(S.L.newRoadmap)}</button><button type="button" class="rm-foot-btn" data-act="manage">${esc(S.L.manageRoadmaps)}</button></div>`;
+}
+
+function setPicker(open) {
+  const pop = $('rmPop');
+  if (open) {
+    renderPicker();
+    const r = $('rmBtn').getBoundingClientRect(), w = Math.min(340, innerWidth - 16);
+    pop.style.cssText = `left:${Math.max(8, Math.min(r.left, innerWidth - w - 8))}px;top:${r.bottom + 6}px;width:${w}px;max-height:${Math.max(220, innerHeight - r.bottom - 20)}px`;
+    loadRemoteStates().then(() => { if (!pop.hidden) renderPicker(); });
+  }
+  pop.hidden = !open;
+  $('rmBtn').setAttribute('aria-expanded', String(open));
+}
+
+async function openById(id) {
+  setPicker(false);
+  if (id === '__local__') return setRoadmap(S.localRm, { local: true });
+  const entry = entryById(id);
+  if (entry && !(S.rm?.id === id && !S.isLocal)) await openEntry(entry);
+}
+
+function buildSwitch() { updatePickerBtn(); }
+
+/* ---------- manager dialog: list, hide, delete, duplicate ---------- */
+const needServer = () => sync.api === false;
+
+function renderManage() {
+  const dlg = $('manageDlg');
+  if (!dlg.open) return;
+  const L = S.L, hidden = S.manifest.roadmaps.filter(r => r.hidden);
+  const groups = (S.manifest.groups || []).map(g => ({ g, items: visibleRoadmaps().filter(r => r.group === g.id) })).filter(x => x.items.length);
+  let html = needServer() ? `<p class="dlg-note warn">${esc(L.rmNoServer)}</p>` : `<p class="dlg-note">${esc(L.rmHideHint)}</p>`;
+  html += groups.map(({ g, items }) => `<div class="rm-group">${esc(g.title)}</div>${items.map(r => rmRowHtml(r, { manage: true })).join('')}`).join('');
+  if (!groups.length) html += `<p class="rm-empty">${esc(L.rmNone)}</p>`;
+  if (hidden.length) html += `<div class="rm-group">${esc(L.rmHidden)} (${hidden.length})</div>${hidden.map(r => rmRowHtml(r, { manage: true })).join('')}`;
+  const body = $('manageBody'), top = body.scrollTop;
+  body.innerHTML = html;
+  body.scrollTop = top;
+  dlg.querySelectorAll('[data-act=new]').forEach(b => { b.disabled = needServer(); });
+}
+
+async function openManage() {
+  setPicker(false);
+  S.confirmDel = null;
+  $('manageDlg').showModal();
+  renderManage();
+  await loadRemoteStates();
+  renderManage();
+}
+
+async function reloadManifest() {
+  S.manifest = await getJson('manifest.json');
+  updatePickerBtn(); renderManage();
+  if (!$('rmPop').hidden) renderPicker();
+}
+
+/* Runs a server call for the manager; on failure tells the user why. */
+async function manageCall(method, path, body) {
+  try {
+    const r = await apiFetch(method, path, body);
+    if (r.ok) return r;
+    if ([404, 405, 501].includes(r.status) && !(r.headers.get('Content-Type') || '').includes('json')) { sync.api = false; renderManage(); alert(S.L.rmNoServer); return null; }
+    const j = await r.json().catch(() => ({}));
+    alert(j.error || (j.errors || []).join('\n') || `HTTP ${r.status}`);
+  } catch { alert(S.L.rmNoServer); }
+  return null;
+}
+
+async function afterRemoval(id) {
+  await reloadManifest();
+  if (S.rm?.id === id && !S.isLocal) {
+    const next = visibleRoadmaps()[0];
+    if (next) await openEntry(next); else { S.rm = null; showMessage(S.L.rmNone, `<button type="button" class="primary" data-act="new">${esc(S.L.newRoadmap)}</button>`); }
+  }
+}
+
+async function manageAction(act, id) {
+  const entry = entryById(id), L = S.L;
+  if (!entry) return;
+  if (act === 'open') { $('manageDlg').close(); return openById(id); }
+  if (act === 'edit') return openEditor(entry);
+  if (act === 'duplicate') return duplicateRoadmap(entry);
+  if (act === 'delete') { S.confirmDel = id; return renderManage(); }
+  if (act === 'cancel') { S.confirmDel = null; return renderManage(); }
+  if (act === 'hide' || act === 'restore') {
+    if (!await manageCall('PUT', `api/hidden/${encodeURIComponent(id)}`, { hidden: act === 'hide' })) return;
+    return afterRemoval(act === 'hide' ? id : null);
+  }
+  if (act === 'delete-keep' || act === 'delete-progress') {
+    const wipe = act === 'delete-progress';
+    if (!await manageCall('DELETE', `api/roadmaps/${encodeURIComponent(id)}${wipe ? '?progress=1' : ''}`)) return;
+    S.confirmDel = null;
+    if (wipe) [KEY.state(id), KEY.ts(id), KEY.backup(id), KEY.view(id)].forEach(k => store.del(k));
+    return afterRemoval(id);
+  }
+}
+
+async function duplicateRoadmap(entry) {
+  const L = S.L;
+  try {
+    const raw = JSON.parse(await getText(entry.file));
+    delete raw.$schema;
+    const ids = new Set(S.manifest.roadmaps.map(r => r.id));
+    let id = `${raw.id}-copy`, n = 2;
+    while (ids.has(id)) id = `${raw.id}-copy-${n++}`;
+    raw.id = id;
+    raw.meta = { ...raw.meta, title: `${raw.meta.title} ${L.rmCopySuffix}` };
+    if (!await manageCall('POST', 'api/roadmaps', raw)) return;
+    await reloadManifest();
+    $('manageDlg').close();
+    await openEntry(entryById(id));
+  } catch (err) { alert(err.message); }
+}
+
+/* ---------- editor dialog: a form for the common fields, plus the raw JSON ---------- */
+const LANG_NAMES = { 'pt-BR': 'Português (Brasil)', en: 'English' };
+const ed = { id: null, base: null, model: null, mode: 'form', dirty: false, n: 0 };
+const NODE_TEXT = ['time', 'summary', 'challenge', 'success'];
+
+function modelFromJson(j) {
+  const m = j.meta || {};
+  return {
+    title: str(m.title), subtitle: str(m.subtitle), description: str(m.description), icon: str(m.icon),
+    language: str(m.language) || S.rm?.meta.language || 'pt-BR',
+    phases: arr(j.phases).map(p => ({ key: str(p.id) || `p${ed.n++}`, orig: p, title: str(p.title), period: str(p.period) })),
+    nodes: arr(j.nodes).map(n => ({
+      orig: n, title: str(n.title), phase: str(n.phase), open: false,
+      ...Object.fromEntries(NODE_TEXT.map(k => [k, str(n[k])])),
+      topics: arr(n.topics).map(str).join('\n'), tasks: arr(n.tasks).map(t => str(t?.title)).join('\n'),
+      links: arr(n.links).map(l => `${str(l?.title)} | ${str(l?.url)}`).join('\n'),
+    })),
+  };
+}
+
+const blankNode = phase => ({ orig: null, title: '', phase, open: false, time: '', summary: '', challenge: '', success: '', topics: '', tasks: '', links: '' });
+const lines = t => str(t).split('\n').map(x => x.trim()).filter(Boolean);
+
+function buildJson(model, base) {
+  const used = new Set((S.manifest?.roadmaps || []).map(r => r.id));
+  const fresh = (set, text, fallback) => { const b = slug(text) || fallback; let id = b, i = 2; while (set.has(id)) id = `${b}-${i++}`; set.add(id); return id; };
+  const meta = { ...(base?.meta || {}), title: model.title.trim(), language: model.language };
+  for (const k of ['subtitle', 'description', 'icon']) { const v = model[k].trim(); if (v) meta[k] = v; else delete meta[k]; }
+  const phaseIds = new Set(model.phases.map(p => p.orig?.id).filter(Boolean)), idOf = {};
+  const phases = model.phases.filter(p => p.title.trim()).map(p => {
+    const o = { ...(p.orig || {}), id: p.orig?.id || fresh(phaseIds, p.title, 'fase'), title: p.title.trim() };
+    if (p.period.trim()) o.period = p.period.trim(); else delete o.period;
+    idOf[p.key] = o.id;
+    return o;
+  });
+  const nodeIds = new Set(model.nodes.map(n => n.orig?.id).filter(Boolean));
+  let nodes = model.nodes.filter(n => n.title.trim()).map(n => {
+    const o = { ...(n.orig || {}), id: n.orig?.id || fresh(nodeIds, n.title, 'topico'), title: n.title.trim() };
+    if (phases.length) o.phase = idOf[n.phase] || phases[0].id; else delete o.phase;
+    for (const k of NODE_TEXT) { const v = n[k].trim(); if (v) o[k] = v; else delete o[k]; }
+    const topics = lines(n.topics); if (topics.length) o.topics = topics; else delete o.topics;
+    const old = arr(n.orig?.tasks), taskIds = new Set(old.map(t => t.id)), tasks = lines(n.tasks).map(t => old.find(x => x.title === t) || { id: fresh(taskIds, t, 'tarefa'), title: t });
+    if (tasks.length) o.tasks = tasks; else delete o.tasks;
+    const links = lines(n.links).map(l => { const i = l.indexOf('|'); return i < 0 ? { title: l, url: l } : { title: l.slice(0, i).trim() || l.slice(i + 1).trim(), url: l.slice(i + 1).trim() }; });
+    if (links.length) o.links = links; else delete o.links;
+    return o;
+  });
+  if (phases.length) { const idx = id => phases.findIndex(p => p.id === id); nodes = nodes.map((n, i) => [n, i]).sort((a, b) => idx(a[0].phase) - idx(b[0].phase) || a[1] - b[1]).map(x => x[0]); }
+  const id = base?.id || fresh(used, model.title, 'roadmap');
+  const { phases: _p, nodes: _n, ...rest } = base || {};
+  const out = { ...rest, schemaVersion: 1, id, meta };
+  if (phases.length) out.phases = phases;
+  out.nodes = nodes;
+  return out;
+}
+
+const fld = (label, inner, cls = '') => `<label class="ed-f ${cls}"><span>${esc(label)}</span>${inner}</label>`;
+const inp = (f, v, ph = '', extra = '') => `<input type="text" data-f="${f}" value="${esc(v)}" placeholder="${esc(ph)}" ${extra}>`;
+const area = (f, v, rows = 3) => `<textarea data-f="${f}" rows="${rows}">${esc(v)}</textarea>`;
+const rowBtns = L => `<span class="ed-btns"><button type="button" data-do="up" title="${esc(L.edMoveUp)}" aria-label="${esc(L.edMoveUp)}">↑</button><button type="button" data-do="down" title="${esc(L.edMoveDown)}" aria-label="${esc(L.edMoveDown)}">↓</button><button type="button" data-do="rm" class="x" title="${esc(L.edRemove)}" aria-label="${esc(L.edRemove)}">×</button></span>`;
+
+function renderForm() {
+  const L = S.L, m = ed.model, langs = S.manifest.languages?.length ? S.manifest.languages : ['pt-BR', 'en'];
+  const phaseOpts = sel => m.phases.map(p => `<option value="${esc(p.key)}"${p.key === sel ? ' selected' : ''}>${esc(p.title || L.edPhaseTitle)}</option>`).join('');
+  $('editBody').innerHTML =
+    `<div class="ed-grid">${fld(L.edName, inp('title', m.title), 'wide')}${fld(L.edLanguage, `<select data-f="language">${langs.map(c => `<option value="${esc(c)}"${c === m.language ? ' selected' : ''}>${esc(LANG_NAMES[c] || c)}</option>`).join('')}</select>`)}${fld(L.edIcon, inp('icon', m.icon, '🚀', 'maxlength="8"'))}${fld(L.edSubtitle, inp('subtitle', m.subtitle), 'wide')}${fld(L.edDescription, inp('description', m.description), 'wide')}</div>` +
+    `<h3 class="ed-h">${esc(L.edPhases)}</h3><div data-list="phases">${m.phases.map((p, i) => `<div class="ed-row" data-i="${i}">${inp('title', p.title, L.edPhaseTitle)}${inp('period', p.period, L.edPhasePeriod)}${rowBtns(L)}</div>`).join('')}</div><button type="button" class="secondary ed-add" data-do="add-phase">+ ${esc(L.edAddPhase)}</button>` +
+    `<h3 class="ed-h">${esc(L.edTopics)}</h3><div data-list="nodes">${m.nodes.map((n, i) => `<div class="ed-card${n.open ? ' open' : ''}" data-i="${i}"><div class="ed-row"><span class="ed-num">${i + 1}</span>${inp('title', n.title, L.edTopicTitle)}${m.phases.length ? `<select data-f="phase" aria-label="${esc(L.edPhaseOf)}">${phaseOpts(n.phase || m.phases[0].key)}</select>` : ''}${inp('time', n.time, L.edTime)}${rowBtns(L)}</div>` +
+      `<button type="button" class="ed-more" data-do="more" aria-expanded="${n.open}">${n.open ? '▾' : '▸'} ${esc(L.edDetails)}${n.orig?.optional ? ` · ${esc(L.edOptionalTag)}` : ''}</button>` +
+      (n.open ? `<div class="ed-det">${fld(L.edSummary, area('summary', n.summary, 2), 'wide')}${fld(L.edStudy, area('topics', n.topics))}${fld(L.edTasks, area('tasks', n.tasks))}${fld(L.edChallenge, area('challenge', n.challenge, 2))}${fld(L.edSuccess, area('success', n.success, 2))}${fld(L.edLinks, area('links', n.links), 'wide')}</div>` : '') + '</div>').join('')}</div>` +
+    `<button type="button" class="secondary ed-add" data-do="add-node">+ ${esc(L.edAddTopic)}</button><p class="ed-hint">${esc(L.edHint)}</p>`;
+}
+
+function showEditErr(list) { $('editErr').innerHTML = list.length ? `<strong>${esc(S.L.edErrors)}</strong><ul>${list.map(x => `<li>${esc(x)}</li>`).join('')}</ul>` : ''; }
+
+function setEditMode(mode) {
+  if (mode === ed.mode && $('editBody').firstChild) return;
+  showEditErr([]);
+  if (mode === 'json') {
+    const json = buildJson(ed.model, ed.base);
+    $('editBody').innerHTML = `<textarea class="ed-json" id="edJson" spellcheck="false" aria-label="JSON"></textarea>`;
+    $('edJson').value = JSON.stringify(json, null, 2);
+  } else if (ed.mode === 'json' && $('edJson')) {
+    try {
+      const j = JSON.parse($('edJson').value);
+      if (!j || typeof j !== 'object' || Array.isArray(j)) throw new Error('not an object');
+      ed.base = j; ed.model = modelFromJson(j);
+    } catch (err) { showEditErr([S.L.edJsonInvalid + err.message]); return; }
+    renderForm();
+  } else renderForm();
+  ed.mode = mode;
+  $('editMode').querySelectorAll('[data-mode]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.mode === mode)));
+}
+
+async function openEditor(entry = null) {
+  const L = S.L;
+  let base = null;
+  if (entry) {
+    try { base = JSON.parse(await getText(entry.file)); } catch (err) { return alert(err.message); }
+  }
+  ed.id = entry ? entry.id : null; ed.base = base; ed.dirty = false; ed.mode = 'form';
+  ed.model = base ? modelFromJson(base) : { ...modelFromJson({ meta: {}, nodes: [] }), nodes: [blankNode('')] };
+  $('editTitle').textContent = entry ? L.edTitleEdit : L.edTitleNew;
+  $('editBody').replaceChildren();
+  showEditErr([]);
+  if ($('manageDlg').open) $('manageDlg').close();
+  setPicker(false);
+  $('editDlg').showModal();
+  setEditMode('form');
+  $('editBody').scrollTop = 0;
+}
+
+async function saveEditor() {
+  let json;
+  try {
+    if (ed.mode === 'json') json = JSON.parse($('edJson').value);
+    else {
+      json = buildJson(ed.model, ed.base);
+      if (!json.meta.title || !json.nodes.length) return showEditErr([S.L.edNeedTitle]);
+    }
+  } catch (err) { return showEditErr([S.L.edJsonInvalid + err.message]); }
+  showEditErr([]);
+  $('editSave').disabled = true;
+  try {
+    const r = await apiFetch(ed.id ? 'PUT' : 'POST', ed.id ? `api/roadmaps/${encodeURIComponent(ed.id)}` : 'api/roadmaps', json);
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) return showEditErr(j.errors || [j.error || (r.status === 404 || r.status === 405 ? S.L.rmNoServer : `HTTP ${r.status}`)]);
+    ed.dirty = false;
+    $('editDlg').close();
+    await reloadManifest();
+    const entry = entryById(json.id);
+    if (entry) await openEntry(entry);
+  } catch { showEditErr([S.L.rmNoServer]); }
+  finally { $('editSave').disabled = false; }
+}
+
+function wireEditor() {
+  const dlg = $('editDlg'), body = $('editBody');
+  const move = (list, i, d) => { const j = i + d; if (j >= 0 && j < list.length) [list[i], list[j]] = [list[j], list[i]]; };
+  const rerender = () => { const top = body.scrollTop; renderForm(); body.scrollTop = top; };
+  body.addEventListener('input', e => {
+    ed.dirty = true;
+    const f = e.target.dataset.f, card = e.target.closest('[data-i]');
+    if (!f || !card || ed.mode !== 'form') return;
+    const kind = e.target.closest('[data-list]').dataset.list, row = ed.model[kind][+card.dataset.i];
+    row[f] = e.target.value;
+    if (kind === 'phases' && f === 'title') body.querySelectorAll(`select[data-f=phase] option[value="${CSS.escape(row.key)}"]`).forEach(o => { o.textContent = row.title || S.L.edPhaseTitle; });
+  });
+  body.addEventListener('change', e => {
+    if (e.target.dataset.f && !e.target.closest('[data-i]')) { ed.dirty = true; ed.model[e.target.dataset.f] = e.target.value; }
+  });
+  body.addEventListener('click', e => {
+    const b = e.target.closest('[data-do]');
+    if (!b || ed.mode !== 'form') return;
+    ed.dirty = true;
+    const card = b.closest('[data-i]'), i = card ? +card.dataset.i : -1, m = ed.model, kind = card?.closest('[data-list]').dataset.list;
+    switch (b.dataset.do) {
+      case 'up': move(m[kind], i, -1); break;
+      case 'down': move(m[kind], i, 1); break;
+      case 'rm':
+        m[kind].splice(i, 1);
+        if (kind === 'nodes' && !m.nodes.length) m.nodes.push(blankNode(m.phases[0]?.key || ''));
+        break;
+      case 'more': m.nodes[i].open = !m.nodes[i].open; break;
+      case 'add-phase': m.phases.push({ key: `p${ed.n++}`, orig: null, title: '', period: '' }); break;
+      case 'add-node': m.nodes.push(blankNode(m.phases.at(-1)?.key || '')); break;
+    }
+    rerender();
+    if (b.dataset.do === 'add-node') body.querySelector('[data-list=nodes] .ed-card:last-child input')?.focus();
+    if (b.dataset.do === 'add-phase') body.querySelector('[data-list=phases] .ed-row:last-child input')?.focus();
+  });
+  $('editMode').addEventListener('click', e => { const b = e.target.closest('[data-mode]'); if (b) setEditMode(b.dataset.mode); });
+  $('editSave').addEventListener('click', saveEditor);
+  const close = () => { if (!ed.dirty || confirm(S.L.edDiscard)) { ed.dirty = false; dlg.close(); } };
+  dlg.addEventListener('cancel', e => { e.preventDefault(); close(); });
+  dlg.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click', close));
+  body.addEventListener('input', e => { if (e.target.id === 'edJson') ed.dirty = true; });
 }
 
 /* ---------- map build + layout ---------- */
@@ -600,6 +939,7 @@ function refresh() {
   const qty = rm.core.filter(isDone).length;
   $('progressText').textContent = `${qty} / ${rm.core.length}`;
   $('barFill').style.width = (qty / rm.core.length * 100) + '%';
+  updatePickerBtn();
 }
 
 function applyFilters() {
@@ -1118,7 +1458,7 @@ function wire() {
   document.addEventListener('click', e => {
     const act = e.target.closest('[data-act]');
     if (act) {
-      ({ export: exportBundle, import: () => $('importFile').click(), open: () => $('openFile').click(), reset: resetProgress })[act.dataset.act]?.();
+      ({ export: exportBundle, import: () => $('importFile').click(), open: () => $('openFile').click(), reset: resetProgress, new: () => openEditor(), manage: openManage })[act.dataset.act]?.();
       setSettingsOpen(false);
     } else if (!$('settings').hidden && !e.target.closest('#settings, #settingsBtn')) setSettingsOpen(false);
   });
@@ -1136,11 +1476,18 @@ function wire() {
     frame = requestAnimationFrame(() => { if (S.rm && S.svg && S.view === 'map') layout(); });
   });
   $('openFile').addEventListener('change', async e => { const f = e.target.files?.[0]; if (f) await openLocalFile(f); e.target.value = ''; });
-  $('roadmapSelect').addEventListener('change', e => {
-    if (e.target.value === '__local__') return setRoadmap(S.localRm, { local: true });
-    const entry = S.manifest.roadmaps.find(r => r.id === e.target.value);
-    if (entry) openEntry(entry);
+  $('rmBtn').addEventListener('click', () => setPicker($('rmPop').hidden));
+  $('rmPop').addEventListener('click', e => { const it = e.target.closest('[data-open]'); if (it) openById(it.dataset.open); });
+  document.addEventListener('click', e => { if (!$('rmPop').hidden && !e.target.closest('#rmPop, #rmBtn')) setPicker(false); });
+  addEventListener('keydown', e => { if (e.key === 'Escape' && !$('rmPop').hidden) { setPicker(false); $('rmBtn').focus(); } });
+  addEventListener('resize', () => setPicker(false));
+  const manage = $('manageDlg');
+  manage.addEventListener('click', e => {
+    if (e.target === manage || e.target.closest('[data-close]')) return manage.close();
+    const b = e.target.closest('[data-rm]');
+    if (b) manageAction(b.dataset.rm, b.dataset.id);
   });
+  wireEditor();
   addEventListener('dragover', e => { e.preventDefault(); document.body.classList.add('dragging'); });
   addEventListener('dragleave', e => { if (!e.relatedTarget) document.body.classList.remove('dragging'); });
   addEventListener('drop', e => {
@@ -1172,9 +1519,13 @@ async function init() {
   S.L = S.defaults;
   applyI18n();
   buildSwitch();
-  const want = new URLSearchParams(location.search).get('r') || store.get(KEY.last);
-  const entry = S.manifest.roadmaps.find(r => r.id === want) || S.manifest.roadmaps[0];
-  if (!entry) { showMessage('Nenhum roadmap', 'Crie um JSON em <code>roadmaps/</code> e rode <code>python3 tools/roadkit.py check</code>. Ou arraste um arquivo .json para esta página.'); return; }
+  const asked = new URLSearchParams(location.search).get('r'), last = store.get(KEY.last), visible = visibleRoadmaps();
+  const entry = entryById(asked) || visible.find(r => r.id === last) || visible[0];
+  loadRemoteStates().then(updatePickerBtn);
+  if (!entry) {
+    showMessage(S.L.rmNone, `<button type="button" class="primary" data-act="new">${esc(S.L.newRoadmap)}</button>`);
+    return;
+  }
   await openEntry(entry);
 }
 
