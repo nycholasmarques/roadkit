@@ -11,7 +11,8 @@ Fonte formal: [`schema/roadmap.schema.json`](../schema/roadmap.schema.json). Reg
   "theme": { ... },
   "labels": { ... },
   "phases": [ ... ],                            // opcional
-  "nodes": [ ... ]                              // obrigatório
+  "nodes": [ ... ],                             // obrigatório
+  "projects": [ ... ]                           // opcional
 }
 ```
 
@@ -135,3 +136,47 @@ Como o estado do tópico e o das tarefas se relacionam:
 Se um tópico avança para `working`, `review` ou `finished` com tópicos principais anteriores ainda não concluídos, o cartão do kanban mostra um alerta (o painel de detalhes também). Quem usa decide quanto tolerar nos ajustes. Tópicos opcionais não geram nem contam para o alerta.
 
 O que a pessoa muda na interface fica salvo no navegador, por roadmap; o JSON só define o ponto de partida. As ordens dentro das colunas seguem a ordem do JSON.
+
+## `projects[]` (opcional)
+
+Projetos práticos que atravessam vários tópicos, em três níveis. Com `projects`, aparece a tela **Projetos** ao lado de Mapa e Kanban; sem, nada muda.
+
+```jsonc
+"projects": [
+  {
+    "id": "api-tarefas",
+    "title": "API de tarefas",
+    "level": "beginner",
+    "summary": "Uma API REST com CRUD de tarefas e persistência em banco.",
+    "uses": ["http", "sql-basico"],
+    "requirements": [
+      { "id": "crud", "title": "Criar, listar, editar e apagar tarefas" },
+      { "id": "testes", "title": "Testes para as rotas principais" }
+    ],
+    "deliverable": "Um repositório com o código e um README de como rodar.",
+    "success": "Outra pessoa consegue rodar e usar a API seguindo só o README.",
+    "stretch": ["Paginação", "Autenticação com token"],
+    "time": "1 a 2 semanas",
+    "links": [{ "title": "…", "url": "https://…" }]
+  }
+]
+```
+
+| Campo | Notas |
+|---|---|
+| `id` (obrigatório) | slug único entre os projetos; chave do progresso do projeto |
+| `title` (obrigatório) | curto (≤ 60 caracteres) |
+| `level` (obrigatório) | `beginner`, `intermediate` ou `advanced`: a coluna da tela Projetos |
+| `summary` | uma frase no cartão e no painel |
+| `uses` | ids de `nodes` que o projeto pratica. Quando todos estão concluídos, o projeto fica **pronto para começar** |
+| `requirements` | o que o projeto precisa fazer, como checklist; `id` único dentro do projeto |
+| `deliverable` | o que entregar (caixa amarela no painel) |
+| `success` | como saber que acabou |
+| `stretch` | ideias para ir além; não contam para nada |
+| `time` | texto livre ("1 a 2 semanas") |
+| `links` | `[{ "title": "…", "url": "https://…" }]` |
+
+- Os projetos não entram na barra de progresso do roadmap, que continua medindo os tópicos principais. A tela Projetos tem a própria contagem.
+- O andamento de cada projeto (estado, requisitos marcados e o link do seu repositório) é guardado junto com o progresso, em `state.projects`.
+- O `check` aponta `uses` com id que não existe, `level` inválido e ids repetidos, e avisa quando um projeto não tem `uses` nem `requirements`, ou quando há mais de 20 projetos (ou mais de 8 num nível).
+- Os rótulos da tela (`viewProjects`, `level_beginner`, `requirements`, `deliverable`, `stretch`...) podem ser trocados por `labels`, como os outros.

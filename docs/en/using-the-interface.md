@@ -28,6 +28,22 @@ The **Kanban** button swaps the map for a board with four columns: to do, workin
 
 A topic's state is the same in both views. Moving a card on the kanban changes its color on the map, and the other way around.
 
+## Projects
+
+Some roadmaps come with hands-on projects, and then a third button shows up: **Map / Kanban / Projects**. The view has one column per level (beginner, intermediate and advanced; tabs on a phone). Each card shows the project's state, the topics it uses (the ones you finished in green) and how many requirements are checked.
+
+A project is **ready to start** when every topic it uses is done. Its card gets a badge, and the **Only the ones I can start now** box hides the rest. When you finish the last missing topic, a notice shows up once at the bottom of the screen, with a shortcut to the project.
+
+Clicking a project opens its panel, which works like a topic's:
+
+- the four states (to do, working, review, finished);
+- the topics it uses, each with its state, and a quiet warning if any is missing. It blocks nothing;
+- the **requirements**, as checkboxes. Checking the first one moves the project to "working";
+- the deliverable, the success criterion and the ideas to go further;
+- **Your repository**: paste the link to your code so you remember where it is. It is saved with your progress and becomes a button to open it.
+
+In a topic's panel, the **Projects that use this topic** section leads to the projects linked to it. Projects do not count toward the progress bar at the top: it still measures main topics, and the Projects view has its own count.
+
 ## How progress is counted
 
 Only main topics count toward the progress bar at the top. The other levels have their own rules:

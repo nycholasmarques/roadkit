@@ -18,6 +18,7 @@ A few things that help:
 - **Optional.** Inside a sub-topic there is an "Optional" checkbox. Marking a topic as optional also marks everything below it (you can uncheck them one by one). A new sub-topic created under an optional one starts out optional.
 - **Preview linked to the form.** Clicking a topic in the preview takes you to its field, and focusing a field selects the topic in the preview. A phase with no topics shows a dotted "Your topic here" card, just so you can see where it goes.
 - **Problem line.** At the bottom, next to the Save button, a line says "No problems" or lists what is wrong (and what is only a warning, like a long title). These are the same rules as `check`, running as you type.
+- **Projects.** After the topics comes the section for hands-on projects: name, level, time and, under "Details", the summary, the topics the project uses (one checkbox per topic), the requirements, the deliverable, the criterion and the ideas to go further. Focusing a project switches the preview to the Projects view. Format details in [`SCHEMA.md`](SCHEMA.md#projects-optional).
 - **JSON tab.** The form does not cover everything: custom labels, the milestone at the end of a phase and other parts of the [format](SCHEMA.md) are only available in the JSON. The tab shows the whole file, the preview keeps working, and you can go back to the form at any time.
 
 Roadmaps created here are stored in the server's data folder (`data/roadmaps/`), not in your `roadmaps/` folder. You can come back to edit them, change their category or delete them whenever you want. To move one into your own files, export it and copy the JSON out of the zip.
@@ -40,8 +41,8 @@ The examples in `examples/` cover quite different situations and are worth a loo
 | File | What it shows |
 |---|---|
 | `minimal.json` | the smallest valid roadmap, with no phases |
-| `sql.json` | a study track in phases |
-| `argocd.json` | tasks per topic, sub-topics and optional topics (it is the one in the GIFs) |
+| `sql.json` | a study track in phases, with hands-on projects |
+| `argocd.json` | tasks per topic, sub-topics, optional topics and projects (it is the one in the GIFs) |
 | `home-lab.json` | a personal project, with custom labels |
 | `half-marathon.json` | a goal that has nothing to do with technology |
 | `side-project.json` | a product project, with its own colors and labels |
@@ -92,5 +93,7 @@ After building a few, these made the most difference:
 **Honest time estimates.** The `time` field is free text and does no math, but writing "Week 3" for something that takes three days fools you. Err on the long side.
 
 **Stay under about 40 main topics.** Past that, split it into two roadmaps. `check` warns you.
+
+**Projects that follow the path.** A beginner project uses the first topics; an advanced one combines many. If a beginner project's `uses` points to the last phase, it is not a beginner project. Two to four per level is usually enough.
 
 **Never change the `id` of a roadmap you already use.** It is the key for the saved progress. You can change the title, the content, the order and even the folder, but the `id` stays.

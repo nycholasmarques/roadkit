@@ -110,6 +110,48 @@
           "anchor": { "type": "string", "description": "Older name for `parent`, used by optional nodes. Prefer `parent`." }
         }
       }
+    },
+    "projects": {
+      "type": "array",
+      "description": "Optional hands-on projects, from beginner to advanced, shown in the Projects view. Each one lists the topics it practices.",
+      "items": {
+        "type": "object",
+        "required": ["id", "title", "level"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$", "description": "Unique among the projects; key of the saved project progress." },
+          "title": { "type": "string", "maxLength": 60 },
+          "level": { "enum": ["beginner", "intermediate", "advanced"] },
+          "summary": { "type": "string" },
+          "uses": { "type": "array", "items": { "type": "string" }, "description": "Node ids this project practices. When all of them are finished, the project is ready to start." },
+          "requirements": {
+            "type": "array",
+            "description": "What the project must do, shown as a checklist.",
+            "items": {
+              "type": "object",
+              "required": ["id", "title"],
+              "additionalProperties": false,
+              "properties": {
+                "id": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$" },
+                "title": { "type": "string" }
+              }
+            }
+          },
+          "deliverable": { "type": "string", "description": "What to hand in, e.g. 'A repository with a README'." },
+          "success": { "type": "string", "description": "How to know it is done." },
+          "stretch": { "type": "array", "items": { "type": "string" }, "description": "Optional ideas to go further; they do not count." },
+          "time": { "type": "string", "description": "Free text, e.g. '1 to 2 weeks'." },
+          "links": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["title", "url"],
+              "additionalProperties": false,
+              "properties": { "title": { "type": "string" }, "url": { "type": "string", "pattern": "^https?://" } }
+            }
+          }
+        }
+      }
     }
   }
 }

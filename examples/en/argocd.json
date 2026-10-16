@@ -206,5 +206,225 @@
       "challenge": "A short list of what is missing for Argo CD to be the only way into production.",
       "success": "You know what happens to deploys if Argo CD becomes unavailable."
     }
+  ],
+  "projects": [
+    {
+      "id": "hello-gitops",
+      "title": "Your app, synced from Git",
+      "level": "beginner",
+      "summary": "Put a small app in a Git repository and let Argo CD deploy it.",
+      "uses": [
+        "cluster",
+        "install",
+        "application"
+      ],
+      "requirements": [
+        {
+          "id": "manifests",
+          "title": "A repository with the manifests of a small web app"
+        },
+        {
+          "id": "app",
+          "title": "An Application that points to that repository"
+        },
+        {
+          "id": "change",
+          "title": "Change the number of replicas with a commit and watch it sync"
+        },
+        {
+          "id": "readme",
+          "title": "A README explaining how to reproduce it"
+        }
+      ],
+      "deliverable": "A public repository with the manifests, the Application and the README.",
+      "success": "Someone with a local cluster can follow the README and see the app running.",
+      "stretch": [
+        "Expose the app with an Ingress"
+      ],
+      "time": "2 to 3 days"
+    },
+    {
+      "id": "self-healing",
+      "title": "Self-healing demo",
+      "level": "beginner",
+      "summary": "Show that the cluster goes back to what Git says, even after manual changes.",
+      "uses": [
+        "sync",
+        "application"
+      ],
+      "requirements": [
+        {
+          "id": "auto",
+          "title": "Turn on automatic sync with prune and self-heal"
+        },
+        {
+          "id": "break",
+          "title": "Delete a Deployment and edit a Service by hand"
+        },
+        {
+          "id": "record",
+          "title": "Record or screenshot Argo CD fixing both"
+        },
+        {
+          "id": "explain",
+          "title": "Explain in the README what each setting did"
+        }
+      ],
+      "deliverable": "A short write-up with the screenshots or a recording.",
+      "success": "Every manual change goes back to the Git version without anyone touching it.",
+      "stretch": [
+        "Use a sync window to block syncs at night"
+      ],
+      "time": "1 to 2 days"
+    },
+    {
+      "id": "three-environments",
+      "title": "One app, three environments",
+      "level": "intermediate",
+      "summary": "Run the same app in dev, staging and prod, promoted by pull request.",
+      "uses": [
+        "packaging",
+        "helm-values",
+        "sync",
+        "waves"
+      ],
+      "requirements": [
+        {
+          "id": "envs",
+          "title": "dev, staging and prod with Kustomize overlays or Helm values"
+        },
+        {
+          "id": "differences",
+          "title": "Different replicas, resources and config per environment"
+        },
+        {
+          "id": "migration",
+          "title": "A database migration as a PreSync hook"
+        },
+        {
+          "id": "promotion",
+          "title": "Promoting a version is a pull request that changes one file"
+        }
+      ],
+      "deliverable": "A repository with the three environments and a README of the promotion flow.",
+      "success": "A new version reaches prod only through merged pull requests, and the migration runs before the app.",
+      "stretch": [
+        "Add a smoke test as a PostSync hook"
+      ],
+      "time": "1 to 2 weeks"
+    },
+    {
+      "id": "team-platform",
+      "title": "A small platform for teams",
+      "level": "intermediate",
+      "summary": "Let several teams deploy their apps safely from one repository.",
+      "uses": [
+        "applicationset",
+        "rbac"
+      ],
+      "requirements": [
+        {
+          "id": "generator",
+          "title": "An ApplicationSet that creates one app per folder"
+        },
+        {
+          "id": "projects",
+          "title": "One AppProject per team, limited to its namespaces"
+        },
+        {
+          "id": "roles",
+          "title": "Roles so each team syncs only its own apps"
+        },
+        {
+          "id": "onboarding",
+          "title": "Adding a team is creating a folder and a pull request"
+        }
+      ],
+      "deliverable": "A repository with the ApplicationSet, the projects and an onboarding guide.",
+      "success": "A team cannot deploy outside its namespaces, and a new team is live after one merge.",
+      "stretch": [
+        "Generate apps for many clusters"
+      ],
+      "time": "1 to 2 weeks"
+    },
+    {
+      "id": "full-pipeline",
+      "title": "From commit to canary",
+      "level": "advanced",
+      "summary": "A complete delivery flow: CI builds, Git records, Argo CD deploys with a canary.",
+      "uses": [
+        "integration",
+        "secrets",
+        "rollouts"
+      ],
+      "requirements": [
+        {
+          "id": "ci",
+          "title": "CI builds the image and updates the tag in the config repository"
+        },
+        {
+          "id": "secrets",
+          "title": "Secrets stored encrypted in Git (Sealed Secrets or SOPS)"
+        },
+        {
+          "id": "canary",
+          "title": "A canary release with Argo Rollouts"
+        },
+        {
+          "id": "rollback",
+          "title": "Automatic rollback when an analysis fails"
+        },
+        {
+          "id": "diagram",
+          "title": "A diagram of the whole flow in the README"
+        }
+      ],
+      "deliverable": "Two repositories (app and config) and a recording of a failed canary rolling back.",
+      "success": "A bad version is stopped and rolled back without anyone stepping in.",
+      "stretch": [
+        "Notifications for each step in a chat channel"
+      ],
+      "time": "2 to 3 weeks"
+    },
+    {
+      "id": "production-ready",
+      "title": "Production readiness review",
+      "level": "advanced",
+      "summary": "Take an Argo CD setup through a production checklist and prove it.",
+      "uses": [
+        "production",
+        "rbac",
+        "secrets",
+        "applicationset"
+      ],
+      "requirements": [
+        {
+          "id": "ha",
+          "title": "Argo CD in high availability mode"
+        },
+        {
+          "id": "monitoring",
+          "title": "Metrics and alerts for Argo CD itself"
+        },
+        {
+          "id": "backup",
+          "title": "A backup of the Argo CD config, restored in a new cluster"
+        },
+        {
+          "id": "access",
+          "title": "SSO or local users with least privilege"
+        },
+        {
+          "id": "runbook",
+          "title": "A runbook for when Argo CD is down"
+        }
+      ],
+      "deliverable": "The checklist with evidence for each item, and the runbook.",
+      "success": "You restore the whole setup in an empty cluster by following only the runbook.",
+      "stretch": [
+        "Run a game day with a teammate breaking things"
+      ],
+      "time": "2 to 3 weeks"
+    }
   ]
 }

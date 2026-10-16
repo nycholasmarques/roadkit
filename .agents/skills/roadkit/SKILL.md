@@ -15,12 +15,13 @@ Pergunte só o que falta. Se ela já contou o objetivo, não repita a pergunta. 
 - **Ponto de partida**: o que já sabe. Isso decide por onde começar.
 - **Tempo**: prazo e quantas horas por semana. Define o número de fases e o ritmo dos prazos (`time`).
 - **Idioma** do roadmap (`pt-BR` ou `en`) e **categoria**, que é a pasta onde ele vai ficar (`estudos`, `trabalho`, `jogos`...).
+- **Projetos práticos**: se a pessoa quer, além dos tópicos, projetos para construir do iniciante ao avançado. Num roadmap de estudo, ofereça; num roadmap que já é um projeto, normalmente não faz sentido.
 
 Faça no máximo três ou quatro perguntas por vez, de preferência numa mensagem só. Se a pessoa não quiser responder, escolha o padrão mais razoável e diga qual foi.
 
 ## 2. Mostre o esqueleto antes do JSON
 
-Antes de escrever o arquivo, mostre em texto simples as fases e os tópicos em ordem, uma linha por tópico, com o prazo. Peça o ok ou ajustes. É muito mais barato mudar uma lista de dez linhas do que um JSON de trezentas.
+Antes de escrever o arquivo, mostre em texto simples as fases e os tópicos em ordem, uma linha por tópico, com o prazo. Se houver projetos, liste-os por nível, cada um com os tópicos que usa. Peça o ok ou ajustes. É muito mais barato mudar uma lista de dez linhas do que um JSON de trezentas.
 
 ## 3. Escreva o JSON
 
@@ -32,6 +33,7 @@ Siga `docs/SCHEMA.md`. Resumo do que mais erra:
 - Exploração que não deve travar o progresso é `"optional": true` (e também precisa de `parent`). Filhos de um opcional também devem ser opcionais.
 - Título com até 60 caracteres. `challenge` é algo concreto que a pessoa consegue conferir sozinha. `tasks` só quando o tópico realmente se divide em passos (3 a 6).
 - Só coloque `links` que você tem certeza de que existem (documentação oficial). Na dúvida, deixe de fora.
+- Projetos ficam em `projects` (veja a seção no `docs/SCHEMA.md`): `level` é `beginner`, `intermediate` ou `advanced`, e `uses` lista os ids dos tópicos que o projeto pratica. Um projeto fica "pronto para começar" quando todos esses tópicos estão concluídos, então escolha tópicos que vêm antes dele. De 2 a 4 projetos por nível e de 3 a 6 `requirements` em cada um. Escreva projetos próprios, sem copiar enunciados de outros sites. `examples/pt-BR/argocd.json` e `sql.json` têm projetos como modelo.
 - Não invente campos. Campo sem nada bom para dizer fica de fora.
 
 ## 4. Salve no lugar certo

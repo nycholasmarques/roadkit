@@ -11,7 +11,7 @@ Serve para qualquer IA (ChatGPT, Claude, Gemini, um modelo local), porque o Road
 </p>
 
 1. Abra **Novo roadmap** e clique em **Criar com IA**.
-2. Conte o que você quer aprender ou fazer, escolha o idioma e o tamanho. Quanto mais contexto você dá (o que já sabe, quanto tempo tem), melhor sai.
+2. Conte o que você quer aprender ou fazer, escolha o idioma e o tamanho. Quanto mais contexto você dá (o que já sabe, quanto tempo tem), melhor sai. A caixa **Incluir projetos práticos** (marcada por padrão) pede também de 2 a 4 projetos por nível, ligados aos tópicos.
 3. **Copiar prompt**, cole na sua IA e espere a resposta.
 4. Cole a resposta na terceira caixa e clique em **Usar no editor**.
 

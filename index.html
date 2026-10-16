@@ -82,6 +82,7 @@
         <div class="seg" id="viewSeg" role="group" data-i18n-aria="viewSwitch">
           <button type="button" data-view="map" aria-pressed="true" data-i18n="viewMap"></button>
           <button type="button" data-view="kanban" aria-pressed="false" data-i18n="viewKanban"></button>
+          <button type="button" data-view="projects" aria-pressed="false" data-i18n="viewProjects" id="viewProjects" hidden></button>
         </div>
         <button class="icon-btn" id="settingsBtn" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="settings" data-i18n-aria="settings" data-i18n-title="settings">
           <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h2M10 17h10" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/><circle cx="16" cy="7" r="2.3" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="8" cy="17" r="2.3" fill="none" stroke="currentColor" stroke-width="2"/></svg>
@@ -130,6 +131,7 @@
         <p class="board-hint" id="boardHint"></p>
         <div class="board" id="board" data-dnd-root></div>
       </section>
+      <section class="projects-wrap" id="projects"></section>
       <div class="detail-grip" id="detailGrip" role="separator" aria-orientation="vertical" tabindex="0" data-i18n-aria="resizeDetail"></div>
       <section class="detail" id="detail" aria-live="polite">
         <button class="detail-close" id="detailClose" data-i18n-aria="close">×</button>
@@ -163,6 +165,7 @@
         <label class="ed-f"><span data-i18n="aiLang"></span><select id="aiLang"></select></label>
         <label class="ed-f"><span data-i18n="aiSize"></span><select id="aiSize"><option value="s" data-i18n="aiSizeS"></option><option value="m" data-i18n="aiSizeM" selected></option><option value="l" data-i18n="aiSizeL"></option></select></label>
       </div>
+      <label class="ed-chk"><input type="checkbox" id="aiProjects" checked> <span data-i18n="aiProjects"></span></label>
       <h3 class="ai-h"><span>2</span> <b data-i18n="aiStep2"></b></h3>
       <textarea id="aiPrompt" class="ai-prompt" rows="7" readonly spellcheck="false" aria-label="Prompt"></textarea>
       <button type="button" class="primary" id="aiCopy" data-i18n="aiCopy"></button>

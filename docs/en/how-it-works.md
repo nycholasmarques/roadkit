@@ -31,7 +31,7 @@ On wide screens the map is drawn in a fixed space and scaled to fit. On narrow s
 
 ## Where progress is stored
 
-Progress is a small object: the state of each topic and each task (`todo`, `working`, `review` or `finished`). It lives in two places at once.
+Progress is a small object: the state of each topic and each task (`todo`, `working`, `review` or `finished`) and, when the roadmap has projects, each project's state with its checked requirements and the link to your repository. It lives in two places at once.
 
 **On the server**, in one file per roadmap: `data/<id>.json`. It is the source of truth, which is why progress follows you to any device that opens the same instance.
 
@@ -66,7 +66,7 @@ Everything the interface asks of the server is below. It can be useful for scrip
 |---|---|
 | `GET /manifest.json` | the list of roadmaps, with sections, counts and hidden ones |
 | `GET /api/state/<id>` | a roadmap's saved progress (`204` if there is none) |
-| `PUT /api/state/<id>` | saves progress, or returns `409` with what the server has if that is newer |
+| `PUT /api/state/<id>` | saves progress, or returns `409` with what the server has if that is newer. Parts of the progress the client does not send stay as they were, so an older version that only knows topics and tasks does not erase the projects |
 | `GET /api/states` | a summary of all of them, for the progress badges |
 | `POST /api/validate` | validates a roadmap JSON without saving it |
 | `POST /api/roadmaps?category=` | creates a roadmap (`categoryTitle=` names a new category) |

@@ -28,6 +28,22 @@ O botão **Kanban** troca o mapa por um quadro com quatro colunas: a fazer, em a
 
 O estado do tópico é o mesmo nas duas telas. Mover um cartão no kanban muda a cor no mapa, e vice-versa.
 
+## Projetos
+
+Alguns roadmaps trazem projetos práticos, e aí aparece um terceiro botão: **Mapa / Kanban / Projetos**. A tela mostra uma coluna por nível (iniciante, intermediário e avançado; no celular, abas). Cada cartão diz o estado do projeto, os tópicos que ele usa (em verde os que você já concluiu) e quantos requisitos já estão marcados.
+
+Um projeto fica **pronto para começar** quando todos os tópicos que ele usa estão concluídos. O cartão ganha um selo, e a caixa **Só os que posso começar agora** esconde o resto. Quando você conclui o tópico que faltava, um aviso aparece uma vez no rodapé da tela, com um atalho para o projeto.
+
+Clicar num projeto abre o painel dele, com o mesmo jeito do painel de um tópico:
+
+- os quatro estados (a fazer, em andamento, em revisão, concluído);
+- os tópicos que ele usa, cada um com o seu estado, e um aviso discreto se ainda faltar algum. Não bloqueia nada;
+- os **requisitos**, como caixas de marcar. Marcar o primeiro passa o projeto para "em andamento";
+- o entregável, o critério de sucesso e as ideias para ir além;
+- **Seu repositório**: cole o link do seu código para lembrar onde está. Ele fica salvo com o progresso e vira um botão para abrir.
+
+No painel de um tópico, a seção **Projetos que usam este tópico** leva aos projetos ligados a ele. Os projetos não entram na barra de progresso do topo: ela continua medindo os tópicos principais, e a tela de projetos tem a própria contagem.
+
 ## Como o progresso é contado
 
 Só os tópicos principais contam na barra de progresso do topo. Os outros níveis têm regras próprias:

@@ -18,6 +18,7 @@ Alguns detalhes que ajudam:
 - **Opcional.** Dentro de um subtópico tem a caixa "Opcional". Marcar um tópico como opcional marca também tudo o que está abaixo dele (dá para desmarcar um por um). Um subtópico novo criado sob um opcional já nasce opcional.
 - **Prévia ligada ao formulário.** Clicar num tópico da prévia leva você ao campo dele, e focar num campo seleciona o tópico na prévia. Uma fase sem tópicos aparece com um cartão pontilhado "Seu tópico aqui" só para você ver onde ela fica.
 - **Aviso de problemas.** Embaixo, junto do botão Salvar, uma linha diz "Sem problemas" ou lista o que está errado (e o que é só um aviso, como um título comprido). São as mesmas regras do `check`, rodando enquanto você digita.
+- **Projetos.** Depois dos tópicos fica a seção de projetos práticos: nome, nível, prazo e, em "Detalhes", o resumo, os tópicos que o projeto usa (uma caixa por tópico), os requisitos, o entregável, o critério e as ideias para ir além. Focar num projeto troca a prévia para a tela Projetos. Detalhes do formato em [`SCHEMA.md`](SCHEMA.md#projects-opcional).
 - **Aba JSON.** O formulário não cobre tudo: rótulos trocados, o marco no fim de uma fase e outras coisas do [formato](SCHEMA.md) ficam só no JSON. A aba mostra o arquivo inteiro, a prévia continua funcionando, e dá para voltar ao formulário a qualquer hora.
 
 Os roadmaps criados aqui ficam na pasta de dados do servidor (`data/roadmaps/`), não na sua pasta `roadmaps/`. Dá para voltar e editar, trocar de categoria ou excluir quando quiser. Se quiser levar um para a sua pasta de arquivos, exporte e copie o JSON de dentro do zip.
@@ -40,8 +41,8 @@ Os exemplos em `examples/` cobrem situações bem diferentes e valem uma olhada 
 | Arquivo | O que mostra |
 |---|---|
 | `minimal.json` | o menor roadmap válido, sem fases |
-| `sql.json` | uma trilha de estudo em fases |
-| `argocd.json` | tarefas por tópico, subtópicos e opcionais (é o que aparece nos GIFs) |
+| `sql.json` | uma trilha de estudo em fases, com projetos práticos |
+| `argocd.json` | tarefas por tópico, subtópicos, opcionais e projetos (é o que aparece nos GIFs) |
 | `home-lab.json` | um projeto pessoal, com rótulos trocados |
 | `half-marathon.json` | uma meta que nada tem a ver com tecnologia |
 | `side-project.json` | um projeto de produto, com cores e rótulos próprios |
@@ -92,5 +93,7 @@ Depois de montar alguns, o que mais fez diferença foi isto:
 **Prazos sinceros.** O campo `time` é texto livre e não faz conta nenhuma, mas escrever "Semana 3" para algo que leva três dias te engana. Prefira estimar para cima.
 
 **Não passe de uns 40 tópicos principais.** Passou disso, divida em dois roadmaps. O `check` avisa.
+
+**Projetos que dependem do caminho.** Um projeto iniciante usa os primeiros tópicos; um avançado junta vários. Se o `uses` de um projeto iniciante aponta para a última fase, ele não é iniciante. De 2 a 4 por nível costuma bastar.
 
 **Nunca mude o `id` de um roadmap que você já usa.** É a chave do progresso salvo. Pode mudar o título, o conteúdo, a ordem e até a pasta, mas o `id` fica.

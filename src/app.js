@@ -18,6 +18,8 @@ const NEST = 22;   // narrow layout: indent per sub-topic level
 const NARROW_BELOW = 860;   // map viewport width (px) under which the compact vertical layout is used
 const MAX_SCALE = 1.4;      // the wide layout is scaled to fit the viewport, up to this factor
 const STATUSES = ['todo', 'working', 'review', 'finished'];
+const LEVELS = ['beginner', 'intermediate', 'advanced'];
+const MAX_REPO_URL = 300;
 const FONT_SCALE = { small: 0.95, normal: 1.1, large: 1.25, xlarge: 1.4 };
 const FS_KEY = 'roadkit:v1:fs', SKIP_KEY = 'roadkit:v1:skip', DETAIL_KEY = 'roadkit:v1:detailw';
 const STATUS_LABEL = { todo: 'kanbanTodo', working: 'kanbanWorking', review: 'kanbanReview', finished: 'kanbanFinished' };
@@ -175,6 +177,38 @@ function normTasks(v) {
   return out;
 }
 
+/* Hands-on projects: each one at a level, practicing some of the roadmap's topics. */
+function normProjects(v, byId, warn) {
+  const seen = new Set(), out = [];
+  arr(v).forEach((p, i) => {
+    if (!p || typeof p !== 'object') return;
+    const title = str(p.title);
+    if (!title) return;
+    const id = str(p.id) || slug(title) || `p${i + 1}`;
+    if (seen.has(id)) { warn.push(`duplicate project id "${id}" ignored`); return; }
+    seen.add(id);
+    const uses = [...new Set(arr(p.uses).map(String))].filter(u => byId[u] || void warn.push(`project "${id}": unknown topic "${u}"`)).map(u => byId[u]);
+    const reqIds = new Set(), requirements = [];
+    arr(p.requirements).forEach((r, j) => {
+      if (typeof r === 'string') r = { title: r };
+      const t = str(r?.title);
+      if (!t) return;
+      let rid = str(r.id) || slug(t) || `r${j + 1}`;
+      if (reqIds.has(rid)) rid = `${rid}-${j + 1}`;
+      reqIds.add(rid);
+      requirements.push({ id: rid, title: t });
+    });
+    if (p.level && !LEVELS.includes(p.level)) warn.push(`project "${id}": unknown level "${p.level}", using beginner`);
+    const proj = {
+      id, title, level: LEVELS.includes(p.level) ? p.level : 'beginner', summary: str(p.summary), uses, requirements,
+      deliverable: str(p.deliverable), success: str(p.success), stretch: arr(p.stretch).map(str).filter(Boolean), time: str(p.time), links: normLinks(p.links),
+    };
+    proj.hay = [title, proj.summary, ...requirements.map(r => r.title), ...uses.map(n => n.title)].join(' ').toLocaleLowerCase();
+    out.push(proj);
+  });
+  return out;
+}
+
 function normalize(raw, fallbackId) {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw new Error('JSON must be an object');
   if (!Array.isArray(raw.nodes) || !raw.nodes.length) throw new Error('"nodes" must be a non-empty list');
@@ -242,6 +276,7 @@ function normalize(raw, fallbackId) {
     if (!n.explicit) n.status = deriveStatus([...n.tasks.map(t => t.status), ...n.children.filter(c => !c.optional).map(c => c.status)]);
   };
   core.forEach(settle);
+  const projects = normProjects(raw.projects, byId, warn);
   if (warn.length) console.warn(`[roadmap ${raw.id || fallbackId}]`, warn);
   const th = raw.theme || {};
   return {
@@ -250,6 +285,7 @@ function normalize(raw, fallbackId) {
     labels: raw.labels && typeof raw.labels === 'object' ? raw.labels : {},
     defaultView: meta.defaultView === 'kanban' ? 'kanban' : 'map',
     phases, hasPhases, nodes, core, byId, phaseById, warn, maxDepth,
+    projects, projById: Object.fromEntries(projects.map(p => [p.id, p])),
   };
 }
 
@@ -261,15 +297,45 @@ const isDone = n => nodeStatus(n) === 'finished';
 const finishedTasks = n => n.tasks.filter(t => taskStatus(n, t) === 'finished').length;
 const phaseDone = ph => ph.nodes.length > 0 && ph.nodes.every(isDone);
 
-const emptyState = () => ({ nodes: {}, tasks: {} });
-const hasProgress = st => Object.keys(st.nodes).length > 0 || Object.keys(st.tasks).length > 0;
+const emptyState = () => ({ nodes: {}, tasks: {}, projects: {} });
+const hasProgress = st => ['nodes', 'tasks', 'projects'].some(k => Object.keys(st[k] || {}).length > 0);
+const okRepo = u => typeof u === 'string' && u.length <= MAX_REPO_URL && /^https?:\/\/\S+$/i.test(u);
+
+/* A project's saved progress, keeping only valid fields and requirements that still exist. */
+function cleanProject(p, v) {
+  if (!v || typeof v !== 'object') return null;
+  const o = {}, req = {};
+  if (STATUSES.includes(v.status) && v.status !== 'todo') o.status = v.status;
+  if (okRepo(v.repo)) o.repo = v.repo;
+  for (const r of p.requirements) if (v.req?.[r.id] === true) req[r.id] = true;
+  if (Object.keys(req).length) o.req = req;
+  return Object.keys(o).length ? o : null;
+}
 
 /* Keeps only what still exists in the roadmap and has a valid status. */
 function cleanState(rm, saved) {
   const st = emptyState();
   for (const [id, v] of Object.entries(saved?.nodes || {})) if (rm.byId[id] && STATUSES.includes(v)) st.nodes[id] = v;
   for (const n of rm.nodes) for (const t of n.tasks) { const v = saved?.tasks?.[taskKey(n, t)]; if (STATUSES.includes(v)) st.tasks[taskKey(n, t)] = v; }
+  for (const p of rm.projects) { const v = cleanProject(p, saved?.projects?.[p.id]); if (v) st.projects[p.id] = v; }
   return st;
+}
+
+/* ---------- projects: status, requirements and repository link (stored under state.projects) ---------- */
+const projState = p => S.state.projects[p.id] || {};
+const projStatus = p => projState(p).status || 'todo';
+const projDone = p => projStatus(p) === 'finished';
+const reqDone = (p, r) => !!projState(p).req?.[r.id];
+const reqCount = p => p.requirements.filter(r => reqDone(p, r)).length;
+const missingFor = p => p.uses.filter(n => !isDone(n));
+const projReady = p => p.uses.length > 0 && !missingFor(p).length;
+
+function editProject(p, fn) {
+  const o = { ...projState(p), req: { ...projState(p).req } };
+  fn(o);
+  const v = cleanProject(p, o);
+  if (v) S.state.projects[p.id] = v; else delete S.state.projects[p.id];
+  changed();
 }
 
 function loadState(rm) {
@@ -324,8 +390,38 @@ const toggleDone = n => setNodeStatus(n, isDone(n) ? 'todo' : 'finished');
 function changed() {
   S.ts = Date.now();
   saveState();
-  refresh(); renderBoard(); renderDetail();
+  refresh(); renderBoard(); renderProjects(); renderDetail();
+  notifyReady();
   schedulePush();
+}
+
+/* A project whose topics just got finished is announced once (per browser), with a link to open it. */
+const READY_KEY = id => `roadkit:v1:ready:${id}`;
+const readyNow = () => new Set((S.rm?.projects || []).filter(p => projReady(p) && !projDone(p)).map(p => p.id));
+function notifyReady() {
+  if (!S.rm?.projects.length || S.preview) return;
+  const now = readyNow(), before = S.readyBase || new Set();
+  S.readyBase = now;
+  let told = [];
+  try { told = JSON.parse(store.get(READY_KEY(S.rm.id)) || '[]'); } catch { /* corrupt entry */ }
+  const p = S.rm.projects.find(x => now.has(x.id) && !before.has(x.id) && !told.includes(x.id));
+  if (!p) return;
+  store.set(READY_KEY(S.rm.id), JSON.stringify([...told, p.id]));
+  toast(fmt(S.L.projectReadyToast, { title: p.title }), () => { setView('projects'); selectProject(p.id); });
+}
+
+function toast(text, onClick) {
+  let el = $('toast');
+  if (!el) {
+    el = Object.assign(document.createElement('button'), { id: 'toast', type: 'button', className: 'toast' });
+    el.setAttribute('role', 'status');
+    document.body.append(el);
+  }
+  el.textContent = text;
+  el.onclick = () => { el.classList.remove('show'); onClick?.(); };
+  el.classList.add('show');
+  clearTimeout(el.hideTimer);
+  el.hideTimer = setTimeout(() => el.classList.remove('show'), 7000);
 }
 
 /* ---------- sync: progress also lives on the server (data/<id>.json), localStorage is the offline cache ---------- */
@@ -365,7 +461,8 @@ function adopt(rm, remote) {
   S.state = cleanState(rm, remote.state);
   S.ts = remote.updatedAt;
   saveState();
-  refresh(); renderBoard(); renderDetail();
+  S.readyBase = readyNow();   // changes made on another device are not announced here
+  refresh(); renderBoard(); renderProjects(); renderDetail();
 }
 
 function schedulePush() {
@@ -671,10 +768,19 @@ function modelFromJson(j) {
       orig: n, tmp: `t${ed.n++}`, title: str(n.title), phase: str(n.phase), open: false, optional: !!n.optional, parent: str(n.parent) || (n.optional ? str(n.anchor) : ''),
       ...Object.fromEntries(NODE_TEXT.map(k => [k, str(n[k])])),
       topics: arr(n.topics).map(str).join('\n'), tasks: arr(n.tasks).map(t => str(t?.title)).join('\n'),
-      links: arr(n.links).map(l => `${str(l?.title)} | ${str(l?.url)}`).join('\n'),
+      links: linksText(n.links),
     }))),
+    projects: arr(j.projects).filter(p => p && typeof p === 'object').map(p => ({
+      orig: p, key: str(p.id) || `j${ed.n++}`, open: false, title: str(p.title), level: LEVELS.includes(p.level) ? p.level : 'beginner',
+      summary: str(p.summary), uses: arr(p.uses).map(String), requirements: arr(p.requirements).map(r => str(r?.title ?? r)).join('\n'),
+      deliverable: str(p.deliverable), success: str(p.success), stretch: arr(p.stretch).map(str).join('\n'), time: str(p.time), links: linksText(p.links),
+    })),
   };
 }
+
+const linksText = v => arr(v).map(l => `${str(l?.title)} | ${str(l?.url)}`).join('\n');
+const parseLinks = t => lines(t).map(l => { const i = l.indexOf('|'); return i < 0 ? { title: l, url: l } : { title: l.slice(0, i).trim() || l.slice(i + 1).trim(), url: l.slice(i + 1).trim() }; });
+const blankProject = () => ({ orig: null, key: `j${ed.n++}`, open: true, title: '', level: 'beginner', summary: '', uses: [], requirements: '', deliverable: '', success: '', stretch: '', time: '', links: '' });
 
 const rowId = r => r.orig?.id || r.tmp;
 /* Rows stay in tree order (each one right after its parent's subtree), so moving, removing and indenting are slices of one array. */
@@ -722,7 +828,7 @@ function buildJson(model, base, preview = false) {
     const topics = lines(n.topics); if (topics.length) o.topics = topics; else delete o.topics;
     const old = arr(n.orig?.tasks), taskIds = new Set(old.map(t => t.id)), tasks = lines(n.tasks).map((t, k) => old.find(x => x.title === t) || { id: preview ? `k${k}` : fresh(taskIds, t, 'tarefa'), title: t });
     if (tasks.length) o.tasks = tasks; else delete o.tasks;
-    const links = lines(n.links).map(l => { const i = l.indexOf('|'); return i < 0 ? { title: l, url: l } : { title: l.slice(0, i).trim() || l.slice(i + 1).trim(), url: l.slice(i + 1).trim() }; });
+    const links = parseLinks(n.links);
     if (links.length) o.links = links; else delete o.links;
     delete o.anchor;   // `parent` replaces the older name
     if (hangs(n)) { o.parent = idByRow.get(n.parent); delete o.phase; if (n.optional) o.optional = true; else delete o.optional; }
@@ -736,13 +842,26 @@ function buildJson(model, base, preview = false) {
   if (preview) for (const p of phases) if (!groups.some(g => g.phase === p.id)) groups.push({ phase: p.id, list: [{ id: `ghost-${p.id}`, title: S.L.edGhostTitle, phase: p.id, summary: S.L.edGhostSummary }] });   // a phase with no topics yet still shows up
   if (phases.length) { const idx = id => phases.findIndex(p => p.id === id); groups = groups.map((g, i) => [g, i]).sort((a, b) => idx(a[0].phase) - idx(b[0].phase) || a[1] - b[1]).map(x => x[0]); }
   const nodes = groups.flatMap(g => g.list);
+  const projIds = new Set(model.projects.map(p => p.orig?.id).filter(Boolean));
+  const projects = model.projects.filter(p => p.title.trim()).map(p => {
+    const o = { ...(p.orig || {}), id: p.orig?.id || (preview ? p.key : fresh(projIds, p.title, 'projeto')), title: p.title.trim(), level: p.level };
+    for (const k of ['summary', 'deliverable', 'success', 'time']) { const v = p[k].trim(); if (v) o[k] = v; else delete o[k]; }
+    const uses = [...new Set(p.uses.filter(u => idByRow.has(u)).map(u => idByRow.get(u)))];
+    if (uses.length) o.uses = uses; else delete o.uses;
+    const old = arr(p.orig?.requirements), reqIds = new Set(old.map(r => r?.id)), reqs = lines(p.requirements).map((t, k) => old.find(x => x?.title === t) || { id: preview ? `q${k}` : fresh(reqIds, t, 'requisito'), title: t });
+    if (reqs.length) o.requirements = reqs; else delete o.requirements;
+    const stretch = lines(p.stretch); if (stretch.length) o.stretch = stretch; else delete o.stretch;
+    const links = parseLinks(p.links); if (links.length) o.links = links; else delete o.links;
+    return o;
+  });
   const id = base?.id || (preview ? 'draft' : fresh(used, model.title, 'roadmap'));
-  const { phases: _p, nodes: _n, ...rest } = base || {};
+  const { phases: _p, nodes: _n, projects: _j, ...rest } = base || {};
   const { theme: _t, ...rest2 } = rest;
   const out = { ...rest2, schemaVersion: 1, id, meta };
   if (Object.keys(theme).length) out.theme = theme;
   if (phases.length) out.phases = phases;
   out.nodes = nodes;
+  if (projects.length) out.projects = projects;
   return out;
 }
 
@@ -763,7 +882,20 @@ function renderForm() {
     `<h3 class="ed-h">${esc(L.edColors)}</h3><div class="ed-grid">${fld(L.edAccent, colorField('accent', m.accent, DEFAULT_ACCENT))}${fld(L.edBrandColor, colorField('brandColor', m.brandColor, DEFAULT_BRAND))}${fld(L.edLogo, `<span class="ed-logo-row">${inp('logoPlain', m.logoPlain, 'road')}${inp('logoAccent', m.logoAccent, 'kit')}<span class="ed-logo" id="logoMini">${logoHtml(m)}</span></span>`, 'wide')}</div><p class="ed-hint">${esc(L.edColorsHint)}</p>` +
     `<h3 class="ed-h">${esc(L.edPhases)}</h3><div data-list="phases">${m.phases.map((p, i) => `<div class="ed-row" data-i="${i}">${inp('title', p.title, L.edPhaseTitle)}${inp('period', p.period, L.edPhasePeriod)}${colorField('color', p.color, PALETTE[i % PALETTE.length], L.edPhaseColor, 'phase')}${rowBtns(L)}</div>`).join('')}</div><button type="button" class="secondary ed-add" data-do="add-phase">+ ${esc(L.edAddPhase)}</button>` +
     `<h3 class="ed-h">${esc(L.edTopics)}</h3><div data-list="nodes">${topicCards(m, L, phaseOpts)}</div>` +
-    `<button type="button" class="secondary ed-add" data-do="add-node">+ ${esc(L.edAddTopic)}</button><p class="ed-hint">${esc(L.edHint)}</p>`;
+    `<button type="button" class="secondary ed-add" data-do="add-node">+ ${esc(L.edAddTopic)}</button>` +
+    `<h3 class="ed-h">${esc(L.edProjects)}</h3><div data-list="projects">${projectCards(m, L)}</div>` +
+    `<button type="button" class="secondary ed-add" data-do="add-project">+ ${esc(L.edAddProject)}</button><p class="ed-hint">${esc(L.edHint)}</p>`;
+}
+
+function projectCards(m, L) {
+  const depths = rowDepths(m.nodes), named = m.nodes.map((n, k) => ({ id: rowId(n), title: n.title.trim(), d: depths[k] })).filter(x => x.title);
+  return m.projects.map((p, i) => `<div class="ed-card ed-pcard${p.open ? ' open' : ''}" data-i="${i}"><div class="ed-row">${inp('title', p.title, L.edProjectTitle)}${rowBtns(L)}<span class="ed-br"></span>` +
+    `<select data-f="level" aria-label="${esc(L.edLevel)}">${LEVELS.map(lv => `<option value="${lv}"${lv === p.level ? ' selected' : ''}>${esc(L[`level_${lv}`])}</option>`).join('')}</select>${inp('time', p.time, L.edProjectTime)}</div>` +
+    `<div class="ed-acts"><button type="button" class="ed-more" data-do="more" aria-expanded="${p.open}">${p.open ? '▾' : '▸'} ${esc(L.edDetails)}</button></div>` +
+    (p.open ? `<div class="ed-det">${fld(L.edSummary, area('summary', p.summary, 2), 'wide')}` +
+      `<div class="ed-f wide"><span>${esc(L.edUses)}</span><div class="ed-uses">${named.length ? named.map(x => `<label class="${x.d ? 'sub' : ''}"><input type="checkbox" data-f="uses" data-use="${esc(x.id)}"${p.uses.includes(x.id) ? ' checked' : ''}> ${esc(x.title)}</label>`).join('') : `<em>${esc(L.edUsesNone)}</em>`}</div></div>` +
+      `${fld(L.edRequirements, area('requirements', p.requirements))}${fld(L.edDeliverable, area('deliverable', p.deliverable, 2))}${fld(L.edSuccess, area('success', p.success, 2))}${fld(L.edStretch, area('stretch', p.stretch, 2))}${fld(L.edLinks, area('links', p.links), 'wide')}</div>` : '') +
+    '</div>').join('');
 }
 
 function topicCards(m, L, phaseOpts) {
@@ -881,6 +1013,25 @@ const scheduleLint = () => { clearTimeout(lintTimer); lintTimer = setTimeout(run
 
 /* ---- create with an AI: build a prompt, take the answer back ---- */
 const AI_SIZES = { s: 'about 6 to 8 main topics', m: 'about 10 to 14 main topics, in 2 to 4 phases', l: 'about 16 to 24 main topics, in 3 to 5 phases' };
+const AI_PROJECTS = `
+PROJECTS
+Also add a top-level "projects" list: hands-on projects that practice the topics above, 2 to 4 for each level ("beginner", "intermediate", "advanced"). One project looks like this:
+{
+  "id": "project-slug",
+  "title": "Short project name",
+  "level": "beginner",
+  "summary": "One sentence on what I will build.",
+  "uses": ["topic-slug", "another-topic-slug"],
+  "requirements": [ { "id": "requirement-slug", "title": "Something the project must do" } ],
+  "deliverable": "What I hand in, like a repository with a README.",
+  "success": "How I know the project is done.",
+  "stretch": ["An optional idea to go further"],
+  "time": "1 to 2 weeks"
+}
+- "uses" lists ids from "nodes". A project is ready to start when all of them are finished, so pick topics that come before it.
+- Give each project 3 to 6 requirements. Beginner projects use early topics; advanced ones combine many.
+- Write projects of your own; do not copy them from other websites.
+`;
 let aiTemplate = null;
 
 async function buildAiPrompt() {
@@ -888,7 +1039,8 @@ async function buildAiPrompt() {
   const code = $('aiLang').value || 'en';
   const goal = $('aiGoal').value.trim() || '(describe here what you want the roadmap to cover)';
   $('aiPrompt').value = aiTemplate.replace(/\{\{goal\}\}/g, goal).replace(/\{\{languageCode\}\}/g, code)
-    .replace(/\{\{language\}\}/g, LANG_NAMES[code] || code).replace(/\{\{size\}\}/g, AI_SIZES[$('aiSize').value] || AI_SIZES.m);
+    .replace(/\{\{language\}\}/g, LANG_NAMES[code] || code).replace(/\{\{size\}\}/g, AI_SIZES[$('aiSize').value] || AI_SIZES.m)
+    .replace(/\{\{projects\}\}/g, $('aiProjects').checked ? AI_PROJECTS : '');
 }
 
 function openAi() {
@@ -1033,6 +1185,11 @@ function wireEditor() {
     }
     if (!f || !card || ed.mode !== 'form') return;
     const kind = e.target.closest('[data-list]').dataset.list, row = ed.model[kind][+card.dataset.i];
+    if (kind === 'projects' && f === 'uses') {   // one checkbox per topic
+      const u = e.target.dataset.use;
+      row.uses = e.target.checked ? [...new Set([...row.uses, u])] : row.uses.filter(x => x !== u);
+      return;
+    }
     row[f] = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
     if (f === 'optional' && row.optional && kind === 'nodes') {   // everything below an optional topic is optional too, until you untick it
       const d = rowDepths(ed.model.nodes), i = +card.dataset.i;
@@ -1068,7 +1225,8 @@ function wireEditor() {
         if (kind === 'nodes') m.nodes.splice(i, end(i) - i); else m[kind].splice(i, 1);
         if (kind === 'nodes' && !m.nodes.length) m.nodes.push(blankNode(m.phases[0]?.key || ''));
         break;
-      case 'more': m.nodes[i].open = !m.nodes[i].open; break;
+      case 'more': m[kind][i].open = !m[kind][i].open; break;
+      case 'add-project': m.projects.push(blankProject()); break;
       case 'add-sub': { focusAt = end(i); const kid = blankNode('', rowId(m.nodes[i])); kid.optional = m.nodes[i].optional; m.nodes.splice(focusAt, 0, kid); break; }   // under an optional topic, optional by default
       case 'reset-color': if (b.dataset.kind === 'phase') m.phases[i].color = ''; else m[b.dataset.f] = ''; break;
       case 'add-phase': m.phases.push({ key: `p${ed.n++}`, orig: null, title: '', period: '', color: '' }); break;
@@ -1079,11 +1237,19 @@ function wireEditor() {
     if (focusAt >= 0) body.querySelector(`[data-list=nodes] .ed-card[data-i="${focusAt}"] input`)?.focus();
     if (b.dataset.do === 'add-node') body.querySelector('[data-list=nodes] .ed-card:last-child input')?.focus();
     if (b.dataset.do === 'add-phase') body.querySelector('[data-list=phases] .ed-row:last-child input')?.focus();
+    if (b.dataset.do === 'add-project') body.querySelector('[data-list=projects] .ed-card:last-child input')?.focus();
   });
-  /* the topic you are editing is the one selected in the preview */
+  /* the topic (or project) you are editing is the one selected in the preview */
   body.addEventListener('focusin', e => {
     const card = e.target.closest('.ed-card');
     if (!card || !S.rm) return;
+    if (card.closest('[data-list]').dataset.list === 'projects') {
+      const p = ed.model.projects[+card.dataset.i], pid = p && (p.orig?.id || p.key);
+      if (!pid || !S.rm.projById[pid] || S.project === pid) return;
+      if (S.view !== 'projects') setView('projects', false);
+      selectProject(pid, { drawer: false });
+      return;
+    }
     const row = ed.model.nodes[+card.dataset.i], id = row && (row.orig?.id || row.tmp);
     if (id && S.rm.byId[id] && S.selected !== id) select(id, true, { drawer: false });
   });
@@ -1093,6 +1259,7 @@ function wireEditor() {
   const ai = $('aiDlg');
   ai.addEventListener('click', e => { if (e.target === ai || e.target.closest('[data-close]')) ai.close(); });
   ['aiGoal', 'aiLang', 'aiSize'].forEach(id => $(id).addEventListener('input', buildAiPrompt));
+  $('aiProjects').addEventListener('change', buildAiPrompt);
   $('aiCopy').addEventListener('click', async () => {
     const t = $('aiPrompt').value;
     try { await navigator.clipboard.writeText(t); } catch { $('aiPrompt').select(); document.execCommand('copy'); }
@@ -1199,7 +1366,7 @@ function placeKidsNarrow(n, top, nodeX) {
    line on the left, phase headers above their topics and optional topics nested below. */
 function layout() {
   const { rm } = S, map = $('map'), svg = S.svg;
-  if (!svg || S.view === 'kanban') return;
+  if (!svg || S.view !== 'map') return;
   const geo = S.geo = geometry(), nw = geo.narrow;
   const nodeX = nw ? 44 : G.spineX, nodeW = nw ? geo.mapW - nodeX - 16 : G.nodeW;
   const gap = nw ? 30 : G.gap, msGap = nw ? 22 : G.msGap, lineX = nw ? 24 : nodeX + nodeW / 2;
@@ -1326,6 +1493,7 @@ function refresh() {
 function applyFilters() {
   refresh();
   renderBoard();
+  renderProjects();
 }
 
 /* ---------- skipped-topic warning ---------- */
@@ -1373,18 +1541,72 @@ function moveButtons(i) {
 }
 
 function setView(v, persist = true) {
-  S.view = v === 'kanban' ? 'kanban' : 'map';
+  S.view = v === 'projects' && S.rm?.projects.length ? 'projects' : v === 'kanban' ? 'kanban' : 'map';
   document.body.classList.toggle('view-kanban', S.view === 'kanban');
+  document.body.classList.toggle('view-projects', S.view === 'projects');
   document.querySelectorAll('#viewSeg [data-view]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.view === S.view)));
   if (persist && S.rm && !S.preview) store.set(KEY.view(S.rm.id), S.view);
   if (S.view === 'kanban') renderBoard();
+  else if (S.view === 'projects') renderProjects();
   else if (S.svg) layout();
+}
+
+/* ---------- projects view: one column per level (tabs on narrow screens) ---------- */
+const pips = lv => `<span class="pips" aria-hidden="true">${LEVELS.map((x, i) => `<i${i <= LEVELS.indexOf(lv) ? ' class="on"' : ''}></i>`).join('')}</span>`;
+
+function projectCard(p) {
+  const L = S.L, st = projStatus(p), tot = p.requirements.length, fin = reqCount(p), ready = projReady(p) && st === 'todo';
+  return `<button type="button" class="pj-card s-${st}${S.project === p.id ? ' selected' : ''}" data-project="${esc(p.id)}">` +
+    `<span class="pj-top"><span class="pj-status s-${st}">${esc(L[STATUS_LABEL[st]])}</span>${ready ? `<span class="pj-ready">${esc(L.projectReady)}</span>` : ''}</span>` +
+    `<span class="pj-title">${esc(p.title)}</span>` +
+    (p.summary ? `<span class="pj-sum">${esc(p.summary)}</span>` : '') +
+    (p.uses.length ? `<span class="pj-uses">${p.uses.map(n => `<span class="pj-use${isDone(n) ? ' ok' : ''}">${esc(n.title)}</span>`).join('')}</span>` : '') +
+    (tot ? `<span class="kc-prog"><span class="kc-bar"><i style="width:${Math.round(fin / tot * 100)}%"></i></span><span>${fin}/${tot}</span></span>` : '') +
+    (p.time ? `<span class="pj-time">${esc(p.time)}</span>` : '') + `</button>`;
+}
+
+function renderProjects() {
+  if (S.view !== 'projects' || !S.rm) return;
+  const { rm, L } = S, done = rm.projects.filter(projDone).length;
+  if (!LEVELS.includes(S.projLevel)) S.projLevel = LEVELS.find(lv => rm.projects.some(p => p.level === lv)) || LEVELS[0];
+  const shown = rm.projects.filter(p => (!S.readyOnly || (projReady(p) && !projDone(p))) && (!S.search || p.hay.includes(S.search)));
+  $('projects').innerHTML =
+    `<div class="pj-head"><p class="pj-count">${esc(fmt(L.projectsDone, { done, total: rm.projects.length }))}</p>` +
+    `<label class="pj-filter"><input type="checkbox" data-ready-only${S.readyOnly ? ' checked' : ''}> ${esc(L.projectsReadyOnly)}</label></div>` +
+    `<div class="seg small pj-tabs" role="group">${LEVELS.map(lv => `<button type="button" data-level="${lv}" aria-pressed="${S.projLevel === lv}">${esc(L[`level_${lv}`])}</button>`).join('')}</div>` +
+    `<div class="pj-cols">${LEVELS.map(lv => {
+      const list = shown.filter(p => p.level === lv);
+      return `<section class="pj-col${S.projLevel === lv ? ' on' : ''}" data-col-level="${lv}"><h3 class="pj-col-h">${pips(lv)}<span>${esc(L[`level_${lv}`])}</span><b>${list.length}</b></h3>` +
+        `<div class="pj-list">${list.map(projectCard).join('') || `<div class="kempty">${esc(L.projectsNone)}</div>`}</div></section>`;
+    }).join('')}</div>`;
+}
+
+function wireProjects() {
+  const box = $('projects');
+  box.addEventListener('click', e => {
+    const lv = e.target.closest('[data-level]');
+    if (lv) { S.projLevel = lv.dataset.level; renderProjects(); return; }
+    const card = e.target.closest('[data-project]');
+    if (card) selectProject(card.dataset.project);
+  });
+  box.addEventListener('change', e => {
+    if (e.target.matches('[data-ready-only]')) { S.readyOnly = e.target.checked; renderProjects(); }
+  });
+}
+
+function selectProject(id, { drawer = true } = {}) {
+  if (!S.rm?.projById[id]) return;
+  S.project = id; S.selected = null;
+  refresh(); renderBoard(); renderProjects(); renderDetail();
+  $('detail').scrollTop = 0;
+  if (drawer) setDrawer(true);
 }
 
 /* ---------- details panel, with the per-card task kanban ---------- */
 function renderDetail() {
   if (!S.rm) return;
-  const { rm, L } = S, box = $('detailContent'), n = rm.byId[S.selected];
+  const { rm, L } = S, box = $('detailContent'), n = rm.byId[S.selected], proj = rm.projById[S.project];
+  if (proj) return renderProjectDetail(proj);
   if (!n) {
     box.className = 'detail-placeholder';
     box.innerHTML = `${rm.meta.icon ? `<span class="big">${esc(rm.meta.icon)}</span>` : ''}<strong>${esc(L.placeholderTitle)}</strong><br>${esc(L.placeholderText)}`;
@@ -1405,6 +1627,10 @@ function renderDetail() {
           `</div></div>`;
       }).join('') + `</div>`
     : '';
+  const usedBy = rm.projects.filter(p => p.uses.includes(n));
+  const projects = usedBy.length
+    ? `<h3>${esc(L.projectsOfTopic)}</h3><div class="sublist">${usedBy.map(p => `<button type="button" class="subitem" data-project="${esc(p.id)}"><span class="kdot k-${projStatus(p)}"></span><span>${esc(p.title)}</span><em class="pj-lv">${esc(L[`level_${p.level}`])}</em></button>`).join('')}</div>`
+    : '';
   box.className = '';
   box.innerHTML =
     `<div class="panel-kicker">${esc(kicker)}</div><h2>${esc(n.title)}</h2>` +
@@ -1416,8 +1642,38 @@ function renderDetail() {
     (n.challenge ? `<h3>${esc(L.challenge)}</h3><div class="mission">${esc(n.challenge)}</div>` : '') +
     tasks +
     (n.success ? `<h3>${esc(L.success)}</h3><p>${esc(n.success)}</p>` : '') +
-    (n.links.length ? `<h3>${esc(L.resources)}</h3>${n.links.map(l => `<a class="resource" target="_blank" rel="noopener noreferrer" href="${esc(safeUrl(l.url))}">${esc(l.title)}</a>`).join('')}` : '') +
+    projects +
+    linkList(n.links) +
     `<button class="complete-action ${done ? 'done' : ''}" id="completeAction">${esc(done ? L.markUndone : L.markDone)}</button><p class="small-note">${esc(L.doneHint)}</p>`;
+}
+
+const linkList = links => (links.length ? `<h3>${esc(S.L.resources)}</h3>${links.map(l => `<a class="resource" target="_blank" rel="noopener noreferrer" href="${esc(safeUrl(l.url))}">${esc(l.title)}</a>`).join('')}` : '');
+
+function renderProjectDetail(p) {
+  const L = S.L, box = $('detailContent'), st = projStatus(p), done = st === 'finished', miss = missingFor(p), repo = projState(p).repo || '';
+  const focused = document.activeElement?.closest?.('#detailContent [data-req]')?.dataset.req;
+  box.className = '';
+  box.innerHTML =
+    `<div class="panel-kicker">${pips(p.level)} ${esc([L[`level_${p.level}`], p.time].filter(Boolean).join(' | '))}</div><h2>${esc(p.title)}</h2>` +
+    `<div class="statusbar" role="group" aria-label="${esc(L.status)}">${STATUSES.map(s => `<button type="button" data-pstatus="${s}" class="s-${s}${s === st ? ' on' : ''}" aria-pressed="${s === st}">${esc(L[STATUS_LABEL[s]])}</button>`).join('')}</div>` +
+    (p.summary ? `<p>${esc(p.summary)}</p>` : '') +
+    (p.uses.length
+      ? `<h3>${esc(L.projectUses)} <span class="h3-count">${p.uses.length - miss.length}/${p.uses.length}</span></h3>` +
+        (miss.length && !done ? `<div class="skip-note" role="note">${esc(fmt(miss.length === 1 ? L.projectMissingOne : L.projectMissingMany, { n: miss.length }))}</div>` : '') +
+        `<div class="sublist">${p.uses.map(n => `<button type="button" class="subitem" data-goto="${esc(n.id)}"><span class="kdot k-${nodeStatus(n)}"></span><span>${esc(n.title)}</span></button>`).join('')}</div>`
+      : '') +
+    (p.requirements.length
+      ? `<h3>${esc(L.requirements)} <span class="h3-count">${reqCount(p)}/${p.requirements.length}</span></h3><div class="reqlist">${p.requirements.map(r => `<label class="req"><input type="checkbox" data-req="${esc(r.id)}"${reqDone(p, r) ? ' checked' : ''}><span>${esc(r.title)}</span></label>`).join('')}</div>`
+      : '') +
+    (p.deliverable ? `<h3>${esc(L.deliverable)}</h3><div class="mission">${esc(p.deliverable)}</div>` : '') +
+    (p.success ? `<h3>${esc(L.success)}</h3><p>${esc(p.success)}</p>` : '') +
+    (p.stretch.length ? `<h3>${esc(L.stretch)}</h3><ul class="stretch">${p.stretch.map(x => `<li>${esc(x)}</li>`).join('')}</ul>` : '') +
+    `<h3><label for="projRepo">${esc(L.yourRepo)}</label></h3><div class="repo-row"><input type="url" id="projRepo" inputmode="url" autocomplete="off" spellcheck="false" maxlength="${MAX_REPO_URL}" value="${esc(repo)}" placeholder="${esc(L.yourRepoPh)}">` +
+    (repo ? `<a class="repo-open" href="${esc(safeUrl(repo))}" target="_blank" rel="noopener noreferrer" title="${esc(L.repoOpen)}" aria-label="${esc(L.repoOpen)}">↗</a>` : '') + `</div>` +
+    `<p class="repo-err" id="projRepoErr" role="alert" hidden>${esc(L.repoInvalid)}</p>` +
+    linkList(p.links) +
+    `<button class="complete-action ${done ? 'done' : ''}" data-pdone>${esc(done ? L.markUndone : L.markDone)}</button>`;
+  if (focused) box.querySelector(`[data-req="${CSS.escape(focused)}"]`)?.focus();
 }
 
 /* ---------- interactions ---------- */
@@ -1505,6 +1761,7 @@ function wireDetailResize() {
 
 function select(id, scroll = false, { drawer = true } = {}) {
   S.selected = id;
+  if (S.project) { S.project = null; renderProjects(); }
   refresh(); renderDetail();
   document.querySelectorAll('.kcard').forEach(c => c.classList.toggle('selected', c.dataset.node === id));
   if (scroll && S.view === 'map') {
@@ -1674,16 +1931,39 @@ function wireDnd() {
     onClick(e);
     const go = e.target.closest('[data-goto]');
     if (go) { select(go.dataset.goto, true); return; }
+    const pj = e.target.closest('[data-project]');
+    if (pj) { selectProject(pj.dataset.project); return; }
+    const proj = S.rm.projById[S.project];
+    if (proj) {
+      const ps = e.target.closest('[data-pstatus]');
+      if (ps) editProject(proj, o => { o.status = ps.dataset.pstatus; });
+      else if (e.target.closest('[data-pdone]')) editProject(proj, o => { o.status = projDone(proj) ? 'todo' : 'finished'; });
+      return;
+    }
     const sb = e.target.closest('[data-status]');
     if (sb) { setNodeStatus(S.rm.byId[S.selected], sb.dataset.status); return; }
     if (e.target.closest('#completeAction')) toggleDone(S.rm.byId[S.selected]);
   });
+  // project panel: requirement checkboxes and the repository link
+  $('detailContent').addEventListener('change', e => {
+    const proj = S.rm?.projById[S.project];
+    if (!proj) return;
+    if (e.target.matches('[data-req]')) {
+      const id = e.target.dataset.req, on = e.target.checked;
+      editProject(proj, o => { if (on) o.req[id] = true; else delete o.req[id]; if (on && projStatus(proj) === 'todo') o.status = 'working'; });
+    } else if (e.target.id === 'projRepo') {
+      const v = e.target.value.trim();
+      if (v && !okRepo(v)) { $('projRepoErr').hidden = false; return; }
+      editProject(proj, o => { o.repo = v; });
+    }
+  });
+  $('detailContent').addEventListener('input', e => { if (e.target.id === 'projRepo') $('projRepoErr').hidden = true; });
 }
 
 /* ---------- roadmap loading ---------- */
 function showMessage(title, html) {
   S.svg = null;
-  document.body.classList.remove('view-kanban');
+  document.body.classList.remove('view-kanban', 'view-projects');
   $('map').replaceChildren();
   $('map').style.cssText = 'width:100%;height:420px';
   $('mapFrame').style.cssText = '';
@@ -1705,16 +1985,19 @@ async function setRoadmap(rm, { local = false, keep = false, preview = false } =
   clearTimeout(sync.timer); sync.timer = 0;
   setSyncStatus('local');
   if (keep) {
-    if (!rm.byId[S.selected]) S.selected = rm.core[0].id;
+    if (S.project && !rm.projById[S.project]) S.project = null;
+    if (!rm.byId[S.selected] && !S.project) S.selected = rm.core[0].id;
     if (S.phase !== 'all' && !rm.phaseById[S.phase]) S.phase = 'all';
   } else {
     S.warnOpen = new Set();
-    S.selected = rm.core[0].id; S.phase = 'all'; S.search = '';
+    S.selected = rm.core[0].id; S.project = null; S.phase = 'all'; S.search = ''; S.readyOnly = false; S.projLevel = null;
     $('search').value = '';
   }
+  S.readyBase = readyNow();
+  $('viewProjects').hidden = !rm.projects.length;
   applyChrome(); buildSwitch(); buildMap(); renderDetail();
   const saved = store.get(KEY.view(rm.id));
-  setView(keep ? S.view : (saved === 'kanban' || saved === 'map' ? saved : rm.defaultView), false);
+  setView(keep ? S.view : (['map', 'kanban', 'projects'].includes(saved) ? saved : rm.defaultView), false);
   refresh();
   if (!keep) {
     setDrawer(false);
@@ -1818,7 +2101,7 @@ async function readZip(buf) {
 }
 
 /* ---------- export / import: a zip with the roadmap and its progress ---------- */
-const progressDoc = rm => ({ roadmap: rm.id, title: rm.meta.title, version: 2, exportedAt: new Date().toISOString(), nodes: S.state.nodes, tasks: S.state.tasks });
+const progressDoc = rm => ({ roadmap: rm.id, title: rm.meta.title, version: 2, exportedAt: new Date().toISOString(), nodes: S.state.nodes, tasks: S.state.tasks, projects: S.state.projects });
 
 function download(blob, name) {
   const url = URL.createObjectURL(blob), a = document.createElement('a');
@@ -1953,6 +2236,7 @@ function wire() {
   });
   addEventListener('online', () => { if (sync.status === 'offline') pull(); });
   wireDnd();
+  wireProjects();
   wireDetailResize();
   wireSidebar();
 }

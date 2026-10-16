@@ -46,3 +46,4 @@ RULES
 - Use "tasks" only when a topic really breaks into steps (3 to 6). Leave out any field you have nothing good to put in.
 - Only include links you are sure exist, like official documentation. When unsure, leave "links" out.
 - Do not add keys that are not in the format above.
+{{projects}}

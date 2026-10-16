@@ -118,5 +118,229 @@
       "id": "particoes", "phase": "desempenho", "optional": true, "anchor": "indices", "title": "Particionamento",
       "summary": "Dividir tabelas muito grandes para manter as consultas rápidas."
     }
+  ],
+  "projects": [
+    {
+      "id": "consultas-biblioteca",
+      "title": "Consultas no acervo de uma biblioteca",
+      "level": "beginner",
+      "summary": "Responda perguntas reais sobre os dados de uma pequena biblioteca, só com consultas.",
+      "uses": [
+        "ambiente",
+        "select",
+        "agregacao"
+      ],
+      "requirements": [
+        {
+          "id": "carregar",
+          "title": "Carregar um conjunto de exemplo (livros, autores, empréstimos)"
+        },
+        {
+          "id": "perguntas",
+          "title": "Escrever 6 perguntas que os dados devem responder"
+        },
+        {
+          "id": "consultas",
+          "title": "Responder cada pergunta com uma consulta"
+        },
+        {
+          "id": "comentarios",
+          "title": "Guardar as consultas num arquivo .sql, cada uma com um comentário"
+        }
+      ],
+      "deliverable": "Um repositório com o arquivo .sql e um README com as perguntas.",
+      "success": "Outra pessoa roda o arquivo e chega às mesmas respostas do README.",
+      "stretch": [
+        "Uma pergunta que precise de JOIN",
+        "Exportar um resultado em CSV"
+      ],
+      "time": "2 a 3 dias"
+    },
+    {
+      "id": "relatorio-gastos",
+      "title": "Relatório mensal de gastos",
+      "level": "beginner",
+      "summary": "Transforme uma tabela de gastos num relatório mensal por categoria.",
+      "uses": [
+        "select",
+        "agregacao",
+        "joins"
+      ],
+      "requirements": [
+        {
+          "id": "tabelas",
+          "title": "Gastos e categorias em duas tabelas"
+        },
+        {
+          "id": "mensal",
+          "title": "Total por categoria em cada mês"
+        },
+        {
+          "id": "maiores",
+          "title": "Os 5 maiores gastos de cada mês"
+        },
+        {
+          "id": "vazias",
+          "title": "Categorias sem gasto num mês (LEFT JOIN)"
+        }
+      ],
+      "deliverable": "Um arquivo .sql que cria as tabelas, carrega os dados e mostra o relatório.",
+      "success": "Os totais batem com uma conferência feita à mão numa planilha.",
+      "stretch": [
+        "Comparar cada mês com o anterior"
+      ],
+      "time": "3 a 5 dias"
+    },
+    {
+      "id": "banco-loja",
+      "title": "Banco de dados de uma loja virtual",
+      "level": "intermediate",
+      "summary": "Modele e preencha o banco de uma pequena loja virtual.",
+      "uses": [
+        "ddl",
+        "normalizacao",
+        "dml"
+      ],
+      "requirements": [
+        {
+          "id": "tabelas",
+          "title": "Clientes, produtos, pedidos e itens com chaves estrangeiras"
+        },
+        {
+          "id": "restricoes",
+          "title": "Restrições que impedem estoque e preço negativos"
+        },
+        {
+          "id": "carga",
+          "title": "Um script de carga com dados de exemplo realistas"
+        },
+        {
+          "id": "pedido",
+          "title": "Fechar um pedido numa transação que também baixa o estoque"
+        },
+        {
+          "id": "diagrama",
+          "title": "Um diagrama das entidades no README"
+        }
+      ],
+      "deliverable": "Um repositório com o esquema, o script de carga e o diagrama.",
+      "success": "Rodar os scripts num banco vazio gera uma loja coerente, e um pedido que falha não muda nada.",
+      "stretch": [
+        "Exclusão lógica de produtos",
+        "Uma view com o valor total de cada cliente"
+      ],
+      "time": "1 a 2 semanas"
+    },
+    {
+      "id": "habitos",
+      "title": "Banco de um app de hábitos",
+      "level": "intermediate",
+      "summary": "O banco por trás de um app que registra hábitos diários.",
+      "uses": [
+        "ddl",
+        "dml",
+        "joins",
+        "agregacao"
+      ],
+      "requirements": [
+        {
+          "id": "modelo",
+          "title": "Usuários, hábitos e registros diários"
+        },
+        {
+          "id": "registro",
+          "title": "Um registro só pode acontecer uma vez por hábito por dia"
+        },
+        {
+          "id": "semanal",
+          "title": "Um relatório semanal de cumprimento por hábito"
+        },
+        {
+          "id": "limpeza",
+          "title": "Apagar um hábito apaga os registros dele"
+        }
+      ],
+      "deliverable": "Um arquivo .sql com o esquema, dados de exemplo e as consultas do relatório.",
+      "success": "O relatório semanal está certo para uma semana preenchida à mão.",
+      "stretch": [
+        "Sequência atual de cada hábito com funções de janela"
+      ],
+      "time": "1 semana"
+    },
+    {
+      "id": "clinica-consultas-lentas",
+      "title": "Clínica de consultas lentas",
+      "level": "advanced",
+      "summary": "Encontre consultas lentas numa tabela grande e deixe-as rápidas, com provas.",
+      "uses": [
+        "indices",
+        "explain",
+        "janelas"
+      ],
+      "requirements": [
+        {
+          "id": "dados",
+          "title": "Gerar pelo menos um milhão de linhas"
+        },
+        {
+          "id": "encontrar",
+          "title": "Escolher 3 consultas lentas e medir o tempo"
+        },
+        {
+          "id": "planos",
+          "title": "Guardar o EXPLAIN ANALYZE antes e depois de cada correção"
+        },
+        {
+          "id": "corrigir",
+          "title": "Corrigir cada uma com um índice ou reescrevendo"
+        },
+        {
+          "id": "explicar",
+          "title": "Explicar no README por que cada correção funciona"
+        }
+      ],
+      "deliverable": "Um repositório com o gerador de dados, as consultas, os planos e a explicação.",
+      "success": "Cada consulta fica pelo menos 10 vezes mais rápida, e os planos mostram por quê.",
+      "stretch": [
+        "Mostrar um índice que deixa as escritas mais lentas"
+      ],
+      "time": "1 a 2 semanas"
+    },
+    {
+      "id": "analise-vendas",
+      "title": "Consultas de análise de vendas",
+      "level": "advanced",
+      "summary": "As consultas por trás de um painel de vendas, com funções de janela.",
+      "uses": [
+        "janelas",
+        "agregacao",
+        "joins",
+        "indices"
+      ],
+      "requirements": [
+        {
+          "id": "acumulado",
+          "title": "Total acumulado de vendas por dia"
+        },
+        {
+          "id": "ranking",
+          "title": "Os 3 produtos mais vendidos de cada mês"
+        },
+        {
+          "id": "crescimento",
+          "title": "Crescimento mês a mês por categoria"
+        },
+        {
+          "id": "coortes",
+          "title": "Coortes de clientes pelo mês da primeira compra"
+        }
+      ],
+      "deliverable": "Um arquivo .sql com uma consulta por painel e exemplos de resultado no README.",
+      "success": "Os números de cada painel batem com uma conferência feita de outro jeito.",
+      "stretch": [
+        "Desenhar o painel com qualquer ferramenta aberta"
+      ],
+      "time": "1 a 2 semanas"
+    }
   ]
 }
