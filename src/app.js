@@ -392,6 +392,11 @@ function renderDetail() {
 }
 
 /* ---------- interactions ---------- */
+function setDrawer(open) {
+  $('detail').classList.toggle('open', open);
+  $('scrim').classList.toggle('open', open);
+}
+
 function select(id, scroll = false) {
   S.selected = id;
   refresh(); renderDetail();
@@ -401,7 +406,7 @@ function select(id, scroll = false) {
     const view = $('mapViewport');
     view.scrollTo({ left: Math.max(0, n.x * s - (view.clientWidth - n.el.offsetWidth * s) / 2), behavior: 'smooth' });
   }
-  $('detail').classList.add('open');
+  setDrawer(true);
 }
 
 function toggle(id) {
@@ -447,7 +452,7 @@ async function setRoadmap(rm, { local = false } = {}) {
   S.selected = rm.core[0].id; S.phase = 'all'; S.search = '';
   $('search').value = '';
   applyChrome(); buildSwitch(); buildMap(); layout(); renderDetail();
-  $('detail').classList.remove('open');
+  setDrawer(false);
   $('mapViewport').scrollLeft = 0;
   window.scrollTo({ top: 0 });
   const relayout = () => { if (S.rm === rm && S.svg) layout(); };
@@ -501,7 +506,9 @@ async function importProgress(file) {
 function wire() {
   $('nextBtn').addEventListener('click', next);
   $('startBtn').addEventListener('click', next);
-  $('detailClose').addEventListener('click', () => $('detail').classList.remove('open'));
+  $('detailClose').addEventListener('click', () => setDrawer(false));
+  $('scrim').addEventListener('click', () => setDrawer(false));
+  addEventListener('keydown', e => { if (e.key === 'Escape') setDrawer(false); });
   $('search').addEventListener('input', e => { S.search = e.target.value.toLocaleLowerCase().trim(); refresh(); });
   $('exportBtn').addEventListener('click', exportProgress);
   $('importBtn').addEventListener('click', () => $('importFile').click());
