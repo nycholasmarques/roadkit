@@ -89,7 +89,7 @@ The **Create with AI** button builds a prompt from what you want to learn. You t
 
 ### Organize
 
-Each subfolder of `roadmaps/` becomes a section in the picker, and the picker shows how far along each roadmap is. You can hide, duplicate, export with progress as a `.zip` and import it back. The sidebars resize or collapse, and the theme is light, dark or auto.
+Each subfolder of `roadmaps/` becomes a section in the picker, and the picker shows how far along each roadmap is. You can hide, duplicate, export with progress as a `.zip` and import it back. The sidebars resize or collapse, and there are seven themes, three light and four dark, that follow your system's light or dark mode if you want.
 
 ## Your roadmaps
 
