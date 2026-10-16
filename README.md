@@ -1,136 +1,103 @@
-# Roadkit
-
-Uma interface única para roadmaps interativos, no estilo do roadmap.sh, em que todo o conteúdo vem de arquivos JSON. Título, fases, tópicos, desafios, links, cores e idioma ficam no arquivo. Trocou o JSON, trocou o roadmap.
+<h1 align="center">Roadkit</h1>
 
 <p align="center">
-  <img src="docs/roadkit-demo.gif" alt="Demonstração do Roadkit" width="100%">
+  Roadmaps interativos que saem de um arquivo JSON.<br>
+  Mapa, kanban e progresso salvo, num servidor que cabe em um arquivo Python.
 </p>
 
-Prefere em vídeo? [Baixe a demonstração em MP4](docs/demo.mp4).
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/media/mapa-escuro.png">
+    <img src="docs/media/mapa-claro.png" alt="O roadmap de GitOps com Argo CD aberto no Roadkit" width="100%">
+  </picture>
+</p>
+
+<p align="center">
+  <a href="#rodando">Rodando</a> ·
+  <a href="#o-que-dá-pra-fazer">O que dá pra fazer</a> ·
+  <a href="docs/README.md">Documentação</a> ·
+  <a href="docs/criar-com-ia.md">Criar com IA</a>
+</p>
 
 ## Por que existe
 
-Eu queria ter vários roadmaps, tanto de projetos que quero tocar quanto de coisas que quero estudar, todos com a mesma cara e sem precisar refazer a interface a cada um. A ideia é simples: a interface não sabe nada sobre o assunto, ela só desenha o que está no JSON. Para um roadmap novo, basta escrever um arquivo.
+Eu queria ter vários roadmaps, tanto de projetos que quero tocar quanto de coisas que quero estudar, todos com a mesma cara e sem refazer a interface a cada um. A interface não sabe nada sobre o assunto: ela só desenha o que está no JSON. Para um roadmap novo, basta um arquivo, ou o editor que vem junto.
 
-## Como usar
-
-```bash
-python3 tools/roadkit.py serve      # abre em http://localhost:8765
-```
-
-Só precisa de Python 3, sem dependências e sem etapa de build. Abrir o `index.html` direto do disco não funciona, porque o navegador bloqueia a leitura dos JSONs. Use o servidor.
-
-- O seletor **Roadmaps** na barra lateral lista os JSONs de `roadmaps/` (os seus, em seções por pasta) e os exemplos de `examples/`, agrupados por idioma.
-- `?r=<id>` na URL abre um roadmap específico, por exemplo `http://localhost:8765/?r=estudar-sql`.
-- Também dá para arrastar um arquivo `.json` para a página, ou usar "Abrir arquivo JSON", para ver um roadmap sem salvá-lo na pasta.
-- O progresso (as marcações nos tópicos) é salvo no servidor, em `data/<id-do-roadmap>.json`, e também no `localStorage` do navegador, que funciona como cache. Assim ele vale em qualquer aparelho que abra a mesma instância, e o navegador continua funcionando se o servidor cair (sincroniza quando voltar). Ao abrir a página e ao voltar para a aba, o navegador busca a versão mais recente; em caso de conflito, vale a alteração mais nova. O progresso que você já tinha no navegador é enviado ao servidor na primeira vez. O botão de ajustes mostra o estado da sincronização.
-- **Exportar roadmap e progresso** baixa um `.zip` com uma pasta `<id>/` contendo o JSON do roadmap, como está na sua pasta `roadmaps/`, e o `progress.json`. **Importar** aceita esse `.zip` (ou um `.zip` feito por outro programa): se o roadmap já existe no servidor, só o progresso é aplicado; se não existe, ele é aberto a partir do arquivo, e para guardá-lo no servidor basta copiar o JSON para `roadmaps/`. Também aceita um `progress.json` solto (inclusive os exportados antes desta mudança) ou um JSON de roadmap.
-- Mudar a pasta de dados: `ROADKIT_DATA=/caminho python3 tools/roadkit.py serve`. Para exigir um token na leitura e na escrita do progresso, defina `ROADKIT_TOKEN`; o navegador pede o token uma vez e o guarda. Roadmaps abertos por arquivo ou arrastados para a página não são sincronizados.
-- **Gerenciar roadmaps**: o seletor da barra lateral mostra o andamento de cada roadmap e um selo de concluído. O botão "Gerenciar roadmaps" abre a lista completa, onde dá para abrir, duplicar, ocultar e restaurar. **Novo roadmap** (também em Ferramentas, na barra lateral) abre uma tela própria: de um lado o formulário (nome, idioma, cores de destaque e da marca, logo, fases com cor própria, tópicos com tarefas e links) ou o JSON completo, do outro uma prévia ao vivo, com o mapa ou o kanban de verdade. Cada tópico aceita subtópicos (até 2 níveis) e pode ser marcado como opcional. Clicar num tópico da prévia leva ao campo dele, e focar num tópico no formulário o seleciona na prévia. Os criados ali podem ser editados e excluídos depois. Eles ficam em `data/roadmaps/` (no Docker, dentro do volume do progresso), separados dos seus arquivos de `roadmaps/`, que continuam somente leitura: para esses, "Ocultar" tira da lista sem apagar o arquivo. "Duplicar" cria uma cópia editável de qualquer roadmap, inclusive dos exemplos.
-- A barra lateral esquerda também pode ser redimensionada (arraste a borda; duplo clique volta ao padrão) ou recolhida para uma faixa só de ícones, pelo botão no topo dela. As duas escolhas ficam salvas no navegador.
-- O painel de detalhes (barra lateral direita) pode ser redimensionado arrastando a borda esquerda; duplo clique volta ao tamanho padrão. A largura também fica no `localStorage`.
-
-## Organizar em seções
-
-Cada subpasta de `roadmaps/` vira uma seção no seletor de roadmaps. Os arquivos soltos em `roadmaps/` ficam na seção "Meus roadmaps".
-
-```
-roadmaps/
-  solto.json              # Meus roadmaps
-  trabalho/
-    argocd.json           # Trabalho
-    migracao.json
-  estudos/
-    _section.json         # {"title": "Estudos 2026"}
-    sql.json              # Estudos 2026
-    cloud/
-      redes.json          # Estudos 2026 / Cloud
-```
-
-- O título da seção é o nome da pasta com a primeira letra maiúscula (`trabalho` vira "Trabalho"). Para outro título, crie um `_section.json` com `{ "title": "..." }` dentro da pasta.
-- Subpastas dentro de subpastas funcionam e aparecem como "Pai / Filha". Pastas e arquivos que começam com `_` ou `.` são ignorados.
-- O `id` de cada roadmap continua sendo o que vale: mover um arquivo de pasta não perde o progresso salvo. Só não repita ids entre pastas.
-- Seções novas aparecem ao recarregar a página, inclusive no Docker, porque `./roadmaps` é montada inteira.
-- **Pela interface**: o editor de roadmap tem o campo **Categoria**, com as seções que já existem e a opção "Nova categoria…". O roadmap é gravado em `data/roadmaps/<categoria>/` e aparece na mesma seção dos seus arquivos de `roadmaps/<categoria>/`. Dá para trocar a categoria de um roadmap criado na interface a qualquer momento.
-
-## Criar um roadmap
-
-Copie `examples/pt-BR/minimal.json` (ou `examples/en/minimal.json`) para `roadmaps/meu-roadmap.json`, edite e valide:
+## Rodando
 
 ```bash
-python3 tools/roadkit.py check
+python3 tools/roadkit.py serve
 ```
 
-O `check` valida todos os JSONs e atualiza o `manifest.json`. Ele aponta erros (ids duplicados, tópico de origem inexistente, fases fora de ordem, link sem http) e avisos (chaves desconhecidas, títulos longos).
+Abra `http://localhost:8765`. Só precisa de Python 3: sem dependências, sem build. Os exemplos já aparecem na lista.
 
-O formato está descrito em [`docs/SCHEMA.md`](docs/SCHEMA.md) e em [`schema/roadmap.schema.json`](schema/roadmap.schema.json). O `$schema` no topo dos exemplos dá autocompletar no VS Code. Resumo:
+<details>
+<summary><b>Com Docker</b></summary>
 
-| Bloco | Para quê |
+```bash
+docker compose up -d --build
+```
+
+O progresso e os roadmaps criados pela interface ficam num volume, então sobrevivem a rebuilds. A pasta `./roadmaps` é montada somente leitura. Para abrir para o celular ou outro computador da rede, o token e as outras opções estão em [Docker e rede](docs/docker-e-rede.md).
+</details>
+
+## O que dá pra fazer
+
+### Acompanhar
+
+Cada tópico passa por a fazer, em andamento, em revisão e concluído, no **mapa** ou no **kanban**, e os dois mostram o mesmo estado. Tópicos têm tarefas e subtópicos; concluir o de cima conclui o que está embaixo. O progresso é salvo no servidor, então o que você marca no notebook aparece no celular.
+
+<p align="center">
+  <img src="docs/media/visao-geral.gif" alt="Marcando um tópico, movendo um cartão no kanban e trocando para o tema escuro" width="100%">
+</p>
+
+### Criar, vendo o resultado
+
+**Novo roadmap** abre um editor com o formulário de um lado e o roadmap de verdade do outro, que se desenha enquanto você escreve. Dá para montar fases, tópicos, subtópicos até dois níveis, opcionais, cores, logo e categoria. Uma linha embaixo avisa o que está errado na hora.
+
+<p align="center">
+  <img src="docs/media/criar-roadmap.gif" alt="Montando um roadmap no editor, com a prévia ao lado" width="100%">
+</p>
+
+### Criar com uma IA
+
+O botão **Criar com IA** monta um prompt a partir do que você quer aprender. Você leva até a IA que preferir, cola a resposta de volta, e o roadmap abre no editor para ajustar. Não precisa de chave de API. Quem usa o Claude Code ainda ganha uma [skill](.claude/skills/roadkit/SKILL.md) que conduz essa conversa.
+
+<p align="center">
+  <img src="docs/media/criar-com-ia.gif" alt="Descrevendo um objetivo, copiando o prompt e trazendo a resposta da IA para o editor" width="100%">
+</p>
+
+### Organizar
+
+Cada subpasta de `roadmaps/` vira uma seção no seletor, e o seletor mostra o andamento de cada roadmap. Dá para ocultar, duplicar, exportar com o progresso num `.zip` e importar de volta. As barras laterais se ajustam ou recolhem, e o tema é claro, escuro ou automático.
+
+## Seus roadmaps
+
+Um roadmap é um arquivo JSON. O mínimo cabe em poucas linhas:
+
+```json
+{
+  "id": "meu-roadmap",
+  "meta": { "title": "Meu roadmap" },
+  "nodes": [
+    { "id": "primeiro", "title": "Primeiro tópico", "time": "Semana 1" },
+    { "id": "segundo", "title": "Segundo tópico", "time": "Semana 2" }
+  ]
+}
+```
+
+Salve em `roadmaps/` (ou numa subpasta, que vira a categoria) e rode `python3 tools/roadkit.py check` para validar. Recarregue a página e ele aparece. Os exemplos em [`examples/`](examples/) mostram fases, tarefas, subtópicos, cores e rótulos próprios, em português e em inglês.
+
+## Documentação
+
+| | |
 |---|---|
-| `id`, `meta` | identidade, título, subtítulo, logo, textos da barra lateral e do rodapé, idioma |
-| `theme` | duas cores: botões e destaque do logo |
-| `labels` | troca textos da interface, por exemplo "Desafio prático" por "Entrega" |
-| `phases` | etapas com cor, período e marco (opcional) |
-| `nodes` | tópicos com resumo, assuntos, desafio, critério de conclusão e links. `optional` com `anchor` cria ramos laterais |
-
-Não há coordenadas no JSON. O layout é calculado no navegador: os tópicos principais descem em ordem pela coluna central, agrupados por fase, e os opcionais ficam à direita do tópico de origem.
-
-O tema da interface pode ser claro, escuro ou automático (segue o sistema). A escolha fica salva no navegador e é feita no botão de ajustes, no canto superior direito.
-
-O layout se adapta à tela: em telas grandes o mapa é ampliado e centralizado, e em telas estreitas (celular, janela pequena) vira uma linha do tempo em coluna única, com as fases como atalhos no topo.
-
-## Kanban
-
-Cada roadmap também pode ser visto como um quadro, pelo seletor **Mapa / Kanban** no topo. O quadro tem quatro colunas (a fazer, em andamento, em revisão, concluído) e cada tópico é um cartão que se arrasta entre elas, com o mouse ou pelo ícone de alça no toque. As setas no cartão fazem o mesmo para quem prefere teclado.
-
-Um tópico pode ter `tasks`: ele ganha um kanban pequeno no painel de detalhes, com as mesmas colunas, para quebrar o tópico em passos. Concluir o tópico conclui todas as tarefas, e mover tarefas atualiza o estado do tópico. As regras completas estão em [`docs/SCHEMA.md`](docs/SCHEMA.md#kanban).
-
-Quando um tópico avança no kanban sem que os anteriores (na ordem do roadmap) estejam concluídos, o cartão ganha um pequeno ícone de alerta. Clicar nele abre um aviso simples, dentro do próprio cartão, listando o que falta. Opcionais não entram nessa conta. A tolerância é ajustável: sempre avisar, tolerar até 3 ou 5 pendentes, ou não avisar.
-
-O botão de ajustes, no canto superior direito, concentra o tema (claro, escuro ou automático), o tamanho do texto (pequeno, normal, grande e muito grande), o idioma da interface (automático segue o `meta.language` do roadmap) e a tolerância do aviso. No celular ele também dá acesso a exportar, importar e reiniciar o progresso. Em janelas estreitas o quadro tem uma faixa com as quatro colunas que aparece durante o arrasto, para soltar o cartão sem precisar rolar.
-
-Os textos da interface ficam em `src/labels/` (`pt-BR` e `en`) e são escolhidos por `meta.language`. Para um idioma novo, copie um dos arquivos e traduza.
-
-## Exemplos
-
-Os mesmos seis roadmaps existem em português (`examples/pt-BR/`) e em inglês (`examples/en/`), com o mesmo conteúdo e o mesmo nome de arquivo nas duas pastas. A língua da interface acompanha o `meta.language` de cada roadmap.
-
-| Arquivo | Tipo |
-|---|---|
-| `minimal.json` | o menor roadmap válido, sem fases |
-| `sql.json` | trilha de estudo em fases |
-| `argocd.json` | trilha de estudo com tarefas por tópico (a da demonstração acima) |
-| `home-lab.json` | projeto pessoal, com rótulos trocados |
-| `half-marathon.json` | meta sem relação com tecnologia |
-| `side-project.json` | projeto de produto, com cores e rótulos próprios |
-
-## Docker
-
-```bash
-docker compose up -d --build   # http://localhost:8765, reinicia sozinho
-docker compose logs -f
-docker compose down
-```
-
-- `./roadmaps` é montada no contêiner em modo somente leitura. Criou ou editou um JSON, recarregue a página, sem rebuild. A imagem leva só o motor e os exemplos.
-- A porta escuta apenas em `127.0.0.1`. Para acessar de outro dispositivo na rede, crie um `.env` com `BIND_ADDR=0.0.0.0` (e `PORT=...` para mudar a porta). O servidor é o `http.server` do Python. Se for abrir para a rede, defina `ROADKIT_TOKEN` no `.env` para proteger o progresso (os roadmaps em si continuam públicos), e não o exponha na internet.
-- O progresso fica no volume `roadkit-data` (montado em `/app/data`), então sobrevive a `down`, rebuild e recriação. Só `docker compose down -v` apaga. Backup: `docker run --rm -v roadkit_roadkit-data:/d -v "$PWD":/b alpine tar czf /b/progresso.tgz -C /d .`
-- Mudou algo em `src/` ou `tools/`? Rode o `up -d --build` de novo.
-
-## Estrutura
-
-```
-index.html              casca da interface, sem conteúdo
-src/app.js, style.css   lê o JSON, calcula o layout e desenha
-src/labels/             textos da interface por idioma
-roadmaps/               seus roadmaps (cada subpasta vira uma seção)
-data/                   progresso e roadmaps criados na interface (criada ao usar)
-examples/pt-BR, en/       roadmaps de exemplo, por idioma
-schema/                 JSON Schema
-tools/roadkit.py        serve, check e index
-manifest.json           lista de roadmaps, gerada pelo check e pelo serve
-docs/                   referência do formato
-```
+| [Usando a interface](docs/usando-a-interface.md) | um passeio pela tela |
+| [Criando roadmaps](docs/criar-roadmaps.md) | três jeitos de criar, categorias e o que faz um bom roadmap |
+| [Criando com IA](docs/criar-com-ia.md) | o botão e a skill |
+| [Como funciona](docs/como-funciona.md) | o que roda onde, onde ficam os dados, a API |
+| [Docker e rede](docs/docker-e-rede.md) | volumes, backup, token, outros aparelhos |
+| [Formato do JSON](docs/SCHEMA.md) | referência de cada campo |
 
 ## Licença
 
