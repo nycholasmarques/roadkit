@@ -403,6 +403,7 @@ function applyI18n() {
   document.querySelectorAll('[data-i18n-aria]').forEach(el => el.setAttribute('aria-label', L[el.dataset.i18nAria] ?? ''));
   updateThemeBtn();
   if (S.manifest) buildLangSel();
+  dispatchEvent(new Event('labelschange'));
 }
 
 function applyChrome() {
@@ -413,7 +414,9 @@ function applyChrome() {
   document.title = m.title;
   applyI18n();
   const brand = m.brand || {};
-  $('logo').innerHTML = `${esc(brand.plain ?? 'road')}<b>${esc(brand.accent ?? 'kit')}</b>`;
+  const lp = str(brand.plain ?? 'road'), la = str(brand.accent ?? 'kit');
+  $('logo').innerHTML = `<span class="lg-full">${esc(lp)}<b>${esc(la)}</b></span><span class="lg-mini" aria-hidden="true">${esc([...lp][0] || '')}<b>${esc([...la][0] || '')}</b></span>`;
+  $('logo').setAttribute('aria-label', lp + la);
   $('tagline').innerHTML = br(m.tagline);
   $('eyebrow').textContent = str(m.eyebrow);
   $('title').textContent = m.title;
@@ -424,16 +427,17 @@ function applyChrome() {
 
   const nav = $('phaseNav');
   nav.replaceChildren();
-  const addNav = (key, label, color) => {
+  const addNav = (key, label, color, short = '▦') => {
     const b = document.createElement('button');
     b.className = 'nav-btn' + (S.phase === key ? ' active' : '');
     b.dataset.phase = key;
-    b.innerHTML = `<span class="nav-dot" style="background:${color}"></span>${esc(label)}`;
+    b.title = label;
+    b.innerHTML = `<span class="nav-dot" style="background:${color}" data-n="${esc(short)}"></span><span class="nav-lbl">${esc(label)}</span>`;
     b.addEventListener('click', () => setPhase(key));
     nav.append(b);
   };
   addNav('all', L.fullRoadmap, rm.theme.accent);
-  if (rm.hasPhases) rm.phases.filter(p => p.nodes.length).forEach(p => addNav(p.id, `${String(p.index + 1).padStart(2, '0')} | ${p.title}`, p.color));
+  if (rm.hasPhases) rm.phases.filter(p => p.nodes.length).forEach(p => addNav(p.id, `${String(p.index + 1).padStart(2, '0')} | ${p.title}`, p.color, String(p.index + 1)));
 }
 
 /* ---------- roadmap picker (sidebar) ---------- */
@@ -473,6 +477,7 @@ function updatePickerBtn() {
   const entry = entryById(S.rm.id), local = S.isLocal;
   $('rmIcon').textContent = S.rm.meta.icon || '▦';
   $('rmName').textContent = S.rm.meta.title + (local ? ` (${S.L.localFile})` : '');
+  $('rmBtn').title = $('rmName').textContent;
   const pr = entry && !local ? progressOf(entry) : { done: S.rm.core.filter(isDone).length, total: S.rm.core.length };
   pr.complete = pr.total > 0 && pr.done >= pr.total;
   $('rmChip').innerHTML = pr.complete ? `<span class="chip-done" title="${esc(S.L.rmDone)}">✓</span>` : `<span class="chip-n">${pr.done}/${pr.total}</span>`;
@@ -922,6 +927,12 @@ function wireEditor() {
     if (!f || !card || ed.mode !== 'form') return;
     const kind = e.target.closest('[data-list]').dataset.list, row = ed.model[kind][+card.dataset.i];
     row[f] = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
+    if (f === 'optional' && row.optional && kind === 'nodes') {   // everything below an optional topic is optional too, until you untick it
+      const d = rowDepths(ed.model.nodes), i = +card.dataset.i;
+      for (let j = i + 1; j < d.length && d[j] > d[i]; j++) ed.model.nodes[j].optional = true;
+      rerender();
+      body.querySelector(`[data-list=nodes] .ed-card[data-i="${i}"] [data-f=optional]`)?.focus();
+    }
     if (e.target.type === 'color') e.target.closest('.ed-color').classList.add('set');
     if (kind === 'phases' && f === 'title') body.querySelectorAll(`select[data-f=phase] option[value="${CSS.escape(row.key)}"]`).forEach(o => { o.textContent = row.title || S.L.edPhaseTitle; });
   });
@@ -951,7 +962,7 @@ function wireEditor() {
         if (kind === 'nodes' && !m.nodes.length) m.nodes.push(blankNode(m.phases[0]?.key || ''));
         break;
       case 'more': m.nodes[i].open = !m.nodes[i].open; break;
-      case 'add-sub': focusAt = end(i); m.nodes.splice(focusAt, 0, blankNode('', rowId(m.nodes[i]))); break;
+      case 'add-sub': { focusAt = end(i); const kid = blankNode('', rowId(m.nodes[i])); kid.optional = m.nodes[i].optional; m.nodes.splice(focusAt, 0, kid); break; }   // under an optional topic, optional by default
       case 'reset-color': if (b.dataset.kind === 'phase') m.phases[i].color = ''; else m[b.dataset.f] = ''; break;
       case 'add-phase': m.phases.push({ key: `p${ed.n++}`, orig: null, title: '', period: '', color: '' }); break;
       case 'add-node': m.nodes.push(blankNode(m.phases.at(-1)?.key || '')); break;
@@ -1297,6 +1308,48 @@ function setDrawer(open) {
   $('detail').classList.toggle('open', open);
   $('scrim').classList.toggle('open', open);
   $('detailGrip').classList.toggle('open', open);
+}
+
+/* The left sidebar: drag its edge to resize, or fold it to a rail of icons. Both are remembered. */
+function wireSidebar() {
+  const root = document.documentElement, grip = $('sideGrip'), btn = $('sideToggle');
+  const MIN = 200, MAX = 420, RAIL = 68;
+  const collapsed = () => root.dataset.side === 'collapsed';
+  const openWidth = () => parseInt(getComputedStyle(root).getPropertyValue('--side-open'), 10) || 244;
+  const relayout = () => metricsChanged();
+  const paint = () => {
+    const c = collapsed();
+    btn.setAttribute('aria-expanded', String(!c));
+    const label = (c ? S.L.expandSide : S.L.collapseSide) ?? '';
+    btn.setAttribute('title', label); btn.setAttribute('aria-label', label);
+    grip.style.display = c ? 'none' : '';
+  };
+  const setCollapsed = c => {
+    if (c) root.dataset.side = 'collapsed'; else delete root.dataset.side;
+    store.set('roadkit:v1:side', c ? 'collapsed' : 'open');
+    paint(); setPicker(false); relayout();
+  };
+  btn.addEventListener('click', () => setCollapsed(!collapsed()));
+  let start = null;
+  const apply = w => root.style.setProperty('--side-open', Math.round(Math.min(Math.max(w, MIN), MAX)) + 'px');
+  grip.addEventListener('pointerdown', e => { start = true; grip.setPointerCapture(e.pointerId); grip.classList.add('drag'); document.body.classList.add('resizing'); });
+  grip.addEventListener('pointermove', e => { if (start) apply(e.clientX); });
+  const stop = () => {
+    if (!start) return;
+    start = null; grip.classList.remove('drag'); document.body.classList.remove('resizing');
+    store.set('roadkit:v1:sidew', String(openWidth())); relayout();
+  };
+  grip.addEventListener('pointerup', stop);
+  grip.addEventListener('pointercancel', stop);
+  grip.addEventListener('dblclick', () => { root.style.removeProperty('--side-open'); store.set('roadkit:v1:sidew', ''); relayout(); });
+  grip.addEventListener('keydown', e => {
+    const d = { ArrowLeft: -24, ArrowRight: 24 }[e.key];
+    if (!d) return;
+    e.preventDefault();
+    apply(openWidth() + d); store.set('roadkit:v1:sidew', String(openWidth())); relayout();
+  });
+  addEventListener('labelschange', paint);
+  paint();
 }
 
 /* Drag the left edge of the details panel to resize it; the width is remembered. */
@@ -1783,6 +1836,7 @@ function wire() {
   addEventListener('online', () => { if (sync.status === 'offline') pull(); });
   wireDnd();
   wireDetailResize();
+  wireSidebar();
 }
 
 async function init() {
