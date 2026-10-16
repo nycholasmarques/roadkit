@@ -13,7 +13,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # The job name is what the main ruleset asks for: keep it as "check".
+  # The job names ("check" and "docker") are what the protection rule on main waits for: keep them.
   check:
     runs-on: ubuntu-latest
     timeout-minutes: 10
