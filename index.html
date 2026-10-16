@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f6f7fb">
+  <title>Roadkit</title>
+  <link rel="stylesheet" href="src/style.css">
+</head>
+<body>
+<div class="app">
+  <aside>
+    <div class="logo" id="logo"></div>
+    <div class="side-sub" id="tagline"></div>
+    <div class="roadmap-switch">
+      <div class="aside-label" data-i18n="roadmaps"></div>
+      <select id="roadmapSelect" aria-label="Roadmap"></select>
+    </div>
+    <div class="aside-label" data-i18n="journey"></div>
+    <nav id="phaseNav"></nav>
+    <div class="aside-label" data-i18n="tools"></div>
+    <button class="nav-btn" id="exportBtn" data-i18n="exportProgress"></button>
+    <button class="nav-btn" id="importBtn" data-i18n="importProgress"></button>
+    <button class="nav-btn" id="resetBtn" data-i18n="resetProgress"></button>
+    <button class="nav-btn" id="openFileBtn" data-i18n="openFile"></button>
+    <div class="aside-bottom" id="sidebarNote"></div>
+  </aside>
+  <main class="workspace">
+    <header class="toolbar">
+      <div class="top-left">
+        <div class="eyebrow" id="eyebrow"></div>
+        <h1 id="title">Roadkit</h1>
+        <p id="subtitle"></p>
+      </div>
+      <div class="controls">
+        <div class="progress-wrap">
+          <div class="progress-txt"><span data-i18n="progress"></span><span id="progressText">0 / 0</span></div>
+          <div class="bar"><div class="bar-fill" id="barFill"></div></div>
+        </div>
+        <input id="search" type="search" data-i18n-placeholder="searchPlaceholder" data-i18n-aria="searchAria">
+        <button class="secondary" id="nextBtn" data-i18n="nextTopic"></button>
+        <button class="primary" id="startBtn" data-i18n="start"></button>
+      </div>
+    </header>
+    <section class="bodyline">
+      <div class="map-viewport" id="mapViewport"><div class="map" id="map"></div></div>
+      <section class="detail" id="detail" aria-live="polite">
+        <button class="detail-close" id="detailClose" data-i18n-aria="close">×</button>
+        <div id="detailContent" class="detail-placeholder"></div>
+      </section>
+    </section>
+    <footer class="footer-note" id="footer"></footer>
+  </main>
+</div>
+<input type="file" id="importFile" accept="application/json,.json">
+<input type="file" id="openFile" accept="application/json,.json">
+<script src="src/app.js"></script>
+</body>
+</html>
