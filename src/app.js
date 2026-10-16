@@ -43,11 +43,12 @@ const store = {
   get(k) { try { return localStorage.getItem(k); } catch { return null; } },
   set(k, v) { try { localStorage.setItem(k, v); } catch { /* storage blocked */ } },
 };
-async function getJson(url) {
+async function getText(url) {
   const r = await fetch(url, { cache: 'no-store' });
   if (!r.ok) throw new Error(`${url}: HTTP ${r.status}`);
-  return r.json();
+  return r.text();
 }
+const getJson = async url => JSON.parse(await getText(url));
 
 const S = {
   manifest: null, defaults: {}, L: {}, labelCache: {},
@@ -943,9 +944,16 @@ async function setRoadmap(rm, { local = false } = {}) {
   pull();
 }
 
+/* Builds a roadmap from its JSON text, keeping the text and file name for export. */
+function parseRoadmap(text, fileName) {
+  const rm = normalize(JSON.parse(text), fileName.replace(/\.json$/i, ''));
+  rm.sourceText = text; rm.fileName = fileName;
+  return rm;
+}
+
 async function openEntry(entry) {
   try {
-    const rm = normalize(await getJson(entry.file), entry.id);
+    const rm = parseRoadmap(await getText(entry.file), entry.file.split('/').pop());
     await setRoadmap(rm);
     store.set(KEY.last, rm.id);
     history.replaceState(null, '', `?r=${encodeURIComponent(entry.id)}`);
@@ -955,39 +963,146 @@ async function openEntry(entry) {
   }
 }
 
+async function openRoadmapText(text, fileName) {
+  await setRoadmap(parseRoadmap(text, fileName), { local: true });
+}
+
 async function openLocalFile(file) {
   try {
-    const rm = normalize(JSON.parse(await file.text()), file.name.replace(/\.json$/i, ''));
-    await setRoadmap(rm, { local: true });
+    await openRoadmapText(await file.text(), file.name);
   } catch (err) {
     alert(`${S.L.loadFail}: ${err.message}`);
   }
 }
 
-/* ---------- progress import / export ---------- */
-function exportProgress() {
-  const { rm } = S;
-  const blob = new Blob([JSON.stringify({ roadmap: rm.id, title: rm.meta.title, version: 2, exportedAt: new Date().toISOString(), nodes: S.state.nodes, tasks: S.state.tasks }, null, 2)], { type: 'application/json' });
+/* ---------- zip: a small writer (stored, no compression) and a reader that also inflates ---------- */
+const CRC_TABLE = (() => {
+  const t = new Uint32Array(256);
+  for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; }
+  return t;
+})();
+const crc32 = u8 => { let c = ~0; for (const b of u8) c = CRC_TABLE[(c ^ b) & 255] ^ (c >>> 8); return ~c >>> 0; };
+const ZIP_MAX = 8 * 1024 * 1024;
+
+function makeZip(files) {
+  const enc = new TextEncoder(), parts = [], central = [], d = new Date();
+  const time = (d.getHours() << 11) | (d.getMinutes() << 5) | (d.getSeconds() >> 1);
+  const date = ((d.getFullYear() - 1980) << 9) | ((d.getMonth() + 1) << 5) | d.getDate();
+  let offset = 0;
+  for (const f of files) {
+    const name = enc.encode(f.name), crc = crc32(f.data), size = f.data.length;
+    const lh = new DataView(new ArrayBuffer(30));
+    lh.setUint32(0, 0x04034b50, true); lh.setUint16(4, 20, true); lh.setUint16(6, 0x0800, true);   // 0x0800: UTF-8 names
+    lh.setUint16(10, time, true); lh.setUint16(12, date, true);
+    lh.setUint32(14, crc, true); lh.setUint32(18, size, true); lh.setUint32(22, size, true); lh.setUint16(26, name.length, true);
+    parts.push(lh.buffer, name, f.data);
+    const ch = new DataView(new ArrayBuffer(46));
+    ch.setUint32(0, 0x02014b50, true); ch.setUint16(4, 20, true); ch.setUint16(6, 20, true); ch.setUint16(8, 0x0800, true);
+    ch.setUint16(12, time, true); ch.setUint16(14, date, true);
+    ch.setUint32(16, crc, true); ch.setUint32(20, size, true); ch.setUint32(24, size, true); ch.setUint16(28, name.length, true); ch.setUint32(42, offset, true);
+    central.push(ch.buffer, name);
+    offset += 30 + name.length + size;
+  }
+  const end = new DataView(new ArrayBuffer(22));
+  end.setUint32(0, 0x06054b50, true); end.setUint16(8, files.length, true); end.setUint16(10, files.length, true);
+  end.setUint32(12, central.reduce((n, x) => n + x.byteLength, 0), true); end.setUint32(16, offset, true);
+  return new Blob([...parts, ...central, end.buffer], { type: 'application/zip' });
+}
+
+async function readZip(buf) {
+  const v = new DataView(buf), u8 = new Uint8Array(buf), dec = new TextDecoder();
+  let e = -1;
+  for (let i = buf.byteLength - 22; i >= Math.max(0, buf.byteLength - 22 - 65535); i--) if (v.getUint32(i, true) === 0x06054b50) { e = i; break; }
+  if (e < 0) throw new Error('not a zip file');
+  const out = []; let p = v.getUint32(e + 16, true), total = 0;
+  for (let i = 0, n = v.getUint16(e + 10, true); i < n; i++) {
+    if (v.getUint32(p, true) !== 0x02014b50) throw new Error('corrupt zip');
+    const method = v.getUint16(p + 10, true), csize = v.getUint32(p + 20, true), usize = v.getUint32(p + 24, true);
+    const nl = v.getUint16(p + 28, true), xl = v.getUint16(p + 30, true), cl = v.getUint16(p + 32, true), off = v.getUint32(p + 42, true);
+    const name = dec.decode(u8.subarray(p + 46, p + 46 + nl));
+    p += 46 + nl + xl + cl;
+    if (name.endsWith('/') || name.startsWith('__MACOSX/')) continue;
+    if (usize > ZIP_MAX || (total += usize) > ZIP_MAX) throw new Error('zip too large');
+    const start = off + 30 + v.getUint16(off + 26, true) + v.getUint16(off + 28, true), raw = u8.subarray(start, start + csize);
+    let data;
+    if (method === 0) data = raw;
+    else if (method === 8) data = new Uint8Array(await new Response(new Blob([raw]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).arrayBuffer());
+    else throw new Error('unsupported zip compression');
+    if (data.length > ZIP_MAX) throw new Error('zip too large');
+    out.push({ name, data });
+  }
+  return out;
+}
+
+/* ---------- export / import: a zip with the roadmap and its progress ---------- */
+const progressDoc = rm => ({ roadmap: rm.id, title: rm.meta.title, version: 2, exportedAt: new Date().toISOString(), nodes: S.state.nodes, tasks: S.state.tasks });
+
+function download(blob, name) {
   const url = URL.createObjectURL(blob), a = document.createElement('a');
-  a.href = url; a.download = `${rm.id}-progress.json`; a.click();
+  a.href = url; a.download = name; a.click();
   setTimeout(() => URL.revokeObjectURL(url), 300);
 }
 
-async function importProgress(file) {
-  try {
-    const obj = JSON.parse(await file.text());
-    if (!obj || typeof obj !== 'object') throw new Error('invalid format');
-    const st = { nodes: {}, tasks: {} };
-    if (obj.version === 2) {
-      for (const [id, v] of Object.entries(obj.nodes || {})) if (S.rm.byId[id] && STATUSES.includes(v)) st.nodes[id] = v;
-      for (const n of S.rm.nodes) for (const t of n.tasks) { const v = obj.tasks?.[taskKey(n, t)]; if (STATUSES.includes(v)) st.tasks[taskKey(n, t)] = v; }
-    } else {
-      const p = obj.progress || obj;   // version 1: { id: true }
-      for (const id of Object.keys(S.rm.byId)) if (p[id] === true) st.nodes[id] = 'finished';
-    }
-    S.state = st;
+function exportBundle() {
+  const { rm } = S, enc = new TextEncoder(), dir = `${rm.id}/`;
+  const source = rm.sourceText;
+  download(makeZip([
+    { name: dir + (rm.fileName || `${rm.id}.json`), data: enc.encode(source) },
+    { name: dir + 'progress.json', data: enc.encode(JSON.stringify(progressDoc(rm), null, 2) + '\n') },
+  ]), `${rm.id}.zip`);
+}
+
+/* Progress file -> state for this roadmap. Version 2 is { nodes, tasks }; version 1 was { id: true }. */
+function progressToState(rm, obj) {
+  if (obj.version === 2) return cleanState(rm, obj);
+  const st = emptyState(), p = obj.progress || obj;
+  for (const id of Object.keys(rm.byId)) if (p[id] === true) st.nodes[id] = 'finished';
+  return st;
+}
+
+const looksLikeRoadmap = o => o && typeof o === 'object' && Array.isArray(o.nodes) && o.meta && typeof o.meta === 'object';
+
+async function importZip(buf) {
+  const dec = new TextDecoder(), files = await readZip(buf);
+  const progFile = files.find(f => /(^|\/)progress\.json$/i.test(f.name));
+  const rmFile = files.find(f => f !== progFile && /\.json$/i.test(f.name) && !/(^|\/)_section\.json$/i.test(f.name));
+  if (!rmFile && !progFile) throw new Error('no roadmap or progress inside the zip');
+  let local = false;
+  if (rmFile) {
+    const text = dec.decode(rmFile.data), raw = JSON.parse(text);
+    if (!looksLikeRoadmap(raw)) throw new Error(`${rmFile.name} is not a roadmap`);
+    const entry = S.manifest.roadmaps.find(r => r.id === raw.id);
+    if (entry) await openEntry(entry);              // already on this server: keep its roadmap, bring the progress
+    else { await openRoadmapText(text, rmFile.name.split('/').pop()); local = true; }
+  }
+  if (progFile) {
+    const obj = JSON.parse(dec.decode(progFile.data));
+    if (!obj || typeof obj !== 'object') throw new Error('invalid progress file');
+    S.state = progressToState(S.rm, obj);
     changed();
-    alert(S.L.importOk);
+  }
+  alert(local ? S.L.importOkLocal : S.L.importOk);
+}
+
+async function importJson(text) {
+  const obj = JSON.parse(text);
+  if (!obj || typeof obj !== 'object') throw new Error('invalid format');
+  if (looksLikeRoadmap(obj)) {                      // a bare roadmap file: open it like "Open JSON file"
+    await openRoadmapText(text, 'roadmap.json');
+    return;
+  }
+  const target = typeof obj.roadmap === 'string' && obj.roadmap !== S.rm.id && S.manifest.roadmaps.find(r => r.id === obj.roadmap);
+  if (target) await openEntry(target);              // the progress belongs to another roadmap on this server
+  S.state = progressToState(S.rm, obj);
+  changed();
+  alert(S.L.importOk);
+}
+
+async function importBundle(file) {
+  try {
+    const buf = await file.arrayBuffer(), head = new Uint8Array(buf, 0, 2);
+    if (head[0] === 0x50 && head[1] === 0x4B) await importZip(buf);   // "PK"
+    else await importJson(new TextDecoder().decode(buf));
   } catch (err) { alert(S.L.importFail + err.message); }
 }
 
@@ -1003,7 +1118,7 @@ function wire() {
   document.addEventListener('click', e => {
     const act = e.target.closest('[data-act]');
     if (act) {
-      ({ export: exportProgress, import: () => $('importFile').click(), open: () => $('openFile').click(), reset: resetProgress })[act.dataset.act]?.();
+      ({ export: exportBundle, import: () => $('importFile').click(), open: () => $('openFile').click(), reset: resetProgress })[act.dataset.act]?.();
       setSettingsOpen(false);
     } else if (!$('settings').hidden && !e.target.closest('#settings, #settingsBtn')) setSettingsOpen(false);
   });
@@ -1013,7 +1128,7 @@ function wire() {
   $('fontSeg').addEventListener('click', e => { const b = e.target.closest('[data-fs]'); if (b) { store.set(FS_KEY, b.dataset.fs); applyFont(); metricsChanged(); } });
   $('skipSel').addEventListener('change', e => { store.set(SKIP_KEY, e.target.value); applyFilters(); renderDetail(); });
   new ResizeObserver(syncToolbarHeight).observe($('toolbar'));
-  $('importFile').addEventListener('change', async e => { const f = e.target.files?.[0]; if (f) await importProgress(f); e.target.value = ''; });
+  $('importFile').addEventListener('change', async e => { const f = e.target.files?.[0]; if (f) await importBundle(f); e.target.value = ''; });
   darkQuery.addEventListener('change', applyTheme);
   let frame = 0;
   addEventListener('resize', () => {
