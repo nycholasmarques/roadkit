@@ -1,0 +1,6 @@
+# Keep the source zips (git archive and GitHub's "Source code" downloads) small:
+# the demo media, the recorder and the CI config are not needed to run the app.
+docs/media/ export-ignore
+tools/demos/ export-ignore
+.github/ export-ignore
+.gitattributes export-ignore

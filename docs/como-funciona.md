@@ -91,7 +91,7 @@ examples/           roadmaps de exemplo em português e inglês
 roadmaps/           os seus roadmaps (vazia no repositório)
 data/               progresso e roadmaps da interface (criada ao usar)
 docs/               estes textos e as imagens
-.agents/skills/     a skill para agentes de código (.claude/skills aponta para ela)
+.agents/skills/     a skill para agentes de código
 ```
 
 O `app.js` é um arquivo só, de propósito: sem bundler, sem módulos, sem passo de build. Dá para abrir e ler de cima a baixo, na ordem em que as coisas acontecem.

@@ -1,0 +1,94 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # The job name is what the main ruleset asks for: keep it as "check".
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Roadmaps are valid and manifest.json is up to date
+        run: |
+          python3 tools/roadkit.py check
+          if ! git diff --exit-code manifest.json; then
+            echo "::error file=manifest.json::manifest.json is out of date. Run 'python3 tools/roadkit.py index' and commit it."
+            exit 1
+          fi
+
+      - name: Interface texts are complete
+        run: |
+          python3 - <<'PY'
+          import json, re, pathlib, sys
+          labels = {p.stem: json.loads(p.read_text("utf-8")) for p in pathlib.Path("src/labels").glob("*.json")}
+          base = labels["pt-BR"]
+          bad = False
+          for name, d in labels.items():
+              for k in sorted(set(base) ^ set(d)):
+                  print(f"::error::label '{k}' is in only one of pt-BR and {name}")
+                  bad = True
+          html = pathlib.Path("index.html").read_text("utf-8")
+          for k in sorted(set(re.findall(r'data-i18n(?:-title|-aria|-placeholder)?="([^"]+)"', html))):
+              if k not in base:
+                  print(f"::error::index.html uses the label '{k}', which does not exist")
+                  bad = True
+          sys.exit(1 if bad else 0)
+          PY
+
+      - name: JavaScript and Python parse
+        run: |
+          node --check src/app.js
+          python3 -m py_compile tools/roadkit.py
+
+      - name: Server smoke test
+        run: |
+          export ROADKIT_DATA="$(mktemp -d)"
+          python3 tools/roadkit.py serve --port 8765 &
+          pid=$!
+          trap 'kill $pid' EXIT
+          for i in $(seq 40); do curl -sf http://127.0.0.1:8765/manifest.json >/dev/null && break; sleep 0.25; done
+          H='Content-Type: application/json'
+
+          curl -sf http://127.0.0.1:8765/ | grep -q "Roadkit"
+          curl -sf http://127.0.0.1:8765/manifest.json | python3 -c "import json,sys; m=json.load(sys.stdin); assert m['roadmaps'], 'no roadmaps listed'"
+
+          # validate, create, read back, save progress, delete
+          curl -sf -X POST -H "$H" --data-binary @examples/en/minimal.json http://127.0.0.1:8765/api/validate | python3 -c "import json,sys; r=json.load(sys.stdin); assert not r['errors'], r"
+          sed 's/"minimal-example"/"ci-smoke"/' examples/en/minimal.json | curl -sf -X POST -H "$H" --data-binary @- "http://127.0.0.1:8765/api/roadmaps?category=ci"
+          curl -sf http://127.0.0.1:8765/manifest.json | python3 -c "import json,sys; m=json.load(sys.stdin); assert any(r['id']=='ci-smoke' and r['group']=='roadmaps/ci' for r in m['roadmaps']), 'created roadmap missing'"
+          curl -sf http://127.0.0.1:8765/user/ci/ci-smoke.json | python3 -c "import json,sys; assert json.load(sys.stdin)['id']=='ci-smoke'"
+          curl -sf -X PUT -H "$H" -d '{"updatedAt": 1, "state": {"nodes": {"first": "finished"}, "tasks": {}}}' http://127.0.0.1:8765/api/state/ci-smoke
+          curl -sf http://127.0.0.1:8765/api/state/ci-smoke | grep -q finished
+          curl -sf -X DELETE "http://127.0.0.1:8765/api/roadmaps/ci-smoke?progress=1"
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8765/api/state/ci-smoke)" = 204
+          # writes from another origin are refused
+          test "$(curl -s -o /dev/null -w '%{http_code}' -X PUT -H "$H" -H 'Origin: http://evil.example' -d '{}' http://127.0.0.1:8765/api/state/x)" = 403
+
+  docker:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: The image builds and answers
+        run: |
+          docker build -t roadkit:ci .
+          docker run -d --name rk -p 8765:8765 roadkit:ci
+          for i in $(seq 40); do curl -sf http://127.0.0.1:8765/manifest.json >/dev/null && break; sleep 0.5; done
+          curl -sf http://127.0.0.1:8765/manifest.json | python3 -c "import json,sys; assert json.load(sys.stdin)['roadmaps']"
+          docker rm -f rk

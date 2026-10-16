@@ -23,7 +23,7 @@ O texto do prompt está em [`src/ai-prompt.txt`](../src/ai-prompt.txt). Se quise
 
 ## Pela skill do agente
 
-Se você usa um agente de código, o repositório traz uma skill em [`.agents/skills/roadkit/`](../.agents/skills/roadkit/SKILL.md). Ela é uma conversa guiada em vez de um prompt único. O Claude Code procura skills em `.claude/skills/`, então lá existe um link simbólico para a mesma pasta, e as duas ferramentas leem o mesmo arquivo.
+Se você usa um agente de código, o repositório traz uma skill em [`.agents/skills/roadkit/`](../.agents/skills/roadkit/SKILL.md). Ela é uma conversa guiada em vez de um prompt único. A pasta `.agents/skills/` é a convenção usada por várias ferramentas. Se a sua procura em outro lugar (o Claude Code, por exemplo, olha `.claude/skills/`), copie ou faça um link da pasta `roadkit/` para lá.
 
 Abra o Claude Code dentro da pasta do Roadkit e peça algo como "monta um roadmap para eu aprender Rust" (ou chame direto com `/roadkit`). A skill faz o seguinte:
 
