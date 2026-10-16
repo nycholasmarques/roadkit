@@ -58,6 +58,8 @@ O [`ci.yml`](../.github/workflows/ci.yml) roda a cada push na `main` e em todo p
 
 O trabalho principal se chama `check`, e o do Docker, `docker`. Esses dois nomes são os que a proteção da `main` exige, então se você renomear um, ajuste a regra nas configurações.
 
+O Dependabot ([`dependabot.yml`](../.github/dependabot.yml)) abre um pull request agrupado por mês para as actions, e um para a imagem base do Python no Dockerfile.
+
 ## Proteção da main
 
 As regras de proteção moram nas configurações do repositório, não no código, então não há arquivo para commitar. O que eu uso, em *Settings → Rules → Rulesets*, para a `main`:

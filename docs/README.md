@@ -1,5 +1,7 @@
 # Documentação
 
+[English](en/README.md) · **Português**
+
 Aqui está o que eu gostaria de ter lido quando comecei a usar o Roadkit. Não é um manual de referência, é mais uma conversa sobre como as coisas funcionam e por que estão do jeito que estão.
 
 Se é a primeira vez, comece pelo passeio na interface. Se você só quer criar um roadmap, pule para o segundo.
