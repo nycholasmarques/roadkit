@@ -678,9 +678,26 @@ function setEditMode(mode) {
 }
 
 /* ---- live preview ---- */
-function showPreviewHint() {
-  S.preview = true;
-  showMessage(S.L.edPreviewEmptyTitle, esc(S.L.edPreviewEmptyText));
+/* Nothing to draw yet: the toolbar and the details panel show the draft itself, not the roadmap that was open before. */
+async function showPreviewHint() {
+  S.L = { ...S.defaults, ...await loadLabels(uiLang({ meta: { language: ed.model?.language } })) };
+  S.rm = null; S.preview = true; S.state = emptyState();
+  applyI18n();
+  const L = S.L, m = ed.model, form = ed.mode === 'form', root = document.documentElement;
+  root.style.setProperty('--accent', '#233b65'); root.style.setProperty('--brand', '#7549bd');
+  root.lang = uiLang({ meta: { language: m?.language } });
+  const title = (form && m.title.trim()) || L.edTitleNew;
+  document.title = title;
+  $('eyebrow').textContent = '';
+  $('title').textContent = title;
+  $('subtitle').textContent = form ? m.subtitle : '';
+  $('footer').textContent = '';
+  $('progressText').textContent = '0 / 0';
+  $('barFill').style.width = '0%';
+  const box = $('detailContent');
+  box.className = 'detail-placeholder';
+  box.innerHTML = `${form && m.icon ? `<span class="big">${esc(m.icon)}</span>` : ''}<strong>${esc(L.placeholderTitle)}</strong><br>${esc(L.placeholderText)}`;
+  showMessage(L.edPreviewEmptyTitle, esc(L.edPreviewEmptyText));
 }
 
 async function rebuildPreview(first = false) {
@@ -688,9 +705,12 @@ async function rebuildPreview(first = false) {
   try {
     const json = ed.mode === 'json' ? JSON.parse($('edJson').value) : buildJson(ed.model, ed.base, true);
     if (json && Array.isArray(json.nodes) && json.nodes.length) rm = normalize(json, 'draft');
-  } catch { /* half-typed JSON or no topic yet: keep what is on screen */ }
-  if (!rm) { if (first) showPreviewHint(); return; }
-  await setRoadmap(rm, { preview: true, keep: !first && !!S.preview });
+  } catch { /* half-typed JSON: keep what is on screen */ }
+  if (!rm) {
+    if (first || ed.mode === 'form' || !S.rm) await showPreviewHint();
+    return;
+  }
+  await setRoadmap(rm, { preview: true, keep: !first && !!S.rm && S.preview });
 }
 
 let previewTimer = 0;
@@ -709,7 +729,6 @@ function focusEditorRow(id) {
 /* ---- enter / leave ---- */
 async function openEditor(entry = null) {
   if (S.editing) return;
-  const L = S.L;
   let base = null;
   if (entry) {
     try { base = JSON.parse(await getText(entry.file)); } catch (err) { return alert(err.message); }
@@ -718,7 +737,9 @@ async function openEditor(entry = null) {
   ed.prev = S.rm ? { id: S.rm.id, local: S.isLocal } : null;
   ed.model = base ? modelFromJson(base) : { ...modelFromJson({ meta: {}, nodes: [] }), nodes: [blankNode('')] };
   if (!base) ed.model.language = S.rm?.meta.language || 'pt-BR';
-  $('editTitle').textContent = entry ? L.edTitleEdit : L.edTitleNew;
+  S.L = { ...S.defaults, ...await loadLabels(uiLang({ meta: { language: ed.model.language } })) };   // the editor speaks the draft's language, not the previous roadmap's
+  applyI18n();
+  $('editTitle').textContent = entry ? S.L.edTitleEdit : S.L.edTitleNew;
   $('editBody').replaceChildren();
   showEditErr([]);
   if ($('manageDlg').open) $('manageDlg').close();
@@ -782,6 +803,7 @@ function wireEditor() {
     ed.dirty = true;
     schedulePreview();
     const f = e.target.dataset.f, card = e.target.closest('[data-i]');
+    if (f && !card && ed.mode === 'form') { ed.model[f] = e.target.value; return; }   // name, subtitle, icon...
     if (!f || !card || ed.mode !== 'form') return;
     const kind = e.target.closest('[data-list]').dataset.list, row = ed.model[kind][+card.dataset.i];
     row[f] = e.target.value;
@@ -1085,6 +1107,7 @@ function setView(v, persist = true) {
 
 /* ---------- details panel, with the per-card task kanban ---------- */
 function renderDetail() {
+  if (!S.rm) return;
   const { rm, L } = S, box = $('detailContent'), n = rm.byId[S.selected];
   if (!n) {
     box.className = 'detail-placeholder';
@@ -1183,6 +1206,7 @@ function setPhase(key) {
 }
 
 function next() {
+  if (!S.rm) return;
   const n = S.rm.core.find(x => !isDone(x)) || S.rm.core.at(-1);
   select(n.id, true);
 }
@@ -1566,7 +1590,7 @@ function wire() {
     else { S.L = { ...S.defaults, ...await loadLabels(uiLang(null)) }; applyI18n(); }
     buildLangSel(); renderManage();
     if (!$('rmPop').hidden) renderPicker();
-    if (S.editing) { $('editTitle').textContent = ed.id ? S.L.edTitleEdit : S.L.edTitleNew; if (ed.mode === 'form') renderForm(); }
+    if (S.editing) { $('editTitle').textContent = ed.id ? S.L.edTitleEdit : S.L.edTitleNew; if (ed.mode === 'form') renderForm(); if (!S.rm) await showPreviewHint(); }
   });
   $('skipSel').addEventListener('change', e => { store.set(SKIP_KEY, e.target.value); applyFilters(); renderDetail(); });
   new ResizeObserver(syncToolbarHeight).observe($('toolbar'));
