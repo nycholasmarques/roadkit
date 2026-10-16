@@ -16,14 +16,14 @@ python3 tools/roadkit.py serve      # abre em http://localhost:8765
 
 Só precisa de Python 3, sem dependências e sem etapa de build. Abrir o `index.html` direto do disco não funciona, porque o navegador bloqueia a leitura dos JSONs. Use o servidor.
 
-- O seletor **Roadmaps** na barra lateral lista os JSONs de `roadmaps/` (os seus) e de `examples/`.
+- O seletor **Roadmaps** na barra lateral lista os JSONs de `roadmaps/` (os seus) e os exemplos de `examples/`, agrupados por idioma.
 - `?r=<id>` na URL abre um roadmap específico, por exemplo `http://localhost:8765/?r=estudar-sql`.
 - Também dá para arrastar um arquivo `.json` para a página, ou usar "Abrir arquivo JSON", para ver um roadmap sem salvá-lo na pasta.
 - O progresso (as marcações nos tópicos) fica no `localStorage` do navegador, separado por roadmap, usando o `id` do JSON. Há botões para exportar e importar o progresso. Como o `localStorage` é por origem, mantenha a mesma porta.
 
 ## Criar um roadmap
 
-Copie `examples/minimal.json` para `roadmaps/meu-roadmap.json`, edite e valide:
+Copie `examples/pt-BR/minimal.json` (ou `examples/en/minimal.json`) para `roadmaps/meu-roadmap.json`, edite e valide:
 
 ```bash
 python3 tools/roadkit.py check
@@ -61,14 +61,16 @@ Os textos da interface ficam em `src/labels/` (`pt-BR` e `en`) e são escolhidos
 
 ## Exemplos
 
+Os mesmos seis roadmaps existem em português (`examples/pt-BR/`) e em inglês (`examples/en/`), com o mesmo conteúdo e o mesmo nome de arquivo nas duas pastas. A língua da interface acompanha o `meta.language` de cada roadmap.
+
 | Arquivo | Tipo |
 |---|---|
-| `examples/minimal.json` | o menor roadmap válido, sem fases |
-| `examples/estudar-sql.json` | trilha de estudo em fases |
-| `examples/argocd-gitops.json` | trilha de estudo com tarefas por tópico (a da demonstração acima) |
-| `examples/home-lab.json` | projeto pessoal, com rótulos trocados |
-| `examples/primeira-meia-maratona.json` | meta sem relação com tecnologia |
-| `examples/side-project-saas.json` | projeto em inglês, com cores próprias |
+| `minimal.json` | o menor roadmap válido, sem fases |
+| `sql.json` | trilha de estudo em fases |
+| `argocd.json` | trilha de estudo com tarefas por tópico (a da demonstração acima) |
+| `home-lab.json` | projeto pessoal, com rótulos trocados |
+| `half-marathon.json` | meta sem relação com tecnologia |
+| `side-project.json` | projeto de produto, com cores e rótulos próprios |
 
 ## Docker
 
@@ -89,7 +91,7 @@ index.html              casca da interface, sem conteúdo
 src/app.js, style.css   lê o JSON, calcula o layout e desenha
 src/labels/             textos da interface por idioma
 roadmaps/               seus roadmaps
-examples/               roadmaps de exemplo
+examples/pt-BR, en/       roadmaps de exemplo, por idioma
 schema/                 JSON Schema
 tools/roadkit.py        serve, check e index
 manifest.json           lista de roadmaps, gerada pelo check e pelo serve

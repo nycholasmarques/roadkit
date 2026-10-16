@@ -6,8 +6,12 @@
       "title": "Meus roadmaps"
     },
     {
-      "id": "examples",
-      "title": "Exemplos"
+      "id": "examples/pt-BR",
+      "title": "Exemplos em português"
+    },
+    {
+      "id": "examples/en",
+      "title": "Examples in English"
     }
   ],
   "languages": [
@@ -17,8 +21,8 @@
   "roadmaps": [
     {
       "id": "argocd-gitops",
-      "file": "examples/argocd-gitops.json",
-      "group": "examples",
+      "file": "examples/pt-BR/argocd.json",
+      "group": "examples/pt-BR",
       "title": "GitOps com Argo CD",
       "description": "Roadmap para aprender GitOps na prática com Argo CD e Kubernetes, em sete semanas.",
       "icon": "",
@@ -27,20 +31,20 @@
       "optional": 2
     },
     {
-      "id": "estudar-sql",
-      "file": "examples/estudar-sql.json",
-      "group": "examples",
-      "title": "Estudar SQL na prática",
-      "description": "Roadmap de estudo de SQL com PostgreSQL, em oito semanas.",
+      "id": "primeira-meia-maratona",
+      "file": "examples/pt-BR/half-marathon.json",
+      "group": "examples/pt-BR",
+      "title": "Primeira meia maratona",
+      "description": "Plano de 12 semanas para correr a primeira meia maratona. Sem relação com tecnologia: o formato serve para qualquer meta.",
       "icon": "",
       "phases": 3,
-      "topics": 10,
+      "topics": 8,
       "optional": 3
     },
     {
       "id": "home-lab",
-      "file": "examples/home-lab.json",
-      "group": "examples",
+      "file": "examples/pt-BR/home-lab.json",
+      "group": "examples/pt-BR",
       "title": "Montar um home lab",
       "description": "Projeto de montar um servidor doméstico com serviços úteis e backup.",
       "icon": "",
@@ -50,8 +54,8 @@
     },
     {
       "id": "exemplo-minimo",
-      "file": "examples/minimal.json",
-      "group": "examples",
+      "file": "examples/pt-BR/minimal.json",
+      "group": "examples/pt-BR",
       "title": "Exemplo mínimo",
       "description": "Uma lista de tópicos e um opcional, sem fases.",
       "icon": "",
@@ -60,25 +64,91 @@
       "optional": 1
     },
     {
-      "id": "primeira-meia-maratona",
-      "file": "examples/primeira-meia-maratona.json",
-      "group": "examples",
-      "title": "Primeira meia maratona",
-      "description": "Plano de 12 semanas para correr a primeira meia maratona. Sem relação com tecnologia: o formato serve para qualquer meta.",
+      "id": "projeto-paralelo",
+      "file": "examples/pt-BR/side-project.json",
+      "group": "examples/pt-BR",
+      "title": "Lançar um projeto paralelo",
+      "description": "Um roadmap de projeto, com cores e rótulos trocados.",
       "icon": "",
       "phases": 3,
       "topics": 8,
       "optional": 3
     },
     {
+      "id": "estudar-sql",
+      "file": "examples/pt-BR/sql.json",
+      "group": "examples/pt-BR",
+      "title": "Estudar SQL na prática",
+      "description": "Roadmap de estudo de SQL com PostgreSQL, em oito semanas.",
+      "icon": "",
+      "phases": 3,
+      "topics": 10,
+      "optional": 3
+    },
+    {
+      "id": "gitops-with-argocd",
+      "file": "examples/en/argocd.json",
+      "group": "examples/en",
+      "title": "GitOps with Argo CD",
+      "description": "A roadmap to learn GitOps in practice with Argo CD and Kubernetes, in seven weeks.",
+      "icon": "",
+      "phases": 4,
+      "topics": 13,
+      "optional": 2
+    },
+    {
+      "id": "first-half-marathon",
+      "file": "examples/en/half-marathon.json",
+      "group": "examples/en",
+      "title": "First Half Marathon",
+      "description": "A 12 week plan for a first half marathon. Nothing to do with technology: the format works for any goal.",
+      "icon": "",
+      "phases": 3,
+      "topics": 8,
+      "optional": 3
+    },
+    {
+      "id": "build-a-home-lab",
+      "file": "examples/en/home-lab.json",
+      "group": "examples/en",
+      "title": "Build a Home Lab",
+      "description": "A project to build a home server with useful services and backup.",
+      "icon": "",
+      "phases": 3,
+      "topics": 9,
+      "optional": 3
+    },
+    {
+      "id": "minimal-example",
+      "file": "examples/en/minimal.json",
+      "group": "examples/en",
+      "title": "Minimal Example",
+      "description": "A list of topics and one optional branch, with no phases.",
+      "icon": "",
+      "phases": 0,
+      "topics": 3,
+      "optional": 1
+    },
+    {
       "id": "side-project-saas",
-      "file": "examples/side-project-saas.json",
-      "group": "examples",
+      "file": "examples/en/side-project.json",
+      "group": "examples/en",
       "title": "Launch a Side Project",
       "description": "A project roadmap in English, with colors and labels overridden.",
       "icon": "",
       "phases": 3,
       "topics": 8,
+      "optional": 3
+    },
+    {
+      "id": "learn-sql",
+      "file": "examples/en/sql.json",
+      "group": "examples/en",
+      "title": "Learn SQL by Doing",
+      "description": "A study roadmap for SQL with PostgreSQL, in eight weeks.",
+      "icon": "",
+      "phases": 3,
+      "topics": 10,
       "optional": 3
     }
   ]

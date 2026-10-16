@@ -1,0 +1,108 @@
+{
+  "$schema": "../../schema/roadmap.schema.json",
+  "schemaVersion": 1,
+  "id": "projeto-paralelo",
+  "meta": {
+    "title": "Lançar um projeto paralelo",
+    "eyebrow": "Roadmap de projeto, da ideia ao primeiro cliente pagante",
+    "subtitle": "Validar, construir o MVP, lançar e aprender",
+    "description": "Um roadmap de projeto, com cores e rótulos trocados.",
+    "brand": { "plain": "lance", "accent": ".mapa" },
+    "tagline": "Da ideia ao primeiro cliente pagante.\nRoadmap de exemplo para um produto pequeno.",
+    "sidebarNote": "Entregue pequeno, entregue sempre.\nCorte escopo antes de cortar qualidade.",
+    "footer": "Roadmap de exemplo que acompanha o Roadkit."
+  },
+  "theme": { "accent": "#0f5e55", "brandAccent": "#e0603a" },
+  "labels": {
+    "topics": "O que cobrir",
+    "challenge": "Entrega",
+    "success": "Definição de pronto",
+    "resources": "Referências",
+    "markDone": "Marcar como entregue",
+    "markUndone": "Desmarcar como entregue",
+    "doneHint": "Marque apenas quando a entrega existir e outra pessoa puder usá-la."
+  },
+  "phases": [
+    { "id": "validar", "title": "Validar", "period": "Semanas 1 e 2", "color": "#e0603a", "summary": "Provar que alguém tem o problema antes de escrever código.", "milestone": "Problema validado" },
+    { "id": "construir", "title": "Construir o MVP", "period": "Semanas 3 a 6", "color": "#0f5e55", "summary": "O menor produto que resolve uma tarefa dolorosa de ponta a ponta.", "milestone": "MVP nas mãos dos usuários" },
+    { "id": "lancar", "title": "Lançar", "period": "Semanas 7 e 8", "color": "#3a68d1", "summary": "Conseguir os primeiros usuários, cobrar e ouvir.", "milestone": "Primeiro cliente pagante" }
+  ],
+  "nodes": [
+    {
+      "id": "entrevistas", "phase": "validar", "title": "Entrevistas com clientes", "time": "Semana 1",
+      "summary": "Converse com quem tem o problema. Pergunte o que fizeram no passado, não o que acham da sua ideia.",
+      "topics": ["Roteiro da entrevista", "Comportamento passado e não opinião", "Achar de 8 a 10 candidatos"],
+      "challenge": "Fazer 8 entrevistas e escrever um resumo de uma página com as 3 dores mais repetidas.",
+      "success": "Pelo menos 5 entrevistados descreveram a mesma dor sem serem induzidos.",
+      "links": [{ "title": "The Mom Test", "url": "https://www.momtestbook.com/" }]
+    },
+    {
+      "id": "pagina", "phase": "validar", "title": "Página de captura e lista de espera", "time": "Semana 2",
+      "summary": "Uma promessa em uma página e um jeito de se inscrever, para medir interesse real.",
+      "topics": ["Proposta de valor", "Formulário de espera", "Métricas simples"],
+      "challenge": "Publicar a página e levar 100 pessoas relevantes até ela.",
+      "success": "Você sabe a taxa de visitantes que se inscrevem e tem pelo menos 20 e-mails."
+    },
+    {
+      "id": "pre-venda", "phase": "validar", "optional": true, "anchor": "pagina", "title": "Teste de pré-venda",
+      "summary": "Pedir dinheiro antes de o produto existir.",
+      "challenge": "Oferecer a 5 entrevistados uma vaga paga de acesso antecipado."
+    },
+    {
+      "id": "escopo", "phase": "construir", "title": "Escopo do MVP", "time": "Semana 3",
+      "summary": "Escolha um usuário, uma tarefa e um caminho feliz. O resto vai para a lista de depois.",
+      "topics": ["Jobs to be done", "Precisa, deveria, depois", "Protótipos de tela"],
+      "challenge": "Um documento de uma página com uma única história de usuário e protótipos clicáveis.",
+      "success": "Um desconhecido diz o que o produto faz depois de 30 segundos com os protótipos."
+    },
+    {
+      "id": "base-tecnica", "phase": "construir", "title": "Stack e esqueleto", "time": "Semana 3",
+      "summary": "Escolha ferramentas sem surpresa que você já conhece. Deixe login, banco e deploy funcionando no primeiro dia.",
+      "topics": ["Hospedagem", "Autenticação", "Banco de dados", "Deploy por CI"],
+      "challenge": "Um hello world com login e uma tabela, publicado em uma URL pública.",
+      "success": "Um push na main publica automaticamente.",
+      "tasks": [
+        { "id": "hospedagem", "title": "Escolher a hospedagem e criar o projeto" },
+        { "id": "auth", "title": "Adicionar cadastro e login" },
+        { "id": "banco", "title": "Criar a primeira tabela e uma migração" },
+        { "id": "ci", "title": "Publicar a cada push na main", "note": "Mantenha o pipeline abaixo de cinco minutos." }
+      ]
+    },
+    {
+      "id": "nucleo", "phase": "construir", "title": "Funcionalidade central", "time": "Semanas 4 e 5",
+      "summary": "Construa o caminho feliz de ponta a ponta, mesmo com uma interface feia.",
+      "topics": ["Fluxo principal do usuário", "Estados de erro", "Dados de exemplo"],
+      "challenge": "Um usuário consegue se cadastrar e concluir a tarefa principal sem ajuda.",
+      "success": "Dois testadores concluem a tarefa principal enquanto você fica em silêncio."
+    },
+    {
+      "id": "pagamentos", "phase": "construir", "title": "Pagamentos", "time": "Semana 6",
+      "summary": "Cobre desde o primeiro dia, mesmo que seja um plano único.",
+      "topics": ["Checkout", "Webhooks", "Limites do plano"],
+      "challenge": "Um pagamento em modo de teste libera o produto.",
+      "success": "Assinar, cancelar e falhar um pagamento funcionam corretamente em modo de teste."
+    },
+    {
+      "id": "onboarding", "phase": "construir", "optional": true, "anchor": "nucleo", "title": "Onboarding guiado",
+      "summary": "Uma lista de tarefas ou um tour curto que leva o usuário ao primeiro resultado mais rápido."
+    },
+    {
+      "id": "beta", "phase": "lancar", "title": "Beta fechado", "time": "Semana 7",
+      "summary": "Convide a lista de espera em lotes pequenos e observe como as pessoas usam de verdade.",
+      "topics": ["Lotes de convites", "Canal de feedback", "Triagem de bugs"],
+      "challenge": "Colocar 10 usuários para usar e conversar com pelo menos 5 deles.",
+      "success": "Uma lista priorizada de correções, apoiada no que usuários reais fizeram."
+    },
+    {
+      "id": "lancamento", "phase": "lancar", "title": "Lançamento público", "time": "Semana 8",
+      "summary": "Anuncie onde seus usuários já estão e peça o primeiro pagamento.",
+      "topics": ["Texto de lançamento", "Comunidades", "Página de preços"],
+      "challenge": "Publicar o lançamento em três lugares e responder a todos os comentários.",
+      "success": "Seu primeiro cliente pagante e um número de retenção para acompanhar daqui em diante."
+    },
+    {
+      "id": "indicacoes", "phase": "lancar", "optional": true, "anchor": "lancamento", "title": "Ciclo de indicações",
+      "summary": "Deixe os usuários satisfeitos trazerem outros."
+    }
+  ]
+}

@@ -1,0 +1,101 @@
+{
+  "$schema": "../../schema/roadmap.schema.json",
+  "schemaVersion": 1,
+  "id": "first-half-marathon",
+  "meta": {
+    "title": "First Half Marathon",
+    "eyebrow": "Personal goal, 12 weeks",
+    "subtitle": "Go from 5 km to 21 km without getting hurt",
+    "description": "A 12 week plan for a first half marathon. Nothing to do with technology: the format works for any goal.",
+    "language": "en",
+    "brand": { "plain": "half", "accent": ".path" },
+    "tagline": "One block at a time.\nConsistency beats intensity.",
+    "sidebarNote": "A generic example plan.\nCheck with a professional if you have any pain or condition.",
+    "footer": "Example roadmap bundled with Roadkit."
+  },
+  "theme": { "accent": "#a63d2a", "brandAccent": "#d9822b" },
+  "labels": {
+    "topics": "In the plan",
+    "challenge": "Key workout",
+    "success": "How to tell it went well",
+    "markDone": "Mark block as done",
+    "markUndone": "Unmark block",
+    "doneHint": "Mark this after completing the key workout, even if slower than planned.",
+    "legendHint": "Click a block to see the key workout and how to judge the result."
+  },
+  "phases": [
+    { "id": "base", "title": "Base", "period": "Weeks 1 to 4", "color": "#d9822b", "summary": "Build the habit and settle into 5 to 8 km comfortably.", "milestone": "8 km without stopping" },
+    { "id": "volume", "title": "Volume", "period": "Weeks 5 to 9", "color": "#a63d2a", "summary": "Grow the long run gradually and learn to eat during a run.", "milestone": "16 km long run" },
+    { "id": "race", "title": "Race", "period": "Weeks 10 to 12", "color": "#3f6e9a", "summary": "Cut the load, rest and arrive in good shape.", "milestone": "Finish line" }
+  ],
+  "nodes": [
+    {
+      "id": "assessment", "phase": "base", "title": "Starting point", "time": "Week 1",
+      "summary": "Measure where you are and choose shoes, times and fixed days.",
+      "topics": ["5 km test", "Proper shoes", "Three training days", "Medical check up"],
+      "challenge": "Run 5 km at your own pace and write down the time and how you felt.",
+      "success": "You have the three weekly days reserved in your calendar."
+    },
+    {
+      "id": "easy-runs", "phase": "base", "title": "Easy runs", "time": "Weeks 2 and 3",
+      "summary": "Run slowly, at a pace where you can still hold a conversation.",
+      "topics": ["Conversation pace", "Warm up", "Stretching afterwards"],
+      "challenge": "Three workouts of 30 to 40 minutes at an easy pace.",
+      "success": "You finish every workout feeling you could keep going."
+    },
+    {
+      "id": "strength", "phase": "base", "title": "Strength and mobility", "time": "Week 4",
+      "summary": "Strengthen legs and core to reduce the risk of injury.",
+      "topics": ["Squats", "Plank", "Calf raises", "Hip mobility"],
+      "challenge": "Two 20 minute sessions per week throughout the block.",
+      "success": "You do the sequence without breaks and without pain."
+    },
+    {
+      "id": "sleep-food", "phase": "base", "optional": true, "anchor": "strength", "title": "Sleep and eating routine",
+      "summary": "Simple adjustments that improve recovery."
+    },
+    {
+      "id": "long-run", "phase": "volume", "title": "Progressive long run", "time": "Weeks 5 to 8",
+      "summary": "One longer run per week, growing from 10 to 16 km.",
+      "topics": ["Increase of up to 10 percent", "A rest week every four", "Hydration"],
+      "challenge": "Run 16 km at an easy pace at the end of the block.",
+      "success": "You finish with enough energy to walk home without pain."
+    },
+    {
+      "id": "tempo", "phase": "volume", "title": "Tempo runs", "time": "Weeks 6 to 9",
+      "summary": "One harder workout per week, to learn the race pace.",
+      "topics": ["Race pace", "Short intervals", "Breathing control"],
+      "challenge": "Run 5 km holding the pace you plan to use in the race.",
+      "success": "The last kilometers are as even as the first ones."
+    },
+    {
+      "id": "race-fuel", "phase": "volume", "title": "Eating during the run", "time": "Week 8",
+      "summary": "Test gels, drinks and timing on long runs, never only on race day.",
+      "topics": ["Carbohydrate per hour", "Water and salts", "Tolerance test"],
+      "challenge": "Do a long run using exactly what you will carry in the race.",
+      "success": "No stomach trouble and no drop in energy."
+    },
+    {
+      "id": "hills", "phase": "volume", "optional": true, "anchor": "tempo", "title": "Hill workout",
+      "summary": "Build leg strength with repeats on short hills."
+    },
+    {
+      "id": "taper", "phase": "race", "title": "Cutting the load", "time": "Weeks 10 and 11",
+      "summary": "Lower the volume and keep a little intensity so you arrive rested.",
+      "topics": ["Cut of 30 to 50 percent", "Sleep", "Eating"],
+      "challenge": "One 10 km workout at race pace in week 10.",
+      "success": "You feel with more energy, not less."
+    },
+    {
+      "id": "race-day", "phase": "race", "title": "Race day", "time": "Week 12",
+      "summary": "Arrive early, warm up a little and start slower than seems necessary.",
+      "topics": ["Tested kit and clothes", "Pace of the first 5 km", "Hydration plan"],
+      "challenge": "Complete the 21 km.",
+      "success": "You cross the finish line and already know what the next goal is."
+    },
+    {
+      "id": "recovery", "phase": "race", "optional": true, "anchor": "race-day", "title": "Recovery week",
+      "summary": "Return gradually, with walks and easy workouts."
+    }
+  ]
+}

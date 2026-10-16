@@ -14,7 +14,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-GROUPS = [("roadmaps", "Meus roadmaps"), ("examples", "Exemplos")]  # scanned folders, in display order
+GROUPS = [("roadmaps", "Meus roadmaps"), ("examples/pt-BR", "Exemplos em português"), ("examples/en", "Examples in English")]  # scanned folders, in display order
 MANIFEST = ROOT / "manifest.json"
 LABELS_DIR = ROOT / "src" / "labels"
 

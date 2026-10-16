@@ -1,0 +1,31 @@
+{
+  "$schema": "../../schema/roadmap.schema.json",
+  "schemaVersion": 1,
+  "id": "minimal-example",
+  "meta": {
+    "title": "Minimal Example",
+    "subtitle": "The smallest valid roadmap: no phases, just topics in a row",
+    "description": "A list of topics and one optional branch, with no phases.",
+    "language": "en"
+  },
+  "nodes": [
+    {
+      "id": "first",
+      "title": "First topic",
+      "time": "Week 1",
+      "summary": "Only id and title are required in each topic. Everything else shows up in the side panel when present.",
+      "topics": ["Concept A", "Concept B"],
+      "challenge": "Something small and checkable to do.",
+      "success": "How you know you are done.",
+      "tasks": [
+        { "id": "read", "title": "Read the introduction", "status": "finished" },
+        { "id": "practice", "title": "Do the exercise", "status": "working" },
+        { "id": "review", "title": "Review with the supporting material" }
+      ],
+      "links": [{ "title": "Documentation", "url": "https://example.com/" }]
+    },
+    { "id": "second", "title": "Second topic", "time": "Week 2", "status": "review" },
+    { "id": "third", "title": "Third topic", "time": "Week 3" },
+    { "id": "extra", "title": "Optional extra", "optional": true, "anchor": "second", "summary": "Branches next to its source topic and does not count toward progress." }
+  ]
+}

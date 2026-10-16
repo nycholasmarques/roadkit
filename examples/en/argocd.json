@@ -1,0 +1,194 @@
+{
+  "$schema": "../../schema/roadmap.schema.json",
+  "schemaVersion": 1,
+  "id": "gitops-with-argocd",
+  "meta": {
+    "title": "GitOps with Argo CD",
+    "eyebrow": "Hands-on path, from the first cluster to a full pipeline",
+    "subtitle": "Install, sync, scale to many environments and deliver safely",
+    "description": "A roadmap to learn GitOps in practice with Argo CD and Kubernetes, in seven weeks.",
+    "language": "en",
+    "brand": { "plain": "argo", "accent": ".path" },
+    "tagline": "Git as the source of truth.\nA local cluster to break things on.",
+    "sidebarNote": "Break things on a practice cluster.\nEvery mistake shows how Argo CD reacts.",
+    "footer": "Example roadmap bundled with Roadkit."
+  },
+  "theme": { "accent": "#0b5563", "brandAccent": "#ef7b4d" },
+  "phases": [
+    { "id": "fundamentals", "title": "Fundamentals", "period": "Weeks 1 and 2", "color": "#ef7b4d", "summary": "Understand GitOps, set up a practice cluster and sync a first application.", "milestone": "First app synced" },
+    { "id": "operations", "title": "Operations", "period": "Weeks 3 and 4", "color": "#0b7285", "summary": "Control how and when Argo CD applies changes.", "milestone": "Automatic deploys working" },
+    { "id": "scale", "title": "Scale", "period": "Weeks 5 and 6", "color": "#5f3dc4", "summary": "Many environments, many teams, and secrets out of plain text.", "milestone": "Environments and teams organized" },
+    { "id": "delivery", "title": "Progressive delivery", "period": "Week 7", "color": "#2b8a3e", "summary": "Connect continuous integration to the repository and release with less risk.", "milestone": "Full GitOps pipeline" }
+  ],
+  "nodes": [
+    {
+      "id": "gitops", "phase": "fundamentals", "title": "GitOps on one page", "time": "Week 1",
+      "summary": "The core idea: the desired state lives in Git and a controller in the cluster makes reality match it.",
+      "topics": ["Declarative", "Git as the source of truth", "Continuous reconciliation", "Pull instead of push"],
+      "challenge": "Write a paragraph explaining the difference between a CI script deploy and a GitOps deploy.",
+      "success": "You explain why nobody needs cluster access any more to ship a release.",
+      "links": [
+        { "title": "OpenGitOps principles", "url": "https://opengitops.dev/" },
+        { "title": "Kubernetes documentation", "url": "https://kubernetes.io/docs/home/" }
+      ],
+      "status": "finished"
+    },
+    {
+      "id": "cluster", "phase": "fundamentals", "title": "A local practice cluster", "time": "Week 1",
+      "summary": "A disposable cluster on your computer, to create and destroy without fear.",
+      "topics": ["kind or minikube", "kubectl", "Contexts", "Namespaces"],
+      "challenge": "Create a cluster, list the nodes and remove the cluster completely.",
+      "success": "You recreate the cluster from scratch in a few minutes.",
+      "tasks": [
+        { "id": "tools", "title": "Install kubectl and kind", "status": "finished" },
+        { "id": "create", "title": "Create the practice cluster", "status": "finished" },
+        { "id": "nodes", "title": "List the nodes with kubectl get nodes", "status": "finished" },
+        { "id": "namespace", "title": "Create a test namespace", "status": "finished" }
+      ],
+      "links": [
+        { "title": "kind documentation", "url": "https://kind.sigs.k8s.io/" }
+      ]
+    },
+    {
+      "id": "install", "phase": "fundamentals", "title": "Install Argo CD", "time": "Week 2",
+      "summary": "Put Argo CD in the cluster and reach the web interface and the command line.",
+      "topics": ["argocd namespace", "Install manifests", "Port forward", "argocd CLI"],
+      "challenge": "Open the web interface with the initial password and also log in through the CLI.",
+      "success": "You can explain what each installed component does.",
+      "tasks": [
+        { "id": "namespace", "title": "Create the argocd namespace", "status": "finished" },
+        { "id": "manifests", "title": "Apply the install manifests", "status": "finished" },
+        { "id": "access", "title": "Open the interface with a port forward", "status": "working" },
+        { "id": "password", "title": "Get the initial admin password", "note": "It is in a Secret created during the install." },
+        { "id": "cli", "title": "Install the CLI and log in" }
+      ],
+      "links": [
+        { "title": "Argo CD getting started", "url": "https://argo-cd.readthedocs.io/en/stable/getting_started/" }
+      ]
+    },
+    {
+      "id": "application", "phase": "fundamentals", "title": "Your first Application", "time": "Week 2",
+      "summary": "Point Argo CD at a repository of manifests and watch the application appear in the cluster.",
+      "topics": ["Application resource", "Manifest repository", "Manual sync", "Synced and OutOfSync states"],
+      "challenge": "Publish a simple deployment through a Git repository, then change the replica count through Git.",
+      "success": "A change in the repository shows up in the cluster after a sync.",
+      "tasks": [
+        { "id": "repo", "title": "Create the repository with the manifests" },
+        { "id": "app", "title": "Create the Application in the interface" },
+        { "id": "yaml", "title": "Recreate the same Application in YAML" },
+        { "id": "sync", "title": "Sync and check the resources" },
+        { "id": "drift", "title": "Change something in the cluster and see OutOfSync", "note": "This is the drift Argo CD detects." }
+      ],
+      "links": [
+        { "title": "Application specification", "url": "https://argo-cd.readthedocs.io/en/stable/user-guide/application-specification/" }
+      ]
+    },
+    {
+      "id": "sync", "phase": "operations", "title": "Automatic sync", "time": "Week 3",
+      "summary": "Let Argo CD apply on its own and decide what to do with what vanished from Git or was changed by hand.",
+      "topics": ["Auto sync", "Prune", "Self heal", "Sync options"],
+      "challenge": "Turn on auto sync with self heal, delete a resource by hand and watch Argo CD recreate it.",
+      "success": "You know when prune and self heal are useful and when they can surprise you.",
+      "links": [
+        { "title": "Automated sync policy", "url": "https://argo-cd.readthedocs.io/en/stable/user-guide/auto_sync/" }
+      ]
+    },
+    {
+      "id": "notifications", "phase": "operations", "optional": true, "anchor": "sync", "title": "Sync notifications",
+      "summary": "Tell a chat channel when a deploy finishes or fails.",
+      "links": [
+        { "title": "Argo CD notifications", "url": "https://argo-cd.readthedocs.io/en/stable/operator-manual/notifications/" }
+      ]
+    },
+    {
+      "id": "packaging", "phase": "operations", "title": "Helm and Kustomize", "time": "Week 3",
+      "summary": "Reuse manifests with per environment values instead of copying files.",
+      "topics": ["Helm charts", "Values per environment", "Bases and overlays", "Render before publishing"],
+      "challenge": "Publish the same application in two namespaces with different values.",
+      "success": "The two environments differ only in a values file or an overlay.",
+      "tasks": [
+        { "id": "chart", "title": "Publish a Helm chart through Argo CD" },
+        { "id": "values", "title": "Split the values per environment" },
+        { "id": "overlay", "title": "Redo the same thing with Kustomize" }
+      ],
+      "links": [
+        { "title": "Helm documentation", "url": "https://helm.sh/docs/" },
+        { "title": "Kustomize", "url": "https://kustomize.io/" }
+      ]
+    },
+    {
+      "id": "waves", "phase": "operations", "title": "Sync waves and hooks", "time": "Week 4",
+      "summary": "Control the order in which resources are applied and run tasks before or after the deploy.",
+      "topics": ["Sync waves", "PreSync and PostSync", "Migration jobs", "Health checks"],
+      "challenge": "Run a migration job before starting the deployment, using an earlier wave.",
+      "success": "The deployment only starts after the job finishes successfully.",
+      "links": [
+        { "title": "Sync waves", "url": "https://argo-cd.readthedocs.io/en/stable/user-guide/sync-waves/" }
+      ]
+    },
+    {
+      "id": "applicationset", "phase": "scale", "title": "ApplicationSet", "time": "Week 5",
+      "summary": "Generate many Applications from one template, one per environment, cluster or folder.",
+      "topics": ["Generators", "Templates", "One folder per environment", "Many clusters"],
+      "challenge": "Generate one Application per environment folder from a single ApplicationSet.",
+      "success": "Creating a new folder in Git creates a new application, without editing Argo CD.",
+      "links": [
+        { "title": "ApplicationSet", "url": "https://argo-cd.readthedocs.io/en/stable/operator-manual/applicationset/" }
+      ]
+    },
+    {
+      "id": "clusters", "phase": "scale", "optional": true, "anchor": "applicationset", "title": "Many clusters",
+      "summary": "Register extra clusters and publish to them from the same Argo CD."
+    },
+    {
+      "id": "rbac", "phase": "scale", "title": "Projects and RBAC", "time": "Week 6",
+      "summary": "Separate teams and environments: who can publish what, and to which cluster.",
+      "topics": ["AppProject", "Allowed repositories", "Allowed destinations", "RBAC policies"],
+      "challenge": "Create a project that can only publish to one namespace and test an attempt outside it.",
+      "success": "An attempt to publish outside the project is refused with a clear message.",
+      "links": [
+        { "title": "Argo CD RBAC", "url": "https://argo-cd.readthedocs.io/en/stable/operator-manual/rbac/" }
+      ]
+    },
+    {
+      "id": "secrets", "phase": "scale", "title": "Secrets in GitOps", "time": "Week 6",
+      "summary": "Plain text secrets in Git are a bad idea. There are ways to version them without exposing them.",
+      "topics": ["Sealed Secrets", "External Secrets", "SOPS", "Rotation"],
+      "challenge": "Deliver a secret to the cluster without its value appearing in plain text in the repository.",
+      "success": "You explain what stays in Git and what stays out of it.",
+      "links": [
+        { "title": "External Secrets", "url": "https://external-secrets.io/" },
+        { "title": "SOPS", "url": "https://github.com/getsops/sops" }
+      ]
+    },
+    {
+      "id": "integration", "phase": "delivery", "title": "CI that updates Git", "time": "Week 7",
+      "summary": "Continuous integration builds the image and writes the new version to the manifest repository. Argo CD does the rest.",
+      "topics": ["Two repositories", "Image tag", "Automatic pull request", "Who approves"],
+      "challenge": "A commit to the code produces a new image and a commit to the manifest repository.",
+      "success": "The deploy happens with no manual command on the cluster.",
+      "tasks": [
+        { "id": "image", "title": "Build and publish the image in CI" },
+        { "id": "commit", "title": "Update the tag in the manifest repository" },
+        { "id": "review", "title": "Require review for the production environment" }
+      ]
+    },
+    {
+      "id": "rollouts", "phase": "delivery", "title": "Canary delivery", "time": "Week 7",
+      "summary": "Release a version to part of the traffic and move forward only if everything is healthy.",
+      "topics": ["Canary", "Blue green", "Metric analysis", "Automatic rollback"],
+      "challenge": "Make a faulty version get stopped and rolled back on its own.",
+      "success": "A bad version never reaches all users.",
+      "links": [
+        { "title": "Argo Rollouts", "url": "https://argo-rollouts.readthedocs.io/en/stable/" }
+      ]
+    },
+    {
+      "id": "production", "phase": "delivery", "title": "Production checklist", "time": "Week 7",
+      "summary": "What to review before you truly depend on Argo CD.",
+      "topics": ["High availability", "Backup", "Upgrading Argo CD", "Metrics and alerts"],
+      "challenge": "A short list of what is missing for Argo CD to be the only way into production.",
+      "success": "You know what happens to deploys if Argo CD becomes unavailable."
+    }
+  ]
+}

@@ -1,0 +1,129 @@
+{
+  "$schema": "../../schema/roadmap.schema.json",
+  "schemaVersion": 1,
+  "id": "build-a-home-lab",
+  "meta": {
+    "title": "Build a Home Lab",
+    "eyebrow": "Personal project, from the first server to a stable setup",
+    "subtitle": "Hardware, virtualization, services and backup",
+    "description": "A project to build a home server with useful services and backup.",
+    "language": "en",
+    "brand": { "plain": "home", "accent": ".lab" },
+    "tagline": "A server at home, step by step.\nEvery phase ends with something working.",
+    "sidebarNote": "Write down what you changed.\nBack up before touching something that works.",
+    "footer": "Example roadmap bundled with Roadkit."
+  },
+  "theme": { "accent": "#2d3a4a", "brandAccent": "#c2571a" },
+  "labels": {
+    "topics": "What it involves",
+    "challenge": "Deliverable",
+    "success": "Done when",
+    "markDone": "Mark as delivered",
+    "markUndone": "Unmark as delivered",
+    "doneHint": "Only mark this when the deliverable works and is written down.",
+    "legendHint": "Click a step to see what it involves, the deliverable and the references."
+  },
+  "phases": [
+    { "id": "base", "title": "Base", "period": "Month 1", "color": "#c2571a", "summary": "Choose the hardware and get the system installed and reachable.", "milestone": "Server reachable on the network" },
+    { "id": "services", "title": "Services", "period": "Month 2", "color": "#2f7fb8", "summary": "Bring up the services you will actually use.", "milestone": "Services online" },
+    { "id": "operations", "title": "Operations", "period": "Month 3", "color": "#4a8a4f", "summary": "Backup, monitoring and a maintenance routine.", "milestone": "A setup you can trust" }
+  ],
+  "nodes": [
+    {
+      "id": "hardware", "phase": "base", "title": "Pick the hardware", "time": "Week 1", "status": "finished",
+      "summary": "Decide what the server must do before buying or reusing anything.",
+      "topics": ["Power draw", "Memory and storage", "Network card", "Noise"],
+      "challenge": "A list of what will be used, the cost and the estimated power draw.",
+      "success": "You know how many services fit on the chosen machine."
+    },
+    {
+      "id": "install", "phase": "base", "title": "Install the system", "time": "Week 2",
+      "summary": "Install the hypervisor or the base system and keep everything up to date.",
+      "topics": ["Proxmox or Debian", "Partitioning", "Updates", "Users and SSH"],
+      "challenge": "System installed, updated and reachable over SSH with a key.",
+      "success": "You reboot the server and it comes back on its own, reachable.",
+      "tasks": [
+        { "id": "iso", "title": "Download the image and write it to a USB stick", "status": "finished" },
+        { "id": "setup", "title": "Install and set up the disk", "status": "finished" },
+        { "id": "ssh", "title": "Create the user and the SSH key", "status": "working" },
+        { "id": "update", "title": "Update the system and reboot" }
+      ],
+      "links": [{ "title": "Proxmox VE documentation", "url": "https://pve.proxmox.com/pve-docs/" }]
+    },
+    {
+      "id": "network", "phase": "base", "title": "Network and access", "time": "Week 3",
+      "summary": "A fixed IP, local names and safe remote access.",
+      "topics": ["Static IP or DHCP reservation", "Local DNS", "VPN", "Firewall"],
+      "challenge": "Reach the server by name at home and from outside through the VPN.",
+      "success": "No service is exposed to the internet without a reason.",
+      "tasks": [
+        { "id": "ip", "title": "Reserve a fixed IP on the router" },
+        { "id": "dns", "title": "Create the local names" },
+        { "id": "vpn", "title": "Set up the VPN for remote access" },
+        { "id": "firewall", "title": "Review the firewall rules" }
+      ]
+    },
+    {
+      "id": "vlan", "phase": "base", "optional": true, "anchor": "network", "title": "Separate network for the lab",
+      "summary": "Isolate the lab from the rest of the network with a VLAN."
+    },
+    {
+      "id": "containers", "phase": "services", "title": "Containers with Docker", "time": "Week 5",
+      "summary": "Run the services in containers described by versioned files.",
+      "topics": ["Docker and Compose", "Volumes", "Networks", "Updating images"],
+      "challenge": "A test service running through Compose, with its data in a volume.",
+      "success": "You recreate the container and the data is still there.",
+      "links": [{ "title": "Docker documentation", "url": "https://docs.docker.com/" }]
+    },
+    {
+      "id": "proxy", "phase": "services", "title": "Reverse proxy and certificates", "time": "Week 6",
+      "summary": "A single entry point with HTTPS for the services.",
+      "topics": ["Reverse proxy", "Certificates", "Host names", "Redirects"],
+      "challenge": "Two services reachable under different names, both over HTTPS.",
+      "success": "Adding a new service takes a few minutes."
+    },
+    {
+      "id": "dns-adblock", "phase": "services", "title": "DNS with ad blocking", "time": "Week 7",
+      "summary": "Your own DNS server for the whole house.",
+      "topics": ["Pi-hole", "Block lists", "Upstream DNS", "Allow list"],
+      "challenge": "Every device at home using the lab DNS.",
+      "success": "You can see which queries were blocked and allow one.",
+      "links": [{ "title": "Pi-hole documentation", "url": "https://docs.pi-hole.net/" }]
+    },
+    {
+      "id": "media", "phase": "services", "optional": true, "anchor": "dns-adblock", "title": "Media server",
+      "summary": "Organize photos, music and video in a service of your own."
+    },
+    {
+      "id": "backup", "phase": "operations", "title": "3-2-1 backup", "time": "Week 9",
+      "summary": "Three copies, two kinds of media, one off site.",
+      "topics": ["What goes into the backup", "Scheduling", "Off site copy", "Encryption"],
+      "challenge": "An automatic backup running and a restore that was really tested.",
+      "success": "You restore a service from scratch using the backup.",
+      "tasks": [
+        { "id": "scope", "title": "List what goes into the backup" },
+        { "id": "schedule", "title": "Schedule the automatic run" },
+        { "id": "offsite", "title": "Send a copy off site" },
+        { "id": "restore", "title": "Restore a test service", "note": "A backup that was never restored does not count." }
+      ]
+    },
+    {
+      "id": "monitoring", "phase": "operations", "title": "Monitoring and alerts", "time": "Week 10",
+      "summary": "Know that something broke before you notice by using it.",
+      "topics": ["Disk and memory usage", "Service availability", "Phone alerts"],
+      "challenge": "A simple dashboard and an alert when the disk goes over 85 percent.",
+      "success": "You receive the alert when you simulate a failure."
+    },
+    {
+      "id": "documentation", "phase": "operations", "title": "Document and automate", "time": "Week 11",
+      "summary": "Make the setup reproducible for whoever touches it next, including you in six months.",
+      "topics": ["Network diagram", "Versioned Compose files", "Update routine"],
+      "challenge": "A repository with the configuration and a recovery README.",
+      "success": "Someone can rebuild the setup by following only the README."
+    },
+    {
+      "id": "ansible", "phase": "operations", "optional": true, "anchor": "documentation", "title": "Automation with Ansible",
+      "summary": "Describe the server configuration as code."
+    }
+  ]
+}

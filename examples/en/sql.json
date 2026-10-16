@@ -1,0 +1,123 @@
+{
+  "$schema": "../../schema/roadmap.schema.json",
+  "schemaVersion": 1,
+  "id": "learn-sql",
+  "meta": {
+    "title": "Learn SQL by Doing",
+    "eyebrow": "Study path, from the basics to performance",
+    "subtitle": "Queries, modeling and indexes using PostgreSQL",
+    "description": "A study roadmap for SQL with PostgreSQL, in eight weeks.",
+    "language": "en",
+    "brand": { "plain": "sql", "accent": ".path" },
+    "tagline": "Learn by actually querying.\nA local database and sample data.",
+    "sidebarNote": "Write the query before looking at the answer.\nA short daily session beats a long weekly one.",
+    "footer": "Example roadmap bundled with Roadkit."
+  },
+  "theme": { "accent": "#1f4e79", "brandAccent": "#2f7fb8" },
+  "phases": [
+    { "id": "basics", "title": "Query data", "period": "Weeks 1 and 2", "color": "#2f7fb8", "summary": "Read data from one table and from several tables at once.", "milestone": "Everyday queries" },
+    { "id": "modeling", "title": "Model and write", "period": "Weeks 3 to 5", "color": "#7a8f2a", "summary": "Create tables, relate them and change data safely.", "milestone": "Your own database running" },
+    { "id": "performance", "title": "Performance", "period": "Weeks 6 to 8", "color": "#b5651d", "summary": "Understand why a query is slow and how to speed it up.", "milestone": "Fast and reliable queries" }
+  ],
+  "nodes": [
+    {
+      "id": "environment", "phase": "basics", "title": "Local database and sample data", "time": "Week 1", "status": "working",
+      "summary": "Start a local PostgreSQL and load a data set to practice with.",
+      "topics": ["Local PostgreSQL", "psql or a GUI client", "Importing a dump"],
+      "challenge": "Have a database running with at least three tables that contain data.",
+      "success": "You can connect, list the tables and count the rows in each one.",
+      "tasks": [
+        { "id": "install", "title": "Install PostgreSQL or start a container", "status": "finished" },
+        { "id": "client", "title": "Connect with psql or a GUI client", "status": "working" },
+        { "id": "data", "title": "Import a sample data set", "note": "Any small dump will do." },
+        { "id": "count", "title": "Count the rows in each table" }
+      ],
+      "links": [{ "title": "PostgreSQL documentation", "url": "https://www.postgresql.org/docs/current/" }]
+    },
+    {
+      "id": "select", "phase": "basics", "title": "SELECT, filters and sorting", "time": "Week 1", "status": "review",
+      "summary": "The basis of everything: choose columns, filter rows and sort the result.",
+      "topics": ["SELECT and WHERE", "ORDER BY and LIMIT", "LIKE and IN", "NULL"],
+      "challenge": "Answer ten questions about the data using a single table.",
+      "success": "You write the queries without copying examples.",
+      "links": [{ "title": "SQLBolt", "url": "https://sqlbolt.com/" }]
+    },
+    {
+      "id": "aggregation", "phase": "basics", "title": "Aggregates and grouping", "time": "Week 2",
+      "summary": "Summarize data: counts, sums, averages and groups.",
+      "topics": ["COUNT, SUM, AVG", "GROUP BY", "HAVING", "DISTINCT"],
+      "challenge": "Build a sales report by month and by category.",
+      "success": "You explain the difference between WHERE and HAVING with an example."
+    },
+    {
+      "id": "joins", "phase": "basics", "title": "JOINs", "time": "Week 2",
+      "summary": "Combine related tables without duplicating or losing rows.",
+      "topics": ["INNER JOIN", "LEFT JOIN", "Foreign keys", "Self join"],
+      "challenge": "List customers with no orders using a LEFT JOIN.",
+      "success": "You predict how many rows a JOIN will return before running it.",
+      "tasks": [
+        { "id": "inner", "title": "Solve 5 exercises with INNER JOIN" },
+        { "id": "left", "title": "Solve 5 exercises with LEFT JOIN" },
+        { "id": "no-orders", "title": "List customers with no orders" },
+        { "id": "predict", "title": "Predict the row count before running", "note": "Write the prediction down and compare it with the result." }
+      ]
+    },
+    {
+      "id": "subqueries", "phase": "basics", "optional": true, "anchor": "joins", "title": "Subqueries and CTEs",
+      "summary": "Break big queries into named, readable parts.",
+      "topics": ["Subqueries", "WITH", "EXISTS"]
+    },
+    {
+      "id": "ddl", "phase": "modeling", "title": "Create tables and types", "time": "Week 3",
+      "summary": "Define the structure of the data by choosing types and constraints.",
+      "topics": ["CREATE TABLE", "Data types", "PRIMARY KEY", "NOT NULL and UNIQUE"],
+      "challenge": "Create the schema for a library with books, authors and loans.",
+      "success": "The database rejects invalid data without help from the application."
+    },
+    {
+      "id": "normalization", "phase": "modeling", "title": "Relationships and normalization", "time": "Week 4",
+      "summary": "Avoid repeated data and decide when to split it into another table.",
+      "topics": ["One to many", "Many to many", "Normal forms", "Foreign keys"],
+      "challenge": "Normalize a spreadsheet with repeated data into related tables.",
+      "success": "You can justify every table and every key in your model."
+    },
+    {
+      "id": "dml", "phase": "modeling", "title": "INSERT, UPDATE, DELETE and transactions", "time": "Week 5",
+      "summary": "Change data safely and undo it when something goes wrong.",
+      "topics": ["INSERT", "UPDATE and DELETE with WHERE", "BEGIN, COMMIT, ROLLBACK", "Isolation"],
+      "challenge": "Implement a transfer between accounts that never leaves the balance inconsistent.",
+      "success": "A failure in the middle of the operation does not leave half done data."
+    },
+    {
+      "id": "views", "phase": "modeling", "optional": true, "anchor": "dml", "title": "Views and functions",
+      "summary": "Reuse queries and logic inside the database itself.",
+      "topics": ["VIEW", "SQL functions", "Triggers"]
+    },
+    {
+      "id": "indexes", "phase": "performance", "title": "Indexes", "time": "Week 6",
+      "summary": "How the database finds rows, and when an index helps or hurts.",
+      "topics": ["B-tree", "Composite indexes", "Selectivity", "Write cost"],
+      "challenge": "Create an index that brings a slow query from seconds down to milliseconds.",
+      "success": "You explain why a specific index was chosen.",
+      "links": [{ "title": "Use The Index, Luke", "url": "https://use-the-index-luke.com/" }]
+    },
+    {
+      "id": "explain", "phase": "performance", "title": "Execution plans", "time": "Week 7",
+      "summary": "Read the EXPLAIN output to find the bottleneck of a query.",
+      "topics": ["EXPLAIN ANALYZE", "Seq Scan and Index Scan", "Row estimates", "Join types"],
+      "challenge": "Take three slow queries, find the cause of each one and fix it.",
+      "success": "You point to the step in the plan that costs the most."
+    },
+    {
+      "id": "windows", "phase": "performance", "title": "Window functions", "time": "Week 8",
+      "summary": "Rankings, running totals and comparisons between rows without losing detail.",
+      "topics": ["OVER and PARTITION BY", "ROW_NUMBER and RANK", "LAG and LEAD", "Running totals"],
+      "challenge": "Compute the monthly product ranking and the change from the previous month.",
+      "success": "You solve it without nested subqueries."
+    },
+    {
+      "id": "partitions", "phase": "performance", "optional": true, "anchor": "indexes", "title": "Partitioning",
+      "summary": "Split very large tables to keep queries fast."
+    }
+  ]
+}
