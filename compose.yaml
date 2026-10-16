@@ -1,0 +1,20 @@
+name: roadkit
+
+services:
+  roadmap:
+    build: .
+    image: roadkit:latest
+    container_name: roadkit
+    restart: unless-stopped
+    init: true                    # proper SIGTERM handling, so `docker stop` is instant
+    ports:
+      # localhost only by default; set BIND_ADDR=0.0.0.0 in .env to expose on your LAN
+      - "${BIND_ADDR:-127.0.0.1}:${PORT:-8765}:8765"
+    volumes:
+      # edit/add JSONs on the host and just reload the page: no rebuild needed
+      - ./roadmaps:/app/roadmaps:ro
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    mem_limit: 128m
