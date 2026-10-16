@@ -1,6 +1,16 @@
 version: 2
 updates:
+  # One grouped PR per month instead of one per action, so the open-PR limit never hides updates.
   - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      actions:
+        patterns: ["*"]
+
+  # The python base image of the Dockerfile.
+  - package-ecosystem: docker
     directory: /
     schedule:
       interval: monthly
