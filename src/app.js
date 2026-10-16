@@ -6,6 +6,8 @@ const PALETTE = ['#3a68d1', '#d8a436', '#8854ba', '#168450', '#ce6e4c', '#2a9aa8
 const NS = 'http://www.w3.org/2000/svg';
 const KEY = { progress: id => `roadkit:v1:progress:${id}`, last: 'roadkit:v1:last' };
 const G = { spineX: 420, nodeW: 290, optX: 800, optW: 255, top: 110, gap: 56, msGap: 40, optGap: 14, mapW: 1135, msW: 210 };
+const NARROW_BELOW = 860;   // map viewport width (px) under which the compact vertical layout is used
+const MAX_SCALE = 1.4;      // the wide layout is scaled to fit the viewport, up to this factor
 
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -38,8 +40,9 @@ const darkQuery = matchMedia('(prefers-color-scheme: dark)');
 const themeMode = () => { const m = store.get(THEME_KEY); return m === 'light' || m === 'dark' ? m : 'auto'; };
 
 function updateThemeBtn() {
-  const m = themeMode(), name = S.L['theme' + m[0].toUpperCase() + m.slice(1)];
-  if (S.L.theme && name) $('themeBtn').textContent = `${S.L.theme}: ${name}`;
+  const m = themeMode(), name = S.L['theme' + m[0].toUpperCase() + m.slice(1)], btn = $('themeBtn');
+  btn.dataset.mode = m;
+  if (S.L.theme && name) { btn.title = `${S.L.theme}: ${name}`; btn.setAttribute('aria-label', btn.title); }
 }
 
 function applyTheme() {
@@ -222,57 +225,116 @@ function buildMap() {
   map.append(lg); S.legendEl = lg;
 }
 
+function geometry() {
+  const vw = $('mapViewport').clientWidth || G.mapW;
+  if (vw < NARROW_BELOW) return { narrow: true, mapW: Math.max(280, vw), scale: 1 };
+  return { narrow: false, mapW: G.mapW, scale: Math.min(MAX_SCALE, vw / G.mapW) };
+}
+
+/* Wide: central spine with phase flags on the left and optional branches on the right,
+   drawn in a fixed design space and scaled to fit. Narrow: one column timeline, with the
+   line on the left, phase headers above their topics and optional topics nested below. */
 function layout() {
   const { rm } = S, map = $('map'), svg = S.svg;
   if (!svg) return;
+  const geo = S.geo = geometry(), nw = geo.narrow;
+  const nodeX = nw ? 44 : G.spineX, nodeW = nw ? geo.mapW - nodeX - 16 : G.nodeW, optW = nw ? nodeW - 22 : G.optW;
+  const gap = nw ? 30 : G.gap, msGap = nw ? 22 : G.msGap, lineX = nw ? 24 : nodeX + nodeW / 2;
+  const shown = rm.phases.filter(p => p.nodes.length);
   svg.replaceChildren();
   S.links = [];
-  const cx = G.spineX + G.nodeW / 2;
-  const shown = rm.phases.filter(p => p.nodes.length);
-  const spine = [];
-  let y = G.top, flagBottom = 0, lastWasMs = false;
+
+  // widths first, because card heights depend on them
+  rm.nodes.forEach(n => { n.el.style.width = nw ? (n.optional ? optW : nodeW) + 'px' : ''; });
   shown.forEach(ph => {
-    if (flagBottom) y = Math.max(y, flagBottom + 30);
-    if (ph.flagEl) { ph.flagEl.style.top = y + 'px'; flagBottom = y + ph.flagEl.offsetHeight; }
+    if (ph.flagEl) { ph.flagEl.style.width = nw ? nodeW + 'px' : ''; ph.flagEl.style.left = nw ? nodeX + 'px' : ''; }
+    if (ph.msEl) ph.msEl.style.width = nw ? nodeW + 'px' : '';
+  });
+  S.legendEl.style.width = nw ? nodeW + 'px' : '';
+  S.legendEl.style.left = nw ? nodeX + 'px' : '';
+
+  const spine = [];
+  let y = nw ? 24 : G.top, flagBottom = 0, lastWasMs = false;
+  shown.forEach(ph => {
+    if (nw) {
+      if (ph.flagEl) { ph.flagEl.style.top = y + 'px'; y += ph.flagEl.offsetHeight + 18; }
+    } else {
+      if (flagBottom) y = Math.max(y, flagBottom + 30);
+      if (ph.flagEl) { ph.flagEl.style.top = y + 'px'; flagBottom = y + ph.flagEl.offsetHeight; }
+    }
     ph.nodes.forEach(n => {
       const h = n.el.offsetHeight;
-      Object.assign(n, { x: G.spineX, y, h });
+      Object.assign(n, { x: nodeX, y, h });
       n.el.style.left = n.x + 'px'; n.el.style.top = y + 'px';
       const opts = rm.nodes.filter(o => o.optional && o.anchor === n.id);
       const hs = opts.map(o => o.el.offsetHeight);
-      const total = hs.reduce((a, b) => a + b, 0) + G.optGap * Math.max(0, opts.length - 1);
-      let oy = total <= h ? y + (h - total) / 2 : y;
-      opts.forEach((o, i) => {
-        Object.assign(o, { x: G.optX, y: oy, h: hs[i] });
-        o.el.style.left = o.x + 'px'; o.el.style.top = oy + 'px';
-        const sx = n.x + G.nodeW, sy = n.y + h / 2, ex = o.x, ey = oy + hs[i] / 2, mx = sx + (ex - sx) / 2;
-        addLine(`M${sx} ${sy} L${mx} ${sy} L${mx} ${ey} L${ex} ${ey}`, true, n, o);
-        oy += hs[i] + G.optGap;
-      });
+      let slot = h;
+      if (nw) {
+        let oy = y + h + 10;
+        opts.forEach((o, i) => {
+          Object.assign(o, { x: nodeX + 22, y: oy, h: hs[i] });
+          o.el.style.left = o.x + 'px'; o.el.style.top = oy + 'px';
+          const px = nodeX + 10, ey = oy + hs[i] / 2;
+          addLine(`M${px} ${y + h} L${px} ${ey} L${o.x} ${ey}`, true, n, o);
+          oy += hs[i] + 10;
+        });
+        if (opts.length) slot = oy - 10 - y;
+      } else {
+        const total = hs.reduce((a, b) => a + b, 0) + G.optGap * Math.max(0, opts.length - 1);
+        let oy = total <= h ? y + (h - total) / 2 : y;
+        opts.forEach((o, i) => {
+          Object.assign(o, { x: G.optX, y: oy, h: hs[i] });
+          o.el.style.left = o.x + 'px'; o.el.style.top = oy + 'px';
+          const sx = n.x + nodeW, sy = y + h / 2, ex = o.x, ey = oy + hs[i] / 2, mx = sx + (ex - sx) / 2;
+          addLine(`M${sx} ${sy} L${mx} ${sy} L${mx} ${ey} L${ex} ${ey}`, true, n, o);
+          oy += hs[i] + G.optGap;
+        });
+        slot = Math.max(h, total);
+      }
       spine.push(n);
-      y += Math.max(h, total) + G.gap;
+      y += slot + gap;
       lastWasMs = false;
     });
     if (ph.msEl) {
-      const msY = y - G.gap + G.msGap, mh = ph.msEl.offsetHeight;
-      ph.msEl.style.left = (cx - G.msW / 2) + 'px'; ph.msEl.style.top = msY + 'px';
-      const ms = { y: msY, h: mh, isDone: () => phaseDone(ph) };
+      const msY = y - gap + msGap, mh = ph.msEl.offsetHeight, msX = nw ? nodeX : lineX - G.msW / 2;
+      ph.msEl.style.left = msX + 'px'; ph.msEl.style.top = msY + 'px';
+      const ms = { x: msX, y: msY, h: mh, isDone: () => phaseDone(ph) };
       ph.ms = ms; spine.push(ms);
-      y = msY + mh + G.msGap;
+      y = msY + mh + msGap;
       lastWasMs = true;
     }
   });
-  for (let i = 0; i < spine.length - 1; i++) {
-    const a = spine[i], b = spine[i + 1];
-    addLine(`M${cx} ${a.y + a.h} L${cx} ${b.y}`, false, a, b);
+
+  if (nw) {
+    spine.forEach((it, i) => {
+      const my = it.y + it.h / 2, nx = spine[i + 1];
+      addLine(`M${lineX} ${my} L${it.x} ${my}`, false, it, it);
+      if (nx) addLine(`M${lineX} ${my} L${lineX} ${nx.y + nx.h / 2}`, false, it, nx);
+    });
+  } else {
+    for (let i = 0; i < spine.length - 1; i++) {
+      const a = spine[i], b = spine[i + 1];
+      addLine(`M${lineX} ${a.y + a.h} L${lineX} ${b.y}`, false, a, b);
+    }
   }
-  let mapH = y - (lastWasMs ? G.msGap : G.gap) + 70;
-  const lh = S.legendEl.offsetHeight, ly = Math.max(flagBottom + 30, mapH - lh - 30);
+
+  const lh = S.legendEl.offsetHeight;
+  let mapH, ly;
+  if (nw) {
+    ly = y - (lastWasMs ? msGap : gap) + 28;
+    mapH = ly + lh + 28;
+  } else {
+    mapH = y - (lastWasMs ? msGap : gap) + 70;
+    ly = Math.max(flagBottom + 30, mapH - lh - 30);
+    mapH = Math.max(mapH, ly + lh + 30);
+  }
   S.legendEl.style.top = ly + 'px';
-  mapH = Math.max(mapH, ly + lh + 30);
-  map.style.width = G.mapW + 'px'; map.style.height = mapH + 'px';
-  svg.setAttribute('width', G.mapW); svg.setAttribute('height', mapH);
-  svg.setAttribute('viewBox', `0 0 ${G.mapW} ${mapH}`);
+  map.style.width = geo.mapW + 'px'; map.style.height = mapH + 'px';
+  map.style.transform = geo.scale === 1 ? '' : `scale(${geo.scale})`;
+  $('mapFrame').style.width = geo.mapW * geo.scale + 'px';
+  $('mapFrame').style.height = mapH * geo.scale + 'px';
+  svg.setAttribute('width', geo.mapW); svg.setAttribute('height', mapH);
+  svg.setAttribute('viewBox', `0 0 ${geo.mapW} ${mapH}`);
   refresh();
 }
 
@@ -334,10 +396,10 @@ function select(id, scroll = false) {
   S.selected = id;
   refresh(); renderDetail();
   if (scroll) {
-    const n = S.rm.byId[id];
-    window.scrollTo({ top: Math.max(0, $('map').getBoundingClientRect().top + window.scrollY + n.y - 200), behavior: 'smooth' });
+    const n = S.rm.byId[id], s = S.geo.scale;
+    window.scrollTo({ top: Math.max(0, $('mapFrame').getBoundingClientRect().top + window.scrollY + n.y * s - (window.innerWidth < 800 ? 100 : 200)), behavior: 'smooth' });
     const view = $('mapViewport');
-    view.scrollTo({ left: Math.max(0, n.x - (view.clientWidth - G.nodeW) / 2), behavior: 'smooth' });
+    view.scrollTo({ left: Math.max(0, n.x * s - (view.clientWidth - n.el.offsetWidth * s) / 2), behavior: 'smooth' });
   }
   $('detail').classList.add('open');
 }
@@ -352,8 +414,9 @@ function setPhase(key) {
   S.phase = key;
   document.querySelectorAll('[data-phase]').forEach(b => b.classList.toggle('active', b.dataset.phase === key));
   refresh();
-  const first = key === 'all' ? null : S.rm.phaseById[key]?.nodes[0];
-  const top = $('map').getBoundingClientRect().top + window.scrollY + (first ? first.y - 110 : 0);
+  const ph = key === 'all' ? null : S.rm.phaseById[key], first = ph?.nodes[0];
+  const target = first ? (ph.flagEl ? parseFloat(ph.flagEl.style.top) : first.y) * S.geo.scale : 0;
+  const top = $('mapFrame').getBoundingClientRect().top + window.scrollY + (first ? target - (window.innerWidth < 800 ? 12 : 110) : 0);
   window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
 }
 
@@ -364,8 +427,10 @@ function next() {
 
 /* ---------- roadmap loading ---------- */
 function showMessage(title, html) {
+  S.svg = null;
   $('map').replaceChildren();
-  $('map').style.height = '420px';
+  $('map').style.cssText = 'width:100%;height:420px';
+  $('mapFrame').style.cssText = '';
   const d = document.createElement('div');
   d.className = 'empty';
   d.innerHTML = `<h2>${esc(title)}</h2><p>${html}</p>`;
@@ -383,9 +448,11 @@ async function setRoadmap(rm, { local = false } = {}) {
   $('search').value = '';
   applyChrome(); buildSwitch(); buildMap(); layout(); renderDetail();
   $('detail').classList.remove('open');
-  $('mapViewport').scrollLeft = window.innerWidth < 800 ? 270 : 0;
+  $('mapViewport').scrollLeft = 0;
   window.scrollTo({ top: 0 });
-  document.fonts?.ready.then(() => S.rm === rm && layout());
+  const relayout = () => { if (S.rm === rm && S.svg) layout(); };
+  requestAnimationFrame(relayout);
+  document.fonts?.ready.then(relayout);
 }
 
 async function openEntry(entry) {
@@ -446,6 +513,11 @@ function wire() {
   $('openFileBtn').addEventListener('click', () => $('openFile').click());
   $('themeBtn').addEventListener('click', () => { store.set(THEME_KEY, THEME_NEXT[themeMode()]); applyTheme(); });
   darkQuery.addEventListener('change', applyTheme);
+  let frame = 0;
+  addEventListener('resize', () => {
+    cancelAnimationFrame(frame);
+    frame = requestAnimationFrame(() => { if (S.rm && S.svg) layout(); });
+  });
   $('openFile').addEventListener('change', async e => { const f = e.target.files?.[0]; if (f) await openLocalFile(f); e.target.value = ''; });
   $('roadmapSelect').addEventListener('change', e => {
     if (e.target.value === '__local__') return setRoadmap(S.localRm, { local: true });

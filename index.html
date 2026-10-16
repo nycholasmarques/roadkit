@@ -19,12 +19,13 @@
     </div>
     <div class="aside-label" data-i18n="journey"></div>
     <nav id="phaseNav"></nav>
-    <div class="aside-label" data-i18n="tools"></div>
-    <button class="nav-btn" id="exportBtn" data-i18n="exportProgress"></button>
-    <button class="nav-btn" id="importBtn" data-i18n="importProgress"></button>
-    <button class="nav-btn" id="resetBtn" data-i18n="resetProgress"></button>
-    <button class="nav-btn" id="openFileBtn" data-i18n="openFile"></button>
-    <button class="nav-btn" id="themeBtn"></button>
+    <div class="tools">
+      <div class="aside-label" data-i18n="tools"></div>
+      <button class="nav-btn" id="exportBtn" data-i18n="exportProgress"></button>
+      <button class="nav-btn" id="importBtn" data-i18n="importProgress"></button>
+      <button class="nav-btn" id="resetBtn" data-i18n="resetProgress"></button>
+      <button class="nav-btn" id="openFileBtn" data-i18n="openFile"></button>
+    </div>
     <div class="aside-bottom" id="sidebarNote"></div>
   </aside>
   <main class="workspace">
@@ -42,10 +43,15 @@
         <input id="search" type="search" data-i18n-placeholder="searchPlaceholder" data-i18n-aria="searchAria">
         <button class="secondary" id="nextBtn" data-i18n="nextTopic"></button>
         <button class="primary" id="startBtn" data-i18n="start"></button>
+        <button class="icon-btn" id="themeBtn" data-mode="auto" type="button">
+          <svg class="i-auto" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 3.5a8.5 8.5 0 0 1 0 17z" fill="currentColor"/></svg>
+          <svg class="i-light" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          <svg class="i-dark" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M20.5 14.2A8.5 8.5 0 0 1 9.8 3.5a8.5 8.5 0 1 0 10.7 10.7z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+        </button>
       </div>
     </header>
     <section class="bodyline">
-      <div class="map-viewport" id="mapViewport"><div class="map" id="map"></div></div>
+      <div class="map-viewport" id="mapViewport"><div class="map-frame" id="mapFrame"><div class="map" id="map"></div></div></div>
       <section class="detail" id="detail" aria-live="polite">
         <button class="detail-close" id="detailClose" data-i18n-aria="close">×</button>
         <div id="detailContent" class="detail-placeholder"></div>
