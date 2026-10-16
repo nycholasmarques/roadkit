@@ -41,7 +41,7 @@ O formato está descrito em [`docs/SCHEMA.md`](docs/SCHEMA.md) e em [`schema/roa
 
 Não há coordenadas no JSON. O layout é calculado no navegador: os tópicos principais descem em ordem pela coluna central, agrupados por fase, e os opcionais ficam à direita do tópico de origem.
 
-O tema da interface pode ser claro, escuro ou automático (segue o sistema). O ícone no canto superior direito alterna entre os três e a escolha fica salva no navegador.
+O tema da interface pode ser claro, escuro ou automático (segue o sistema). A escolha fica salva no navegador e é feita no botão de ajustes, no canto superior direito.
 
 O layout se adapta à tela: em telas grandes o mapa é ampliado e centralizado, e em telas estreitas (celular, janela pequena) vira uma linha do tempo em coluna única, com as fases como atalhos no topo.
 
@@ -50,6 +50,10 @@ O layout se adapta à tela: em telas grandes o mapa é ampliado e centralizado, 
 Cada roadmap também pode ser visto como um quadro, pelo seletor **Mapa / Kanban** no topo. O quadro tem quatro colunas (a fazer, em andamento, em revisão, concluído) e cada tópico é um cartão que se arrasta entre elas, com o mouse ou pelo ícone de alça no toque. As setas no cartão fazem o mesmo para quem prefere teclado.
 
 Um tópico pode ter `tasks`: ele ganha um kanban pequeno no painel de detalhes, com as mesmas colunas, para quebrar o tópico em passos. Concluir o tópico conclui todas as tarefas, e mover tarefas atualiza o estado do tópico. As regras completas estão em [`docs/SCHEMA.md`](docs/SCHEMA.md#kanban).
+
+Quando um tópico avança no kanban sem que os anteriores (na ordem do roadmap) estejam concluídos, o cartão ganha um pequeno ícone de alerta. Clicar nele abre um aviso simples, dentro do próprio cartão, listando o que falta. Opcionais não entram nessa conta. A tolerância é ajustável: sempre avisar, tolerar até 3 ou 5 pendentes, ou não avisar.
+
+O botão de ajustes, no canto superior direito, concentra o tema (claro, escuro ou automático), o tamanho do texto (pequeno, normal, grande e muito grande) e a tolerância do aviso. No celular ele também dá acesso a exportar, importar e reiniciar o progresso. Em janelas estreitas o quadro tem uma faixa com as quatro colunas que aparece durante o arrasto, para soltar o cartão sem precisar rolar.
 
 Os textos da interface ficam em `src/labels/` (`pt-BR` e `en`) e são escolhidos por `meta.language`. Para um idioma novo, copie um dos arquivos e traduza.
 

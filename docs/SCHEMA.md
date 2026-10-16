@@ -114,4 +114,6 @@ Como o estado do tópico e o das tarefas se relacionam:
 - Mover uma tarefa recalcula o tópico: todas concluídas é `finished`; todas em `todo` é `todo`; o restante em `review` ou `finished` é `review`; qualquer outra mistura é `working`.
 - Sem `status` no tópico, o estado inicial é calculado do mesmo jeito a partir das tarefas.
 
+Se um tópico avança para `working`, `review` ou `finished` com tópicos principais anteriores ainda não concluídos, o cartão do kanban mostra um alerta (o painel de detalhes também). Quem usa decide quanto tolerar nos ajustes. Tópicos opcionais não geram nem contam para o alerta.
+
 O que a pessoa muda na interface fica salvo no navegador, por roadmap; o JSON só define o ponto de partida. As ordens dentro das colunas seguem a ordem do JSON.

@@ -14,12 +14,15 @@ const G = { spineX: 420, nodeW: 290, optX: 800, optW: 255, top: 110, gap: 56, ms
 const NARROW_BELOW = 860;   // map viewport width (px) under which the compact vertical layout is used
 const MAX_SCALE = 1.4;      // the wide layout is scaled to fit the viewport, up to this factor
 const STATUSES = ['todo', 'working', 'review', 'finished'];
+const FONT_SCALE = { small: 0.95, normal: 1.1, large: 1.25, xlarge: 1.4 };
+const FS_KEY = 'roadkit:v1:fs', SKIP_KEY = 'roadkit:v1:skip';
 const STATUS_LABEL = { todo: 'kanbanTodo', working: 'kanbanWorking', review: 'kanbanReview', finished: 'kanbanFinished' };
 
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const br = s => esc(s).replace(/\n/g, '<br>');
 const str = v => (v == null ? '' : String(v));
+const fmt = (s, o) => str(s).replace(/\{(\w+)\}/g, (_, k) => o[k] ?? '');
 const arr = v => (Array.isArray(v) ? v : []);
 const hex = v => (/^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i.test(str(v)) ? v : '');
 const okStatus = v => (STATUSES.includes(v) ? v : 'todo');
@@ -46,10 +49,11 @@ async function getJson(url) {
 const S = {
   manifest: null, defaults: {}, L: {}, labelCache: {},
   rm: null, localRm: null, state: { nodes: {}, tasks: {} }, view: 'map', selected: null, phase: 'all', search: '',
-  links: [], legendEl: null, svg: null,
+  links: [], legendEl: null, svg: null, warnOpen: new Set(),
 };
 
 const ICON = {
+  warn: '<svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><path d="M8 2l6.5 11.5h-13z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M8 6.6v3.2M8 11.7v.1" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>',
   left: '<svg viewBox="0 0 12 12" width="10" height="10" aria-hidden="true"><path d="M7.5 2.5L4 6l3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
   right: '<svg viewBox="0 0 12 12" width="10" height="10" aria-hidden="true"><path d="M4.5 2.5L8 6l-3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
   grip: '<svg viewBox="0 0 8 14" width="8" height="14" aria-hidden="true"><g fill="currentColor"><circle cx="2" cy="2" r="1.1"/><circle cx="6" cy="2" r="1.1"/><circle cx="2" cy="7" r="1.1"/><circle cx="6" cy="7" r="1.1"/><circle cx="2" cy="12" r="1.1"/><circle cx="6" cy="12" r="1.1"/></g></svg>',
@@ -57,14 +61,12 @@ const ICON = {
 
 /* ---------- theme: auto (follows the system), light or dark ---------- */
 const THEME_KEY = 'roadkit:v1:theme';
-const THEME_NEXT = { auto: 'light', light: 'dark', dark: 'auto' };
 const darkQuery = matchMedia('(prefers-color-scheme: dark)');
 const themeMode = () => { const m = store.get(THEME_KEY); return m === 'light' || m === 'dark' ? m : 'auto'; };
 
 function updateThemeBtn() {
-  const m = themeMode(), name = S.L['theme' + m[0].toUpperCase() + m.slice(1)], btn = $('themeBtn');
-  btn.dataset.mode = m;
-  if (S.L.theme && name) { btn.title = `${S.L.theme}: ${name}`; btn.setAttribute('aria-label', btn.title); }
+  const m = themeMode();
+  document.querySelectorAll('#themeSeg [data-theme-mode]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.themeMode === m)));
 }
 
 function applyTheme() {
@@ -72,6 +74,40 @@ function applyTheme() {
   document.documentElement.dataset.theme = dark ? 'dark' : 'light';
   document.querySelector('meta[name="theme-color"]')?.setAttribute('content', dark ? '#0e131b' : '#f6f7fb');
   updateThemeBtn();
+}
+
+/* ---------- settings: text size and skipped-topic warning ---------- */
+const fontName = () => { const v = store.get(FS_KEY); return FONT_SCALE[v] ? v : 'normal'; };
+const skipSetting = () => { const v = store.get(SKIP_KEY); return v === 'off' || v === '3' || v === '5' ? v : '0'; };
+const skipTolerance = () => (skipSetting() === 'off' ? Infinity : Number(skipSetting()));
+const toolbarHeight = () => $('toolbar').offsetHeight;
+
+function applyFont() {
+  document.documentElement.style.setProperty('--fs', FONT_SCALE[fontName()]);
+  document.querySelectorAll('#fontSeg [data-fs]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.fs === fontName())));
+}
+
+function syncToolbarHeight() {
+  document.documentElement.style.setProperty('--tb-h', toolbarHeight() + 'px');
+}
+
+/* Text metrics changed: card heights differ, so the map needs a new layout. */
+function metricsChanged() {
+  requestAnimationFrame(() => {
+    syncToolbarHeight();
+    if (S.rm && S.svg && S.view === 'map') layout();
+  });
+}
+
+function setSettingsOpen(open) {
+  $('settings').hidden = !open;
+  $('settingsBtn').setAttribute('aria-expanded', String(open));
+}
+
+function resetProgress() {
+  if (!confirm(S.L.confirmReset)) return;
+  S.state = { nodes: {}, tasks: {} };
+  changed();
 }
 
 /* ---------- normalize: tolerant reader (tools/roadkit.py check is the strict one) ---------- */
@@ -214,6 +250,7 @@ function applyI18n() {
   const L = S.L;
   document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = L[el.dataset.i18n] ?? ''; });
   document.querySelectorAll('[data-i18n-placeholder]').forEach(el => { el.placeholder = L[el.dataset.i18nPlaceholder] ?? ''; });
+  document.querySelectorAll('[data-i18n-title]').forEach(el => { el.title = L[el.dataset.i18nTitle] ?? ''; });
   document.querySelectorAll('[data-i18n-aria]').forEach(el => el.setAttribute('aria-label', L[el.dataset.i18nAria] ?? ''));
   updateThemeBtn();
 }
@@ -470,6 +507,23 @@ function applyFilters() {
   renderBoard();
 }
 
+/* ---------- skipped-topic warning ---------- */
+/* A topic that moved past "todo" while earlier main topics are not finished is a skipped topic. */
+function pendingBefore(n) {
+  if (n.optional || nodeStatus(n) === 'todo') return [];
+  return S.rm.core.slice(0, S.rm.core.indexOf(n)).filter(x => !isDone(x));
+}
+
+function skipInfo(n) {
+  const miss = pendingBefore(n);
+  return miss.length > skipTolerance() ? miss : null;
+}
+
+function skipNote(miss) {
+  const L = S.L, shown = miss.slice(0, 4);
+  return `<div class="skip-note" role="note"><strong>${esc(fmt(miss.length === 1 ? L.skipWarnOne : L.skipWarnMany, { n: miss.length }))}</strong><ul>${shown.map(x => `<li>${esc(x.title)}</li>`).join('')}${miss.length > shown.length ? `<li>${esc(fmt(L.skipWarnMore, { n: miss.length - shown.length }))}</li>` : ''}</ul></div>`;
+}
+
 /* ---------- roadmap kanban ---------- */
 function renderBoard() {
   if (S.view !== 'kanban' || !S.rm) return;
@@ -479,11 +533,11 @@ function renderBoard() {
   rm.nodes.forEach(n => { if (!dimmed(n)) cols[nodeStatus(n)].push(n); });
   board.innerHTML = STATUSES.map((s, i) => {
     const cards = cols[s].map(n => {
-      const ph = rm.phaseById[n.phase], tot = n.tasks.length, fin = finishedTasks(n);
+      const ph = rm.phaseById[n.phase], tot = n.tasks.length, fin = finishedTasks(n), miss = skipInfo(n), open = !!miss && S.warnOpen.has(n.id);
       return `<div class="kcard${S.selected === n.id ? ' selected' : ''}" data-drag data-node="${esc(n.id)}" tabindex="0" style="--flag:${ph.color}">` +
         `<span class="grip">${ICON.grip}</span>` +
-        `<div class="kc-top">${rm.hasPhases && ph.title ? `<span class="kc-phase">${esc(ph.title)}</span>` : ''}${n.optional ? `<span class="kc-opt">${esc(L.optionalTag)}</span>` : ''}</div>` +
-        `<div class="kc-title">${esc(n.title)}</div>` +
+        `<div class="kc-top">${rm.hasPhases && ph.title ? `<span class="kc-phase">${esc(ph.title)}</span>` : ''}${n.optional ? `<span class="kc-opt">${esc(L.optionalTag)}</span>` : ''}${miss ? `<button type="button" class="kc-warn${open ? ' on' : ''}" data-warn aria-expanded="${open}" aria-label="${esc(L.skipWarnLabel)}" title="${esc(L.skipWarnLabel)}">${ICON.warn}</button>` : ''}</div>` +
+        `<div class="kc-title">${esc(n.title)}</div>` + (open ? skipNote(miss) : '') +
         (n.time ? `<div class="kc-time">${esc(n.time)}</div>` : '') +
         (tot ? `<div class="kc-prog"><span class="kc-bar"><i style="width:${Math.round(fin / tot * 100)}%"></i></span><span>${fin}/${tot}</span></div>` : '') +
         moveButtons(i) + `</div>`;
@@ -514,7 +568,7 @@ function renderDetail() {
     box.innerHTML = `${rm.meta.icon ? `<span class="big">${esc(rm.meta.icon)}</span>` : ''}<strong>${esc(L.placeholderTitle)}</strong><br>${esc(L.placeholderText)}`;
     return;
   }
-  const ph = rm.phaseById[n.phase], st = nodeStatus(n), done = st === 'finished';
+  const ph = rm.phaseById[n.phase], st = nodeStatus(n), done = st === 'finished', miss = skipInfo(n);
   const kicker = n.optional ? L.optionalKicker : [n.time, ph.title].filter(Boolean).join(' | ');
   const tasks = n.tasks.length
     ? `<h3>${esc(L.tasks)} <span class="h3-count">${finishedTasks(n)}/${n.tasks.length}</span></h3><div class="mini" data-dnd-root data-node="${esc(n.id)}">` +
@@ -529,6 +583,7 @@ function renderDetail() {
   box.innerHTML =
     `<div class="panel-kicker">${esc(kicker)}</div><h2>${esc(n.title)}</h2>` +
     `<div class="statusbar" role="group" aria-label="${esc(L.status)}">${STATUSES.map(s => `<button type="button" data-status="${s}" class="s-${s}${s === st ? ' on' : ''}" aria-pressed="${s === st}">${esc(L[STATUS_LABEL[s]])}</button>`).join('')}</div>` +
+    (miss ? skipNote(miss) : '') +
     (n.summary ? `<p>${esc(n.summary)}</p>` : '') +
     (n.topics.length ? `<h3>${esc(L.topics)}</h3><div>${n.topics.map(t => `<span class="topic">${esc(t)}</span>`).join('')}</div>` : '') +
     (n.challenge ? `<h3>${esc(L.challenge)}</h3><div class="mission">${esc(n.challenge)}</div>` : '') +
@@ -550,7 +605,7 @@ function select(id, scroll = false) {
   document.querySelectorAll('.kcard').forEach(c => c.classList.toggle('selected', c.dataset.node === id));
   if (scroll && S.view === 'map') {
     const n = S.rm.byId[id], s = S.geo.scale;
-    window.scrollTo({ top: Math.max(0, $('mapFrame').getBoundingClientRect().top + window.scrollY + n.y * s - (window.innerWidth < 800 ? 100 : 200)), behavior: 'smooth' });
+    window.scrollTo({ top: Math.max(0, $('mapFrame').getBoundingClientRect().top + window.scrollY + n.y * s - (window.innerWidth < 800 ? 100 : toolbarHeight() + 90)), behavior: 'smooth' });
     const view = $('mapViewport');
     view.scrollTo({ left: Math.max(0, n.x * s - (view.clientWidth - n.el.offsetWidth * s) / 2), behavior: 'smooth' });
   }
@@ -564,7 +619,7 @@ function setPhase(key) {
   if (S.view !== 'map') return;
   const ph = key === 'all' ? null : S.rm.phaseById[key], first = ph?.nodes[0];
   const target = first ? (ph.flagEl ? parseFloat(ph.flagEl.style.top) : first.y) * S.geo.scale : 0;
-  const top = $('mapFrame').getBoundingClientRect().top + window.scrollY + (first ? target - (window.innerWidth < 800 ? 12 : 110) : 0);
+  const top = $('mapFrame').getBoundingClientRect().top + window.scrollY + (first ? target - (window.innerWidth < 800 ? 12 : toolbarHeight() + 20) : 0);
   window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
 }
 
@@ -592,21 +647,50 @@ function moveBy(el, dir) {
 
 /* ---------- drag and drop (pointer events: mouse, pen and touch via the grip) ---------- */
 const dnd = { st: null, suppress: false };
-const DRAG_START = 6, EDGE = 70;
+const DRAG_START = 6, EDGE = 80;
 
-function dndTarget(x, y, root) {
-  const col = document.elementFromPoint(x, y)?.closest('.dropcol');
-  return col && col.closest('[data-dnd-root]') === root ? col : null;
+/* On narrow screens the board scrolls sideways, so a dock with the four columns is shown while dragging. */
+function showDock(show) {
+  const dock = $('dock');
+  if (show) dock.innerHTML = STATUSES.map(s => `<div class="dock-slot" data-col="${s}"><span class="kdot k-${s}"></span>${esc(S.L[STATUS_LABEL[s]])}</div>`).join('');
+  dock.hidden = !show;
+}
+
+function dndTarget(st) {
+  const el = document.elementFromPoint(st.lx, st.ly);
+  const slot = st.dock ? el?.closest('.dock-slot') : null;
+  if (slot) return slot;
+  const col = el?.closest('.dropcol');
+  return col && col.closest('[data-dnd-root]') === st.root ? col : null;
+}
+
+function dndHover(st) {
+  const col = dndTarget(st);
+  if (col === st.col) return;
+  st.col?.classList.remove('drop-over');
+  col?.classList.add('drop-over');
+  st.col = col;
+}
+
+function dndTick() {
+  const st = dnd.st;
+  if (!st?.started) return;
+  if (st.vy) { if (st.vscroll === window) window.scrollBy(0, st.vy); else st.vscroll.scrollTop += st.vy; }
+  if (st.vx) st.root.scrollLeft += st.vx;
+  if (st.vx || st.vy) dndHover(st);
+  st.raf = requestAnimationFrame(dndTick);
 }
 
 function dndEnd(drop) {
   const st = dnd.st;
   dnd.st = null;
   if (!st) return;
+  cancelAnimationFrame(st.raf);
   st.ghost?.remove();
   st.el.classList.remove('is-dragging');
   document.body.classList.remove('dnd-active');
   document.querySelectorAll('.drop-over').forEach(c => c.classList.remove('drop-over'));
+  if (st.dock) showDock(false);
   if (!st.started) return;
   dnd.suppress = true;
   setTimeout(() => { dnd.suppress = false; }, 60);
@@ -616,9 +700,10 @@ function dndEnd(drop) {
 function wireDnd() {
   document.addEventListener('pointerdown', e => {
     const el = e.target.closest('[data-drag]');
-    if (!el || (e.pointerType === 'mouse' && e.button !== 0) || e.target.closest('button:not(.grip)')) return;
+    if (!el || (e.pointerType === 'mouse' && e.button !== 0) || e.target.closest('button')) return;
     if (e.pointerType === 'touch' && !e.target.closest('.grip')) return;   // touch scrolls; the grip drags
-    dnd.st = { el, x: e.clientX, y: e.clientY, started: false, root: el.closest('[data-dnd-root]'), from: el.closest('.dropcol')?.dataset.col, col: null, ghost: null, ox: 0, oy: 0 };
+    const root = el.closest('[data-dnd-root]');
+    dnd.st = { el, root, x: e.clientX, y: e.clientY, lx: e.clientX, ly: e.clientY, started: false, from: el.closest('.dropcol')?.dataset.col, col: null, ghost: null, ox: 0, oy: 0, vx: 0, vy: 0, dock: false, vscroll: root.id === 'board' ? window : $('detail') };
   });
   document.addEventListener('pointermove', e => {
     const st = dnd.st;
@@ -633,20 +718,22 @@ function wireDnd() {
       document.body.append(st.ghost);
       st.el.classList.add('is-dragging');
       document.body.classList.add('dnd-active');
+      st.dock = st.root.id === 'board' && st.root.scrollWidth > st.root.clientWidth + 4;
+      if (st.dock) showDock(true);
+      st.raf = requestAnimationFrame(dndTick);
     }
     e.preventDefault();
+    st.lx = e.clientX; st.ly = e.clientY;
     st.ghost.style.left = (e.clientX - st.ox) + 'px';
     st.ghost.style.top = (e.clientY - st.oy) + 'px';
-    const col = dndTarget(e.clientX, e.clientY, st.root);
-    if (col !== st.col) {
-      st.col?.classList.remove('drop-over');
-      col?.classList.add('drop-over');
-      st.col = col;
-    }
-    if (e.clientY < EDGE) window.scrollBy(0, -16); else if (e.clientY > innerHeight - EDGE) window.scrollBy(0, 16);
+    dndHover(st);
+    const speed = d => Math.round(5 + (1 - Math.min(Math.max(d, 0), EDGE) / EDGE) * 20);
+    const vr = st.vscroll === window ? { top: 0, bottom: innerHeight } : st.vscroll.getBoundingClientRect();
+    st.vy = e.clientY < vr.top + EDGE ? -speed(e.clientY - vr.top) : (!st.dock && e.clientY > vr.bottom - EDGE ? speed(vr.bottom - e.clientY) : 0);
+    st.vx = 0;
     if (st.root.id === 'board') {
       const r = st.root.getBoundingClientRect();
-      if (e.clientX < r.left + EDGE) st.root.scrollLeft -= 16; else if (e.clientX > r.right - EDGE) st.root.scrollLeft += 16;
+      if (e.clientX < r.left + EDGE) st.vx = -speed(e.clientX - r.left); else if (e.clientX > r.right - EDGE) st.vx = speed(r.right - e.clientX);
     }
   }, { passive: false });
   document.addEventListener('pointerup', () => dndEnd(true));
@@ -655,12 +742,19 @@ function wireDnd() {
   document.addEventListener('click', e => { if (dnd.suppress) { e.stopPropagation(); e.preventDefault(); } }, true);
   document.addEventListener('dragstart', e => { if (e.target.closest?.('[data-drag]')) e.preventDefault(); });
 
-  // activation and move buttons, for both kinds of cards
+  // move buttons for both kinds of cards, warning toggles and card activation
   const onClick = e => {
     const mv = e.target.closest('[data-move]');
     if (mv) { e.stopPropagation(); moveBy(mv.closest('[data-drag]'), Number(mv.dataset.move)); }
   };
   $('board').addEventListener('click', e => {
+    const wb = e.target.closest('[data-warn]');
+    if (wb) {
+      const id = wb.closest('.kcard').dataset.node;
+      if (!S.warnOpen.delete(id)) S.warnOpen.add(id);
+      renderBoard();
+      return;
+    }
     onClick(e);
     if (e.defaultPrevented || e.target.closest('[data-move]')) return;
     const card = e.target.closest('.kcard');
@@ -696,6 +790,7 @@ async function setRoadmap(rm, { local = false } = {}) {
   S.rm = rm;
   if (local) S.localRm = rm;
   loadState(rm);
+  S.warnOpen = new Set();
   S.selected = rm.core[0].id; S.phase = 'all'; S.search = '';
   $('search').value = '';
   applyChrome(); buildSwitch(); buildMap(); renderDetail();
@@ -767,16 +862,20 @@ function wire() {
   addEventListener('keydown', e => { if (e.key === 'Escape') setDrawer(false); });
   $('search').addEventListener('input', e => { S.search = e.target.value.toLocaleLowerCase().trim(); applyFilters(); });
   $('viewSeg').addEventListener('click', e => { const b = e.target.closest('[data-view]'); if (b) setView(b.dataset.view); });
-  $('exportBtn').addEventListener('click', exportProgress);
-  $('importBtn').addEventListener('click', () => $('importFile').click());
-  $('importFile').addEventListener('change', async e => { const f = e.target.files?.[0]; if (f) await importProgress(f); e.target.value = ''; });
-  $('resetBtn').addEventListener('click', () => {
-    if (!confirm(S.L.confirmReset)) return;
-    S.state = { nodes: {}, tasks: {} };
-    changed();
+  document.addEventListener('click', e => {
+    const act = e.target.closest('[data-act]');
+    if (act) {
+      ({ export: exportProgress, import: () => $('importFile').click(), open: () => $('openFile').click(), reset: resetProgress })[act.dataset.act]?.();
+      setSettingsOpen(false);
+    } else if (!$('settings').hidden && !e.target.closest('#settings, #settingsBtn')) setSettingsOpen(false);
   });
-  $('openFileBtn').addEventListener('click', () => $('openFile').click());
-  $('themeBtn').addEventListener('click', () => { store.set(THEME_KEY, THEME_NEXT[themeMode()]); applyTheme(); });
+  $('settingsBtn').addEventListener('click', () => setSettingsOpen($('settings').hidden));
+  addEventListener('keydown', e => { if (e.key === 'Escape') setSettingsOpen(false); });
+  $('themeSeg').addEventListener('click', e => { const b = e.target.closest('[data-theme-mode]'); if (b) { store.set(THEME_KEY, b.dataset.themeMode); applyTheme(); } });
+  $('fontSeg').addEventListener('click', e => { const b = e.target.closest('[data-fs]'); if (b) { store.set(FS_KEY, b.dataset.fs); applyFont(); metricsChanged(); } });
+  $('skipSel').addEventListener('change', e => { store.set(SKIP_KEY, e.target.value); applyFilters(); renderDetail(); });
+  new ResizeObserver(syncToolbarHeight).observe($('toolbar'));
+  $('importFile').addEventListener('change', async e => { const f = e.target.files?.[0]; if (f) await importProgress(f); e.target.value = ''; });
   darkQuery.addEventListener('change', applyTheme);
   let frame = 0;
   addEventListener('resize', () => {
@@ -802,6 +901,8 @@ function wire() {
 async function init() {
   wire();
   applyTheme();
+  applyFont();
+  $('skipSel').value = skipSetting();
   try {
     [S.manifest, S.defaults] = await Promise.all([getJson('manifest.json'), getJson('src/labels/pt-BR.json')]);
   } catch (err) {
