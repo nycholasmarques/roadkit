@@ -37,6 +37,7 @@
   "statusDone": "done",
   "statusPending": "pending",
   "close": "Close details",
+  "resizeDetail": "Resize details panel",
   "confirmReset": "Remove all checkmarks for this roadmap in this browser?",
   "importOk": "Progress imported successfully!",
   "importFail": "Could not import: ",

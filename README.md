@@ -24,6 +24,7 @@ Só precisa de Python 3, sem dependências e sem etapa de build. Abrir o `index.
 - `?r=<id>` na URL abre um roadmap específico, por exemplo `http://localhost:8765/?r=estudar-sql`.
 - Também dá para arrastar um arquivo `.json` para a página, ou usar "Abrir arquivo JSON", para ver um roadmap sem salvá-lo na pasta.
 - O progresso (as marcações nos tópicos) fica no `localStorage` do navegador, separado por roadmap, usando o `id` do JSON. Há botões para exportar e importar o progresso. Como o `localStorage` é por origem, mantenha a mesma porta.
+- O painel de detalhes (barra lateral direita) pode ser redimensionado arrastando a borda esquerda; duplo clique volta ao tamanho padrão. A largura também fica no `localStorage`.
 
 ## Organizar em seções
 

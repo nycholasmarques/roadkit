@@ -37,6 +37,7 @@
   "statusDone": "concluído",
   "statusPending": "pendente",
   "close": "Fechar detalhes",
+  "resizeDetail": "Redimensionar painel de detalhes",
   "confirmReset": "Remover todas as marcações deste roadmap neste navegador?",
   "importOk": "Progresso importado com sucesso!",
   "importFail": "Não foi possível importar: ",

@@ -15,7 +15,7 @@ const NARROW_BELOW = 860;   // map viewport width (px) under which the compact v
 const MAX_SCALE = 1.4;      // the wide layout is scaled to fit the viewport, up to this factor
 const STATUSES = ['todo', 'working', 'review', 'finished'];
 const FONT_SCALE = { small: 0.95, normal: 1.1, large: 1.25, xlarge: 1.4 };
-const FS_KEY = 'roadkit:v1:fs', SKIP_KEY = 'roadkit:v1:skip';
+const FS_KEY = 'roadkit:v1:fs', SKIP_KEY = 'roadkit:v1:skip', DETAIL_KEY = 'roadkit:v1:detailw';
 const STATUS_LABEL = { todo: 'kanbanTodo', working: 'kanbanWorking', review: 'kanbanReview', finished: 'kanbanFinished' };
 
 const $ = id => document.getElementById(id);
@@ -597,6 +597,41 @@ function renderDetail() {
 function setDrawer(open) {
   $('detail').classList.toggle('open', open);
   $('scrim').classList.toggle('open', open);
+  $('detailGrip').classList.toggle('open', open);
+}
+
+/* Drag the left edge of the details panel to resize it; the width is remembered. */
+function wireDetailResize() {
+  const grip = $('detailGrip'), root = document.documentElement;
+  const MIN = 280, MAX_FRAC = 0.6;
+  const clampW = w => Math.round(Math.min(Math.max(w, MIN), Math.max(MIN, innerWidth * MAX_FRAC)));
+  const current = () => $('detail').getBoundingClientRect().width;
+  const apply = w => root.style.setProperty('--detail-w', w + 'px');
+  const saved = parseInt(store.get(DETAIL_KEY), 10);
+  if (saved) apply(clampW(saved));
+  let start = null;
+  const done = () => { if (S.rm && S.svg && S.view === 'map') layout(); };
+  grip.addEventListener('pointerdown', e => {
+    start = { x: e.clientX, w: current() };
+    grip.setPointerCapture(e.pointerId);
+    grip.classList.add('drag'); document.body.classList.add('resizing');
+  });
+  grip.addEventListener('pointermove', e => { if (start) apply(clampW(start.w + start.x - e.clientX)); });
+  const stop = () => {
+    if (!start) return;
+    start = null; grip.classList.remove('drag'); document.body.classList.remove('resizing');
+    store.set(DETAIL_KEY, String(Math.round(current())));
+    done();
+  };
+  grip.addEventListener('pointerup', stop);
+  grip.addEventListener('pointercancel', stop);
+  grip.addEventListener('dblclick', () => { root.style.removeProperty('--detail-w'); store.set(DETAIL_KEY, ''); done(); });
+  grip.addEventListener('keydown', e => {
+    const d = { ArrowLeft: 24, ArrowRight: -24 }[e.key];
+    if (!d) return;
+    e.preventDefault();
+    apply(clampW(current() + d)); store.set(DETAIL_KEY, String(Math.round(current()))); done();
+  });
 }
 
 function select(id, scroll = false) {
@@ -896,6 +931,7 @@ function wire() {
     if (f) openLocalFile(f);
   });
   wireDnd();
+  wireDetailResize();
 }
 
 async function init() {
