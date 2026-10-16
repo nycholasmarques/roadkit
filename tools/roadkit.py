@@ -17,8 +17,9 @@ import os
 import re
 import sys
 import tempfile
+import threading
 from pathlib import Path
-from urllib.parse import unquote, urlsplit
+from urllib.parse import parse_qs, unquote, urlsplit
 
 ROOT = Path(__file__).resolve().parent.parent
 ROADMAPS = ROOT / "roadmaps"
@@ -28,6 +29,9 @@ MANIFEST = ROOT / "manifest.json"
 LABELS_DIR = ROOT / "src" / "labels"
 DATA_DIR = Path(os.environ.get("ROADKIT_DATA") or ROOT / "data")  # saved progress, one JSON per roadmap
 TOKEN = os.environ.get("ROADKIT_TOKEN", "")                       # optional: require it for the progress API
+USER_DIR = DATA_DIR / "roadmaps"                                  # roadmaps created in the UI
+HIDDEN_FILE = DATA_DIR / "_hidden.json"                           # ids hidden from the picker (read-only roadmaps can't be deleted)
+LOCK = threading.Lock()
 STATE_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$")
 MAX_STATE_BYTES = 1_000_000
 
@@ -68,8 +72,11 @@ def discover():
     """Sections in display order: (group id, title, files). Every folder below roadmaps/ is a section,
     at any depth; folders starting with '.' or '_' are ignored. Examples come last."""
     out = []
+    root_files = (json_files(ROADMAPS) if ROADMAPS.is_dir() else []) + (json_files(USER_DIR) if USER_DIR.is_dir() else [])
+    if root_files:
+        out.append(("roadmaps", ROOT_TITLE, root_files))
     if ROADMAPS.is_dir():
-        folders = [ROADMAPS] + sorted(
+        folders = sorted(
             (d for d in ROADMAPS.rglob("*")
              if d.is_dir() and not any(part.startswith((".", "_")) for part in d.relative_to(ROADMAPS).parts)),
             key=lambda d: d.relative_to(ROADMAPS).as_posix().lower(),
@@ -78,12 +85,9 @@ def discover():
             files = json_files(d)
             if not files:
                 continue
-            if d == ROADMAPS:
-                gid, title = "roadmaps", ROOT_TITLE
-            else:
-                rel = d.relative_to(ROADMAPS)
-                gid = "roadmaps/" + rel.as_posix()
-                title = " / ".join(section_title(ROADMAPS.joinpath(*rel.parts[: i + 1])) for i in range(len(rel.parts)))
+            rel = d.relative_to(ROADMAPS)
+            gid = "roadmaps/" + rel.as_posix()
+            title = " / ".join(section_title(ROADMAPS.joinpath(*rel.parts[: i + 1])) for i in range(len(rel.parts)))
             out.append((gid, title, files))
     for gid, title in EXAMPLE_GROUPS:
         files = json_files(ROOT / gid) if (ROOT / gid).is_dir() else []
@@ -260,27 +264,74 @@ def validate(data, known_labels):
     return errs, warns
 
 
+def rel(path):
+    try:
+        return path.relative_to(ROOT).as_posix()
+    except ValueError:
+        return str(path)
+
+
+def read_hidden():
+    try:
+        v = json.loads(HIDDEN_FILE.read_text("utf-8"))
+        return {x for x in v if isinstance(x, str)} if isinstance(v, list) else set()
+    except (OSError, ValueError):
+        return set()
+
+
+def write_json(path, obj):
+    """Atomic write: a crash never leaves a half-written file."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fd, tmp = tempfile.mkstemp(dir=path.parent, prefix=".tmp-", suffix=".json")
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as fh:
+            json.dump(obj, fh, ensure_ascii=False, indent=2)
+            fh.write("\n")
+        os.replace(tmp, path)
+    except BaseException:
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
+        raise
+
+
+def default_finished(n):
+    """Is this topic finished before any progress is saved? (its own status, or all of its tasks)"""
+    if n.get("status"):
+        return n["status"] == "finished"
+    tasks = [t for t in n.get("tasks", []) if isinstance(t, dict)]
+    return bool(tasks) and all(t.get("status") == "finished" for t in tasks)
+
+
 def build_manifest(write=True):
-    entries, seen = [], {}
+    entries, seen, hidden = [], {}, read_hidden()
     for folder, path in roadmap_files():
         try:
             d = json.loads(path.read_text("utf-8"))
             title = d["meta"]["title"]
             rid = d["id"]
         except Exception as e:  # skip broken files; `check` reports them
-            print(f"index: skipping {path.relative_to(ROOT)} ({e})", file=sys.stderr)
+            print(f"index: skipping {rel(path)} ({e})", file=sys.stderr)
             continue
         if rid in seen:
-            print(f"index: duplicate id '{rid}' in {path.relative_to(ROOT)} (also {seen[rid]}); skipped", file=sys.stderr)
+            print(f"index: duplicate id '{rid}' in {rel(path)} (also {seen[rid]}); skipped", file=sys.stderr)
             continue
-        seen[rid] = path.relative_to(ROOT).as_posix()
-        nodes = d.get("nodes", [])
+        editable = path.parent == USER_DIR
+        seen[rid] = rel(path)
+        nodes = [n for n in d.get("nodes", []) if isinstance(n, dict)]
+        core = [n for n in nodes if not n.get("optional")]
         entries.append({
-            "id": rid, "file": seen[rid], "group": folder, "title": title,
+            "id": rid, "file": f"user/{path.name}" if editable else seen[rid], "group": folder, "title": title,
             "description": d["meta"].get("description", ""), "icon": d["meta"].get("icon", ""),
+            "language": d["meta"].get("language", ""),
             "phases": len(d.get("phases", [])),
-            "topics": sum(1 for n in nodes if not n.get("optional")),
-            "optional": sum(1 for n in nodes if n.get("optional")),
+            "topics": len(core),
+            "optional": len(nodes) - len(core),
+            "coreIds": [n.get("id") for n in core],
+            "doneByDefault": [n.get("id") for n in core if default_finished(n)],
+            **({"editable": True} if editable else {}),
+            **({"hidden": True} if rid in hidden else {}),
         })
     langs = sorted(p.stem for p in LABELS_DIR.glob("*.json"))
     manifest = {
@@ -300,14 +351,11 @@ def cmd_check(args):
     targets = [Path(f).resolve() for f in args.files] if args.files else [p for _, p in roadmap_files()]
     failed, ids = False, {}
     for p in targets:
-        try:
-            rel = p.relative_to(ROOT).as_posix()
-        except ValueError:
-            rel = str(p)
+        name = rel(p)
         try:
             data = json.loads(p.read_text("utf-8"))
         except Exception as e:
-            print(f"erro {rel}\n    invalid JSON: {e}")
+            print(f"erro {name}\n    invalid JSON: {e}")
             failed = True
             continue
         errs, warns = validate(data, known)
@@ -315,8 +363,8 @@ def cmd_check(args):
         if rid in ids:
             errs.append(f"duplicate roadmap id '{rid}' (also in {ids[rid]})")
         elif rid:
-            ids[rid] = rel
-        print(("erro " if errs else "ok   ") + rel + ("" if errs or not warns else "  (warnings)"))
+            ids[rid] = name
+        print(("erro " if errs else "ok   ") + name + ("" if errs or not warns else "  (warnings)"))
         for e in errs:
             print(f"    error: {e}")
         for w in warns:
@@ -342,11 +390,26 @@ def valid_state(obj):
     return True
 
 
+class ApiError(Exception):
+    def __init__(self, code, body):
+        self.code, self.body = code, body
+
+
+def slug_ok(rid):
+    return isinstance(rid, str) and bool(SLUG.match(rid)) and len(rid) <= 100
+
+
+def known_ids():
+    return {e["id"]: e for e in json.loads(build_manifest(write=False))["roadmaps"]}
+
+
 class Handler(http.server.SimpleHTTPRequestHandler):
     def do_GET(self):
         path = self.path.split("?")[0]
         if path.startswith("/api/"):
-            return self.state_get(path)
+            return self.api("GET", path)
+        if path.startswith("/user/"):                 # roadmaps created in the UI live in the data folder
+            return self.serve_user_file(path)
         if path.startswith(("/.git", "/tools", "/data")):
             return self.send_error(404)
         if path == "/manifest.json":
@@ -354,16 +417,35 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         super().do_GET()
 
     def do_PUT(self):
+        self.route_api("PUT")
+
+    def do_POST(self):
+        self.route_api("POST")
+
+    def do_DELETE(self):
+        self.route_api("DELETE")
+
+    def route_api(self, method):
         path = self.path.split("?")[0]
-        if path.startswith("/api/"):
-            return self.state_put(path)
-        self.send_error(405)
+        self.api(method, path) if path.startswith("/api/") else self.send_error(405)
 
     def end_headers(self):
         self.send_header("Cache-Control", "no-store")
         super().end_headers()
 
-    # ---- progress API: GET/PUT /api/state/<roadmap-id> ----
+    def serve_user_file(self, path):
+        name = unquote(path[len("/user/"):])
+        f = USER_DIR / name
+        if "/" in name or not name.endswith(".json") or name.startswith(("_", ".")) or not f.is_file():
+            return self.send_error(404)
+        body = f.read_bytes()
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    # ---- JSON API (same-origin only, optional bearer token) ----
     def reply(self, code, obj=None):
         body = b"" if obj is None else json.dumps(obj, ensure_ascii=False).encode("utf-8")
         self.send_response(code)
@@ -375,7 +457,6 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             self.wfile.write(body)
 
     def api_allowed(self):
-        """Same-origin only (no CORS), plus the optional bearer token. Replies and returns False when refused."""
         origin = self.headers.get("Origin")
         if origin and urlsplit(origin).netloc != self.headers.get("Host"):
             self.reply(403, {"error": "cross-origin request refused"})
@@ -387,61 +468,141 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 return False
         return True
 
-    def state_file(self, path):
-        m = re.fullmatch(r"/api/state/([^/]+)", path)
-        rid = unquote(m.group(1)) if m else ""
-        return DATA_DIR / f"{rid}.json" if STATE_ID.match(rid) else None
-
-    def state_get(self, path):
-        f = self.state_file(path)
-        if f is None:
-            return self.reply(404, {"error": "unknown endpoint"})
-        if not self.api_allowed():
-            return
-        try:
-            self.reply(200, json.loads(f.read_text("utf-8")))
-        except FileNotFoundError:
-            self.reply(204)
-        except (OSError, ValueError):
-            self.reply(500, {"error": "saved progress is unreadable"})
-
-    def state_put(self, path):
-        f = self.state_file(path)
-        if f is None:
-            return self.reply(404, {"error": "unknown endpoint"})
-        if not self.api_allowed():
-            return
+    def read_json(self):
         if not (self.headers.get("Content-Type") or "").startswith("application/json"):
-            return self.reply(415, {"error": "send application/json"})
+            raise ApiError(415, {"error": "send application/json"})
         try:
             size = int(self.headers.get("Content-Length") or 0)
         except ValueError:
             size = -1
         if not 0 < size <= MAX_STATE_BYTES:
-            return self.reply(413, {"error": "bad or oversized body"})
+            raise ApiError(413, {"error": "bad or oversized body"})
         try:
-            incoming = json.loads(self.rfile.read(size))
+            return json.loads(self.rfile.read(size))
         except ValueError:
-            return self.reply(400, {"error": "invalid JSON"})
-        if not valid_state(incoming):
-            return self.reply(400, {"error": "invalid progress payload"})
+            raise ApiError(400, {"error": "invalid JSON"})
+
+    def api(self, method, path):
+        if not self.api_allowed():
+            return
+        query = parse_qs(urlsplit(self.path).query)
         try:
-            current = json.loads(f.read_text("utf-8"))
-        except (OSError, ValueError):
-            current = None
-        if valid_state(current) and current["updatedAt"] > incoming["updatedAt"]:
-            return self.reply(409, current)  # the server already has newer progress; the client adopts it
-        out = {"updatedAt": incoming["updatedAt"], "state": {
-            "nodes": incoming["state"].get("nodes", {}), "tasks": incoming["state"].get("tasks", {})}}
-        try:
-            DATA_DIR.mkdir(parents=True, exist_ok=True)
-            fd, tmp = tempfile.mkstemp(dir=DATA_DIR, prefix=".tmp-", suffix=".json")
-            with os.fdopen(fd, "w", encoding="utf-8") as fh:
-                json.dump(out, fh, ensure_ascii=False, indent=2)
-            os.replace(tmp, f)  # atomic: a crash never leaves a half-written file
+            for pattern, verbs in ROUTES:
+                m = re.fullmatch(pattern, path)
+                if m:
+                    if method not in verbs:
+                        raise ApiError(405, {"error": "method not allowed"})
+                    return self.reply(*getattr(self, verbs[method])(unquote(m.group(1)) if m.groups() else None, query))
+            raise ApiError(404, {"error": "unknown endpoint"})
+        except ApiError as e:
+            self.reply(e.code, e.body)
         except OSError as e:
-            return self.reply(500, {"error": f"could not save: {e.strerror}"})
-        self.reply(200, out)
+            self.reply(500, {"error": f"disk error: {e.strerror}"})
+
+    # -- progress: GET/PUT /api/state/<id>, GET /api/states --
+    def state_file(self, rid):
+        if not STATE_ID.match(rid or ""):
+            raise ApiError(404, {"error": "unknown roadmap id"})
+        return DATA_DIR / f"{rid}.json"
+
+    def state_get(self, rid, query):
+        f = self.state_file(rid)
+        try:
+            return 200, json.loads(f.read_text("utf-8"))
+        except FileNotFoundError:
+            return 204, None
+        except ValueError:
+            raise ApiError(500, {"error": "saved progress is unreadable"})
+
+    def state_put(self, rid, query):
+        f = self.state_file(rid)
+        incoming = self.read_json()
+        if not valid_state(incoming):
+            raise ApiError(400, {"error": "invalid progress payload"})
+        with LOCK:
+            try:
+                current = json.loads(f.read_text("utf-8"))
+            except (OSError, ValueError):
+                current = None
+            if valid_state(current) and current["updatedAt"] > incoming["updatedAt"]:
+                return 409, current  # the server already has newer progress; the client adopts it
+            out = {"updatedAt": incoming["updatedAt"], "state": {
+                "nodes": incoming["state"].get("nodes", {}), "tasks": incoming["state"].get("tasks", {})}}
+            write_json(f, out)
+        return 200, out
+
+    def states_get(self, _, query):
+        out = {}
+        for f in DATA_DIR.glob("*.json") if DATA_DIR.is_dir() else []:
+            try:
+                v = json.loads(f.read_text("utf-8"))
+            except (OSError, ValueError):
+                continue
+            if STATE_ID.match(f.stem) and valid_state(v):
+                out[f.stem] = {"updatedAt": v["updatedAt"], "nodes": v["state"].get("nodes", {})}
+        return 200, out
+
+    # -- roadmaps made in the UI: POST /api/roadmaps, PUT/DELETE /api/roadmaps/<id> --
+    def check_roadmap(self, data):
+        errs, warns = validate(data, label_keys())
+        if errs:
+            raise ApiError(422, {"errors": errs, "warnings": warns})
+        return warns
+
+    def roadmap_create(self, _, query):
+        data = self.read_json()
+        warns = self.check_roadmap(data)
+        with LOCK:
+            if data["id"] in known_ids():
+                raise ApiError(409, {"error": f"a roadmap with id '{data['id']}' already exists"})
+            write_json(USER_DIR / f"{data['id']}.json", data)
+        return 201, {"id": data["id"], "warnings": warns}
+
+    def roadmap_update(self, rid, query):
+        data = self.read_json()
+        if not slug_ok(rid) or not (USER_DIR / f"{rid}.json").is_file():
+            raise ApiError(404, {"error": "only roadmaps created in the interface can be edited"})
+        if not isinstance(data, dict) or data.get("id") != rid:
+            raise ApiError(400, {"error": "the id of a roadmap cannot change (it keys the saved progress)"})
+        warns = self.check_roadmap(data)
+        with LOCK:
+            write_json(USER_DIR / f"{rid}.json", data)
+        return 200, {"id": rid, "warnings": warns}
+
+    def roadmap_delete(self, rid, query):
+        f = USER_DIR / f"{rid}.json" if slug_ok(rid) else None
+        if f is None or not f.is_file():
+            raise ApiError(405 if rid in known_ids() else 404, {"error": "only roadmaps created in the interface can be deleted; hide the others"})
+        with LOCK:
+            f.unlink()
+            if query.get("progress", [""])[0] == "1":
+                try:
+                    self.state_file(rid).unlink()
+                except (FileNotFoundError, ApiError):
+                    pass
+            hidden = read_hidden()
+            if rid in hidden:
+                write_json(HIDDEN_FILE, sorted(hidden - {rid}))
+        return 200, {"id": rid}
+
+    def hidden_put(self, rid, query):
+        body = self.read_json()
+        if not slug_ok(rid) or not isinstance(body, dict) or not isinstance(body.get("hidden"), bool):
+            raise ApiError(400, {"error": 'send {"hidden": true|false}'})
+        with LOCK:
+            hidden = read_hidden()
+            hidden = hidden | {rid} if body["hidden"] else hidden - {rid}
+            write_json(HIDDEN_FILE, sorted(hidden))
+        return 200, {"id": rid, "hidden": body["hidden"]}
+
+
+ROUTES = [
+    (r"/api/state/([^/]+)", {"GET": "state_get", "PUT": "state_put"}),
+    (r"/api/states", {"GET": "states_get"}),
+    (r"/api/roadmaps", {"POST": "roadmap_create"}),
+    (r"/api/roadmaps/([^/]+)", {"PUT": "roadmap_update", "DELETE": "roadmap_delete"}),
+    (r"/api/hidden/([^/]+)", {"PUT": "hidden_put"}),
+]
 
 
 def cmd_serve(args):
