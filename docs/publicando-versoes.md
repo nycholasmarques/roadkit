@@ -56,21 +56,16 @@ O [`ci.yml`](../.github/workflows/ci.yml) roda a cada push na `main` e em todo p
 - o servidor sobe, lista roadmaps, valida, cria, lê, salva progresso e exclui, e recusa escritas de outra origem;
 - a imagem Docker constrói e responde.
 
-O trabalho principal se chama `check`, e o do Docker, `docker`. Esses dois nomes aparecem na proteção da `main`, então se você renomear um, ajuste o ruleset.
+O trabalho principal se chama `check`, e o do Docker, `docker`. Esses dois nomes são os que a proteção da `main` exige, então se você renomear um, ajuste a regra nas configurações.
 
-## Proteção da main e das tags
+## Proteção da main
 
-O GitHub guarda as regras de proteção nas configurações do repositório, fora do código, então elas não vêm junto de um commit. Por isso deixei as regras prontas em [`.github/rulesets/`](../.github/rulesets/), para você importar com dois cliques:
+As regras de proteção moram nas configurações do repositório, não no código, então não há arquivo para commitar. O que eu uso, em *Settings → Rules → Rulesets*, para a `main`:
 
-1. No repositório, *Settings → Rules → Rulesets → New ruleset → Import a ruleset*.
-2. Escolha `main.json`, confira e clique em *Create*. Repita com `tags.json`.
+- bloquear exclusão e reescrita de histórico (*Restrict deletions* e *Block force pushes*);
+- exigir pull request antes de entrar (*Require a pull request before merging*), sem exigir aprovação, já que num projeto de uma pessoa só não haveria quem aprovar;
+- exigir que o CI passe (*Require status checks to pass*), com os trabalhos `check` e `docker`.
 
-Se o CI ainda não rodou nenhuma vez, as checagens `check` e `docker` aparecem como "esperando". Faça um push (ou abra um pull request) e elas passam a existir.
+Para as tags `v*`, vale um ruleset que impeça apagar ou mover (*Restrict deletions* e *Restrict updates*), para uma versão publicada nunca mudar por engano.
 
-**`main.json`** impede apagar a `main` e reescrever o histórico, e exige que as mudanças entrem por pull request com o CI verde. Não pede aprovação de revisão, porque sem outra pessoa no projeto você não conseguiria aprovar o seu próprio PR. Quem tem o papel de administrador (você) pode contornar a regra e subir direto, o que é o que a opção `bypass_mode: always` faz. É uma rede de segurança contra acidente, não uma trava contra você.
-
-**`tags.json`** impede apagar ou mover tags `v*`, para uma versão publicada nunca mudar de conteúdo por engano.
-
-Se preferir configurar à mão: *Settings → Branches → Add branch ruleset*, alvo `main`, e marque *Restrict deletions*, *Block force pushes*, *Require a pull request before merging* e *Require status checks to pass* (com `check` e `docker`). Em *Bypass list*, adicione o papel *Repository admin*.
-
-Uma consequência prática: com a regra de pull request ligada, quem não é administrador não consegue mais subir direto na `main`, e é isso que se quer. Se alguma ferramenta sua faz push direto e deixar de funcionar, é por causa disso.
+Um efeito prático: com isso ligado, nada entra direto na `main`. O fluxo vira branch, pull request, CI verde e merge. Quem tem papel de administrador pode contornar a regra, se você o colocar na lista de bypass.
