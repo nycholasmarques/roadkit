@@ -228,7 +228,7 @@ async function collage(browser, file, items, { columns, width, phone = false }) 
 const scenes = {
   async hero(b) {
     await scene(b, 'visao-geral', { url: '/?r=argocd-gitops' }, async h => {
-      await h.sleep(400);
+      await h.sleep(300);
       await h.click('.road-node[data-node="instalar"]');
       await h.sleep(500);
       await h.click('.statusbar [data-status="finished"]');
@@ -246,7 +246,7 @@ const scenes = {
     });
   },
   async hoje(b) {
-    await scene(b, 'hoje', { url: '/?r=estudar-sql' }, async h => {
+    await scene(b, 'hoje', { url: '/?r=estudar-sql', scheme: 'dark' }, async h => {
       await h.click('#todayBtn');
       await h.sleep(1300);
       await h.click('.td-rev [data-rev="ok"]');
@@ -256,7 +256,7 @@ const scenes = {
     });
   },
   async projetos(b) {
-    await scene(b, 'projetos', { url: '/?r=estudar-sql' }, async h => {
+    await scene(b, 'projetos', { url: '/?r=estudar-sql', prefs: { 'roadkit:v1:palette-light': 'paper', 'roadkit:v1:side': 'collapsed' } }, async h => {
       await h.click('#viewSeg [data-view="projects"]');
       await h.sleep(800);
       await h.click('.pj-card[data-project="consultas-biblioteca"]');
@@ -270,7 +270,7 @@ const scenes = {
     });
   },
   async notas(b) {
-    await scene(b, 'notas', { url: '/?r=argocd-gitops' }, async h => {
+    await scene(b, 'notas', { url: '/?r=argocd-gitops', scheme: 'dark', prefs: { 'roadkit:v1:palette-dark': 'plum', 'roadkit:v1:side': 'collapsed' } }, async h => {
       await h.click('.road-node[data-node="aplicacao"]');
       await h.sleep(500);
       await h.page.locator('#detailContent .note-text').scrollIntoViewIfNeeded();
@@ -286,8 +286,9 @@ const scenes = {
     });
   },
   async busca(b) {
-    await scene(b, 'busca', { url: '/?r=argocd-gitops' }, async h => {
-      await h.sleep(300);
+    await scene(b, 'busca', { url: '/?r=argocd-gitops', prefs: { 'roadkit:v1:palette-light': 'mist' } }, async h => {
+      await h.click('.road-node[data-node="instalar"]');
+      await h.sleep(500);
       await h.key('Control+k', 400);
       await h.page.keyboard.type('kstmz', { delay: 160 });
       await h.sleep(1200);
@@ -323,7 +324,7 @@ const scenes = {
     }, { fps: 8, width: 900, colors: 64 });
   },
   async ia(b) {
-    await scene(b, 'criar-com-ia', { url: '/?r=argocd-gitops' }, async h => {
+    await scene(b, 'criar-com-ia', { url: '/?r=argocd-gitops', scheme: 'dark', prefs: { 'roadkit:v1:palette-dark': 'graphite' } }, async h => {
       await h.click('.tools [data-act="new"]');
       await h.sleep(400);
       await h.click('#edAi');
@@ -348,7 +349,7 @@ const scenes = {
     await still(b, 'kanban', { url: '/?r=argocd-gitops', prefs: { 'roadkit:v1:view:argocd-gitops': 'kanban' }, sel: '.kcard' });
     await still(b, 'hoje', { url: '/?r=estudar-sql' }, async p => { await p.click('#todayBtn'); await p.waitForSelector('.td-rev'); await sleep(400); });
     await still(b, 'projetos', { url: '/?r=estudar-sql', prefs: { 'roadkit:v1:view:estudar-sql': 'projects' }, sel: '.pj-card' }, async p => { await p.click('.pj-card[data-project="consultas-biblioteca"]'); });
-    await still(b, 'notas', { url: '/?r=argocd-gitops' }, async p => {
+    await still(b, 'notas', { url: '/?r=argocd-gitops', prefs: { 'roadkit:v1:palette-light': 'paper' } }, async p => {
       await p.click('.road-node[data-node="instalar"]');
       await p.evaluate(() => { const n = document.querySelector('#detailContent .note'); document.getElementById('detail').scrollTop = n.offsetTop - 90; });
     });
@@ -359,18 +360,27 @@ const scenes = {
     }
   },
   async foco(b) {
-    await still(b, 'foco', { url: '/?r=argocd-gitops', prefs: { 'roadkit:v1:focus-run': JSON.stringify({ phase: 'focus', rm: 'argocd-gitops', rmTitle: 'GitOps com Argo CD', key: 'instalar', title: 'Instalar o Argo CD', mins: 25, start: Date.now() - 7 * 60e3 - 12e3, paused: 0, pausedMs: 0 }) } },
+    await still(b, 'foco', { url: '/?r=argocd-gitops', scheme: 'dark', prefs: { 'roadkit:v1:palette-dark': 'black', 'roadkit:v1:focus-run': JSON.stringify({ phase: 'focus', rm: 'argocd-gitops', rmTitle: 'GitOps com Argo CD', key: 'instalar', title: 'Instalar o Argo CD', mins: 25, start: Date.now() - 7 * 60e3 - 12e3, paused: 0, pausedMs: 0 }) } },
       async p => { await p.click('.road-node[data-node="instalar"]'); await p.waitForSelector('#focusClock'); await sleep(600); });
   },
   async temas(b) {
-    const palettes = [['light', 'light', 'Claro'], ['light', 'mist', 'Névoa'], ['light', 'paper', 'Papel'], ['dark', 'night', 'Noite'], ['dark', 'graphite', 'Grafite'], ['dark', 'plum', 'Ameixa'], ['dark', 'black', 'Breu']];
+    const node = async p => { await p.click('.road-node[data-node="instalar"]'); };
+    const screens = [
+      ['light', 'light', 'Claro · mapa', { url: '/?r=argocd-gitops' }, node],
+      ['light', 'mist', 'Névoa · Hoje', { url: '/?r=estudar-sql' }, async p => { await p.click('#todayBtn'); await p.waitForSelector('.td-rev'); }],
+      ['light', 'paper', 'Papel · projetos', { url: '/?r=estudar-sql', prefs: { 'roadkit:v1:view:estudar-sql': 'projects' }, sel: '.pj-card' }, async p => { await p.click('.pj-card[data-project="consultas-biblioteca"]'); }],
+      ['dark', 'night', 'Noite · estatísticas', { url: '/?r=estudar-sql' }, async p => { await p.click('aside [data-act="stats"]'); await p.waitForSelector('.st-cards'); }],
+      ['dark', 'graphite', 'Grafite · kanban', { url: '/?r=argocd-gitops', prefs: { 'roadkit:v1:view:argocd-gitops': 'kanban' }, sel: '.kcard' }, async () => {}],
+      ['dark', 'plum', 'Ameixa · notas', { url: '/?r=argocd-gitops', prefs: { 'roadkit:v1:side': 'collapsed' } }, async p => {
+        await node(p); await p.evaluate(() => { const n = document.querySelector('#detailContent .note'); document.getElementById('detail').scrollTop = n.offsetTop - 90; }); }],
+      ['dark', 'black', 'Breu · mapa e foco', { url: '/?r=argocd-gitops', prefs: { 'roadkit:v1:focus-run': JSON.stringify({ phase: 'focus', rm: 'argocd-gitops', rmTitle: 'GitOps com Argo CD', key: 'instalar', title: 'Instalar o Argo CD', mins: 25, start: Date.now() - 9 * 60e3, paused: 0, pausedMs: 0 }) } }, node],
+    ];
     const items = [];
-    for (const [scheme, pal, label] of palettes) {
-      const img = await still(b, null, { url: '/?r=argocd-gitops', scheme, prefs: { [`roadkit:v1:palette-${scheme}`]: pal } },
-        async p => { await p.click('.road-node[data-node="instalar"]'); }, { clip: { x: 0, y: 0, width: 1150, height: 660 } });
+    for (const [scheme, pal, label, opts, setup] of screens) {
+      const img = await still(b, null, { ...opts, scheme, prefs: { ...(opts.prefs || {}), [`roadkit:v1:palette-${scheme}`]: pal } }, setup);
       items.push({ img, label, dark: scheme === 'dark' });
     }
-    await collage(b, 'temas', items, { columns: 4, width: 1800 });
+    await collage(b, 'temas', items, { columns: 3, width: 2000 });
   },
   async celular(b) {
     const items = [];
