@@ -41,6 +41,8 @@
     // the hero screenshot follows the page, not only the system
     const src = dark() ? 'media/mapa-escuro.png' : 'media/mapa-claro.png';
     if (!$('heroImg').src.endsWith(src)) $('heroImg').src = src;
+    const st = dark() ? 'media/estatisticas-escuro.png' : 'media/estatisticas.png';
+    if ($('statsImg') && !$('statsImg').src.endsWith(st)) { $('statsImg').src = st; $('statsImg').parentElement.href = st; }
     document.querySelector('.hero-shot source')?.remove();
   };
   $('themeBtn').addEventListener('click', () => {

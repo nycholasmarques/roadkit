@@ -46,7 +46,7 @@
   "toggleDone": "Toggle completion",
   "statusDone": "done",
   "statusPending": "pending",
-  "close": "Close details",
+  "close": "Close the details panel",
   "sync_on": "Progress saved on the server",
   "sync_syncing": "Syncing with the server...",
   "sync_offline": "Server unavailable: saved in this browser only, will sync when it is back",
@@ -405,6 +405,10 @@
   "statOver": "over the estimate",
   "statsEmpty": "Statistics show up as you check off topics. The activity record started in version 1.7.",
   "paletteWords_stats": "statistics stats chart pace forecast streak heatmap history",
-  "demoBanner": "Demo: your progress stays in this browser only.",
-  "demoInstall": "Install Roadkit to keep it for real →"
+  "demoBanner": "Your progress stays in this browser only. Creating and editing roadmaps, statistics and syncing across devices need Roadkit installed.",
+  "demoInstall": "How to install →",
+  "demoTitle": "Demo",
+  "demoHide": "Hide for 30 days",
+  "demoHidden": "Notice hidden for 30 days.",
+  "statsNoServer": "Statistics come from the activity record, which lives on Roadkit's server. In the demo, or with the app open without a server, they do not show up."
 }
