@@ -75,6 +75,10 @@ Each topic moves through to do, working, review and finished, on the **map** or 
 
 The **Today** screen gathers every roadmap: what is in progress, the most recently touched first, and the next topic of each roadmap you are using. It can be the first thing Roadkit opens.
 
+### See your pace
+
+**Statistics** shows a heatmap of your last 12 months, your day streak and, for each roadmap, the weekly pace and when it should end at that pace.
+
 ### Build projects
 
 A roadmap can come with hands-on projects from beginner to advanced, each linked to the topics it practices. The **Projects** view shows which ones are within reach, and each project has requirements to check off and a place for the link to your repository.

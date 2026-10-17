@@ -113,6 +113,12 @@ jobs:
           curl -sf "http://127.0.0.1:8765/api/activity?days=7" | python3 -c "import json,sys; a=json.load(sys.stdin); r=a['roadmaps']['ci-act']; assert r['last'] > 1700000100000 and sum(d['moves'] for d in a['days'].values()) >= 1, a"
           curl -sf http://127.0.0.1:8765/api/states | python3 -c "import json,sys; s=json.load(sys.stdin); assert s['ci-smoke']['projects']=={'p1': {'status': 'working'}} and 'tasks' in s['ci-act'], s"
 
+          # changes made offline land on the day they happened (events), unless the time is before the last sync
+          curl -sf -X PUT -H "$H" -d '{"updatedAt": 1699617600000, "tz": 0, "state": {"nodes": {}, "tasks": {}}}' http://127.0.0.1:8765/api/state/ci-ev >/dev/null
+          curl -sf -X PUT -H "$H" -d '{"updatedAt": 1699790400000, "tz": 0, "state": {"nodes": {"a": "finished", "b": "working", "c": "working"}, "tasks": {}}, "events": [{"id": "a", "t": 1699704000000}, {"id": "c", "t": 1699531200000}, {"id": "x", "t": "soon"}]}' http://127.0.0.1:8765/api/state/ci-ev >/dev/null
+          curl -sf http://127.0.0.1:8765/api/activity/ci-ev | python3 -c "import json,sys; a=json.load(sys.stdin); assert a['days']=={'2023-11-11': {'moves': 1, 'done': 1}, '2023-11-12': {'moves': 2}}, a; assert a['topics']['a']['finished']=='2023-11-11' and a['topics']['c']['started']=='2023-11-12', a"
+          curl -sf "http://127.0.0.1:8765/api/activity?days=7" | python3 -c "import json,sys; r=json.load(sys.stdin)['roadmaps']['ci-ev']; assert r['first']=='2023-11-11' and r['total']=={'moves': 3, 'done': 1} and r['days']=={}, r"
+
           # focus sessions add up on the topic and on the day; odd payloads are refused
           now="$(date +%s)000"
           curl -sf -X POST -H "$H" -d "{\"id\": \"first\", \"min\": 25, \"t\": $now}" http://127.0.0.1:8765/api/activity/ci-act/focus | python3 -c "import json,sys; r=json.load(sys.stdin); assert r=={'id': 'first', 'focus': 25, 'sessions': 1}, r"

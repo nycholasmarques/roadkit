@@ -73,6 +73,10 @@ Cada tópico passa por a fazer, em andamento, em revisão e concluído, no **map
 
 A tela **Hoje** junta todos os roadmaps: o que está em andamento, do que você mexeu por último para o mais antigo, e o próximo tópico de cada roadmap que você está usando. Ela pode ser a primeira coisa que o Roadkit abre.
 
+### Ver o seu ritmo
+
+**Estatísticas** mostra um mapa de calor dos últimos 12 meses, os dias seguidos e, para cada roadmap, o ritmo por semana e quando ele deve terminar nesse ritmo.
+
 ### Fazer projetos
 
 Um roadmap pode trazer projetos práticos do iniciante ao avançado, cada um ligado aos tópicos que pratica. A tela **Projetos** mostra quais já estão ao seu alcance, e cada projeto tem requisitos para marcar e um lugar para o link do seu repositório.

@@ -28,6 +28,16 @@ Desligada por padrão. Com **Ajustes → Revisão espaçada** ligada, cada tópi
 
 O que já estava concluído quando você liga a revisão não entra na fila: só o que você concluir dali em diante. Opcionais e subtópicos ficam de fora. A caixa **Revisar este roadmap**, nos ajustes, tira um roadmap da revisão (útil para os de projeto, que não são de estudo). O painel do tópico mostra quando é a próxima revisão. A fila fica no servidor, então vale em todos os aparelhos.
 
+## Estatísticas
+
+**Estatísticas**, nas ferramentas da barra lateral (ou pela busca, ou pelo pequeno gráfico ao lado da barra de progresso, que abre já no roadmap aberto), mostra o que você fez com o tempo:
+
+- **Números**: dias seguidos com atividade (com a melhor sequência do ano), tópicos concluídos nos últimos 30 dias e no total, e o tempo de foco dos últimos 30 dias, se você usa as sessões de foco.
+- **Mapa de calor** dos últimos 12 meses, de todos os roadmaps juntos: cada quadrado é um dia, mais escuro quanto mais você fez (mudanças de estado e foco). Passar o mouse ou tocar mostra os números do dia. No celular ele rola de lado e começa em hoje.
+- **Por roadmap**: o andamento, os tópicos concluídos por semana nas últimas 12 semanas e a **previsão**: "No ritmo das últimas 4 semanas, termina por volta de 18 de nov.". A previsão só aparece depois de duas semanas de atividade. Embaixo, os últimos tópicos concluídos com quanto tempo levaram, comparado com o `time` do tópico quando ele é uma duração ("2 semanas", "3 dias").
+
+O tom é de registro, não de cobrança: perder uma sequência não tem aviso nenhum. As estatísticas começam a contar a partir da versão 1.7, quando o registro de atividade começou.
+
 ## Sessões de foco
 
 Desligadas por padrão. Com **Ajustes → Sessões de foco** ligadas, o painel de cada tópico e de cada projeto ganha um botão **Focar**. Ele abre um timer no canto da tela: escolha 25 ou 50 minutos, ou livre (um cronômetro), e comece. Se o tópico ainda estava "a fazer", o timer oferece movê-lo para "em andamento".

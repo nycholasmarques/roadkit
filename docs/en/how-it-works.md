@@ -85,6 +85,8 @@ The file has two parts:
 
 Its size depends on the number of topics and on two years of days, never on how many clicks you make: it stays under 60 KB per roadmap even after years of use, and nothing stays in memory between requests. The first upload of progress that only existed in the browser does not count as that day's activity, and "Reset checkmarks" counts as a single change.
 
+Changes made offline arrive together, when the browser reaches the server again. So each one lands on the day it happened, the browser keeps the time of every topic that changed and sends the list with the progress (`events`). The server uses those times when they are plausible: not in the future, and not before the progress it already had.
+
 Focus sessions go into that file too: the browser sends each finished session to `POST /api/activity/<id>/focus`, and the server adds the minutes to the day (`focus`) and to the topic (`focus` and `sessions`).
 
 ## Where spaced review is stored
@@ -103,7 +105,7 @@ Everything the interface asks of the server is below. It can be useful for scrip
 | `GET /api/state/<id>` | a roadmap's saved progress (`204` if there is none) |
 | `PUT /api/state/<id>` | saves progress, or returns `409` with what the server has if that is newer. Parts of the progress the client does not send stay as they were, so an older version that only knows topics and tasks does not erase the projects |
 | `GET /api/states` | a summary of all of them (topic, task and project states), for the progress badges and the Today screen |
-| `GET /api/activity?days=30` | the activity of every roadmap: totals per day in the period and, per roadmap, when each topic was touched |
+| `GET /api/activity?days=30` | the activity of every roadmap: totals per day in the period and, per roadmap, its days in the period, all-time totals, first day and when each topic started, finished and was touched (what the Today screen and the statistics read) |
 | `GET /api/activity/<id>` | a roadmap's activity file (`204` if there is none) |
 | `POST /api/activity/<id>/focus` | records a focus session: `{"id": "<topic or project:<id>>", "min": 1 to 600, "t": <ms>, "tz": <minutes>}` |
 | `GET /api/review` | the spaced review queue (`204` if there is none) |

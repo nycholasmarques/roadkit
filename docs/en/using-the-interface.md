@@ -28,6 +28,16 @@ Off by default. With **Settings → Spaced review** on, every main topic you fin
 
 What was already finished when you turn review on stays out of the queue: only what you finish from then on goes in. Optional topics and sub-topics are left out. The **Review this roadmap** box, in the settings, takes a roadmap out of review (handy for project roadmaps that are not about studying). The topic panel shows when the next review is. The queue lives on the server, so it works on every device.
 
+## Statistics
+
+**Statistics**, in the sidebar tools (or through the search, or the small chart next to the progress bar, which opens it on the open roadmap), shows what you did over time:
+
+- **Numbers**: your day streak (with the best one of the year), topics finished in the last 30 days and in total, and focus time in the last 30 days, if you use focus sessions.
+- **Heatmap** of the last 12 months, all roadmaps together: each square is a day, darker the more you did (state changes and focus). Hovering or tapping shows the day's numbers. On a phone it scrolls sideways and starts on today.
+- **By roadmap**: progress, topics finished per week over the last 12 weeks and the **forecast**: "At the pace of the last 4 weeks, it ends around Nov 18". The forecast only shows up after two weeks of activity. Below it, the topics finished last and how long they took, compared with the topic's `time` when it is a duration ("2 weeks", "3 days").
+
+The tone is a record, not a scorecard: losing a streak shows no warning at all. Statistics count from version 1.7, when the activity record started.
+
 ## Focus sessions
 
 Off by default. With **Settings → Focus sessions** on, the panel of every topic and project gets a **Focus** button. It opens a timer in the corner of the screen: pick 25 or 50 minutes, or open-ended (a stopwatch), and start. If the topic was still "to do", the timer offers to move it to "in progress".

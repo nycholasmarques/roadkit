@@ -85,6 +85,8 @@ O arquivo tem duas partes:
 
 O tamanho depende do número de tópicos e de dois anos de dias, nunca de quantos cliques você dá: fica abaixo de 60 KB por roadmap mesmo com anos de uso, e nada fica na memória entre uma requisição e outra. O primeiro envio de um progresso que só existia no navegador não conta como atividade do dia, e "Reiniciar marcações" conta como uma mudança só.
 
+Mudanças feitas offline chegam todas juntas, na hora em que o navegador volta a falar com o servidor. Para cada uma cair no dia em que aconteceu, o navegador guarda a hora de cada tópico que mudou e manda a lista junto com o progresso (`events`). O servidor usa essas horas quando são plausíveis: nem no futuro, nem antes do progresso que ele já tinha.
+
 As sessões de foco também vão para esse arquivo: o navegador manda cada sessão terminada para `POST /api/activity/<id>/focus`, e o servidor soma os minutos no dia (`focus`) e no tópico (`focus` e `sessions`).
 
 ## Onde a revisão espaçada é guardada
@@ -103,7 +105,7 @@ Tudo o que a interface pede ao servidor está abaixo. Pode ser útil para script
 | `GET /api/state/<id>` | o progresso salvo de um roadmap (`204` se não houver) |
 | `PUT /api/state/<id>` | grava o progresso, ou devolve `409` com o que o servidor tem se for mais novo. As partes do progresso que o cliente não mandar ficam como estavam, então uma versão antiga, que só conhece tópicos e tarefas, não apaga os projetos |
 | `GET /api/states` | o resumo de todos (estados de tópicos, tarefas e projetos), para os selos de andamento e a tela Hoje |
-| `GET /api/activity?days=30` | a atividade de todos os roadmaps: totais por dia no período e, por roadmap, quando cada tópico foi mexido |
+| `GET /api/activity?days=30` | a atividade de todos os roadmaps: totais por dia no período e, por roadmap, os dias do período, os totais de sempre, o primeiro dia e quando cada tópico começou, terminou e foi mexido (é o que a tela Hoje e as estatísticas leem) |
 | `GET /api/activity/<id>` | o arquivo de atividade de um roadmap (`204` se não houver) |
 | `POST /api/activity/<id>/focus` | registra uma sessão de foco: `{"id": "<tópico ou project:<id>>", "min": 1 a 600, "t": <ms>, "tz": <minutos>}` |
 | `GET /api/review` | a fila de revisão espaçada (`204` se não houver) |
