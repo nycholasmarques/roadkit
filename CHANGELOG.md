@@ -4,7 +4,7 @@ Todas as mudanças relevantes ficam aqui, da mais nova para a mais antiga. O for
 
 Cada release no GitHub também lista automaticamente os commits desde a versão anterior; este arquivo é onde ficam os destaques escritos à mão. Para publicar uma versão, veja [`docs/publicando-versoes.md`](docs/publicando-versoes.md).
 
-## [1.6.0] - não lançada
+## [1.6.0] - 2026-10-17
 
 ### App instalável e offline
 - O Roadkit virou um app instalável (PWA): ícone próprio, janela sem a barra do navegador e **Ajustes → Instalar como app**.
