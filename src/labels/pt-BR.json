@@ -192,6 +192,7 @@
   "requirements": "Requisitos",
   "deliverable": "Entregável",
   "stretch": "Para ir além",
+  "stretchHint": "Desafios extras para quem quer ir mais longe. Marque os que você encarar; eles não contam para concluir o projeto.",
   "yourRepo": "Seu repositório",
   "yourRepoPh": "https://github.com/voce/projeto",
   "repoOpen": "Abrir o repositório",

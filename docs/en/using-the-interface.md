@@ -39,7 +39,8 @@ Clicking a project opens its panel, which works like a topic's:
 - the four states (to do, working, review, finished);
 - the topics it uses, each with its state, and a quiet warning if any is missing. It blocks nothing;
 - the **requirements**, as checkboxes. Checking the first one moves the project to "working". Marking the project as done checks them all, and moving it back to "to do" clears them all, just like a topic's tasks;
-- the deliverable, the success criterion and the ideas to go further;
+- the deliverable and the success criterion;
+- **Going further** 🔥: extra challenges you can check off too. They come in fire colors, and each one you take on lights up its flame. They do not count toward finishing the project, and the card shows how many you have done (🔥 1/2);
 - **Your repository**: paste the link to your code so you remember where it is. It is saved with your progress and becomes a button to open it.
 
 In a topic's panel, the **Projects that use this topic** section leads to the projects linked to it. Projects do not count toward the progress bar at the top: it still measures main topics, and the Projects view has its own count.

@@ -538,16 +538,17 @@ def cmd_check(args):
 
 
 def valid_project_state(v):
-    """{"status": one of STATUSES, "repo": "https://...", "req": {requirement id: bool}}, every field optional."""
-    if not isinstance(v, dict) or set(v) - {"status", "repo", "req"}:
+    """{"status": one of STATUSES, "repo": "https://...", "req": {requirement id: bool}, "stretch": {challenge id: bool}},
+    every field optional."""
+    if not isinstance(v, dict) or set(v) - {"status", "repo", "req", "stretch"}:
         return False
     if "status" in v and v["status"] not in STATUSES:
         return False
     repo = v.get("repo", "")
     if not isinstance(repo, str) or len(repo) > MAX_REPO_URL or (repo and not re.match(r"^https?://", repo)):
         return False
-    req = v.get("req", {})
-    return isinstance(req, dict) and all(isinstance(k, str) and isinstance(b, bool) for k, b in req.items())
+    flags = [v.get("req", {}), v.get("stretch", {})]
+    return all(isinstance(m, dict) and all(isinstance(k, str) and isinstance(b, bool) for k, b in m.items()) for m in flags)
 
 
 def valid_state(obj):

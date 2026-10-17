@@ -199,9 +199,16 @@ function normProjects(v, byId, warn) {
       requirements.push({ id: rid, title: t });
     });
     if (p.level && !LEVELS.includes(p.level)) warn.push(`project "${id}": unknown level "${p.level}", using beginner`);
+    const stretchIds = new Set(), stretch = [];
+    arr(p.stretch).map(str).filter(Boolean).forEach((t, j) => {   // extra challenges: plain strings in the JSON, keyed by their slug
+      let sid = slug(t) || `s${j + 1}`;
+      if (stretchIds.has(sid)) sid = `${sid}-${j + 1}`;
+      stretchIds.add(sid);
+      stretch.push({ id: sid, title: t });
+    });
     const proj = {
       id, title, level: LEVELS.includes(p.level) ? p.level : 'beginner', summary: str(p.summary), uses, requirements,
-      deliverable: str(p.deliverable), success: str(p.success), stretch: arr(p.stretch).map(str).filter(Boolean), time: str(p.time), links: normLinks(p.links),
+      deliverable: str(p.deliverable), success: str(p.success), stretch, time: str(p.time), links: normLinks(p.links),
     };
     proj.hay = [title, proj.summary, ...requirements.map(r => r.title), ...uses.map(n => n.title)].join(' ').toLocaleLowerCase();
     out.push(proj);
@@ -304,11 +311,13 @@ const okRepo = u => typeof u === 'string' && u.length <= MAX_REPO_URL && /^https
 /* A project's saved progress, keeping only valid fields and requirements that still exist. */
 function cleanProject(p, v) {
   if (!v || typeof v !== 'object') return null;
-  const o = {}, req = {};
+  const o = {}, req = {}, stretch = {};
   if (STATUSES.includes(v.status) && v.status !== 'todo') o.status = v.status;
   if (okRepo(v.repo)) o.repo = v.repo;
   for (const r of p.requirements) if (v.req?.[r.id] === true) req[r.id] = true;
+  for (const s of p.stretch) if (v.stretch?.[s.id] === true) stretch[s.id] = true;
   if (Object.keys(req).length) o.req = req;
+  if (Object.keys(stretch).length) o.stretch = stretch;
   return Object.keys(o).length ? o : null;
 }
 
@@ -327,23 +336,26 @@ const projStatus = p => projState(p).status || 'todo';
 const projDone = p => projStatus(p) === 'finished';
 const reqDone = (p, r) => !!projState(p).req?.[r.id];
 const reqCount = p => p.requirements.filter(r => reqDone(p, r)).length;
+const stretchDone = (p, s) => !!projState(p).stretch?.[s.id];
+const stretchCount = p => p.stretch.filter(s => stretchDone(p, s)).length;
 const missingFor = p => p.uses.filter(n => !isDone(n));
 const projReady = p => p.uses.length > 0 && !missingFor(p).length;
 
 function editProject(p, fn) {
-  const o = { ...projState(p), req: { ...projState(p).req } };
+  const o = { ...projState(p), req: { ...projState(p).req }, stretch: { ...projState(p).stretch } };
   fn(o);
   const v = cleanProject(p, o);
   if (v) S.state.projects[p.id] = v; else delete S.state.projects[p.id];
   changed();
 }
 
-/* Like a topic and its tasks: finishing a project checks every requirement, moving it back to todo clears them. */
+/* Like a topic and its tasks: finishing a project checks every requirement, moving it back to todo clears them
+   (and the extra challenges, which finishing leaves alone: they are earned one by one). */
 function setProjectStatus(p, st) {
   editProject(p, o => {
     o.status = st;
     if (st === 'finished') p.requirements.forEach(r => { o.req[r.id] = true; });
-    if (st === 'todo') o.req = {};
+    if (st === 'todo') { o.req = {}; o.stretch = {}; }
   });
 }
 
@@ -1566,7 +1578,8 @@ const pips = lv => `<span class="pips lv-${lv}" aria-hidden="true">${LEVELS.map(
 function projectCard(p) {
   const L = S.L, st = projStatus(p), tot = p.requirements.length, fin = reqCount(p), ready = projReady(p) && st === 'todo';
   return `<button type="button" class="pj-card lv-${p.level} s-${st}${S.project === p.id ? ' selected' : ''}" data-project="${esc(p.id)}">` +
-    `<span class="pj-top"><span class="pj-status s-${st}">${esc(L[STATUS_LABEL[st]])}</span>${ready ? `<span class="pj-ready">${esc(L.projectReady)}</span>` : ''}</span>` +
+    `<span class="pj-top"><span class="pj-status s-${st}">${esc(L[STATUS_LABEL[st]])}</span>${ready ? `<span class="pj-ready">${esc(L.projectReady)}</span>` : ''}` +
+    (p.stretch.length ? `<span class="pj-fire${stretchCount(p) ? ' lit' : ''}" title="${esc(L.stretch)}">🔥 ${stretchCount(p)}/${p.stretch.length}</span>` : '') + `</span>` +
     `<span class="pj-title">${esc(p.title)}</span>` +
     (p.summary ? `<span class="pj-sum">${esc(p.summary)}</span>` : '') +
     (p.uses.length ? `<span class="pj-uses">${p.uses.map(n => `<span class="pj-use${isDone(n) ? ' ok' : ''}">${esc(n.title)}</span>`).join('')}</span>` : '') +
@@ -1660,7 +1673,8 @@ const linkList = links => (links.length ? `<h3>${esc(S.L.resources)}</h3>${links
 
 function renderProjectDetail(p) {
   const L = S.L, box = $('detailContent'), st = projStatus(p), done = st === 'finished', miss = missingFor(p), repo = projState(p).repo || '';
-  const focused = document.activeElement?.closest?.('#detailContent [data-req]')?.dataset.req;
+  const focused = document.activeElement?.closest?.('#detailContent [data-req], #detailContent [data-stretch]');
+  const refocus = focused && (focused.dataset.req ? `[data-req="${CSS.escape(focused.dataset.req)}"]` : `[data-stretch="${CSS.escape(focused.dataset.stretch)}"]`);
   box.className = '';
   box.innerHTML =
     `<div class="panel-kicker">${pips(p.level)} ${esc([L[`level_${p.level}`], p.time].filter(Boolean).join(' | '))}</div><h2>${esc(p.title)}</h2>` +
@@ -1676,13 +1690,16 @@ function renderProjectDetail(p) {
       : '') +
     (p.deliverable ? `<h3>${esc(L.deliverable)}</h3><div class="mission">${esc(p.deliverable)}</div>` : '') +
     (p.success ? `<h3>${esc(L.success)}</h3><p>${esc(p.success)}</p>` : '') +
-    (p.stretch.length ? `<h3>${esc(L.stretch)}</h3><ul class="stretch">${p.stretch.map(x => `<li>${esc(x)}</li>`).join('')}</ul>` : '') +
+    (p.stretch.length
+      ? `<h3 class="stretch-h"><span aria-hidden="true">🔥</span> ${esc(L.stretch)} <span class="h3-count">${stretchCount(p)}/${p.stretch.length}</span></h3><p class="stretch-hint">${esc(L.stretchHint)}</p>` +
+        `<div class="stretchlist">${p.stretch.map(s => `<label class="stretch-item"><input type="checkbox" data-stretch="${esc(s.id)}"${stretchDone(p, s) ? ' checked' : ''}><span>${esc(s.title)}</span><b class="flame" aria-hidden="true">🔥</b></label>`).join('')}</div>`
+      : '') +
     `<h3><label for="projRepo">${esc(L.yourRepo)}</label></h3><div class="repo-row"><input type="url" id="projRepo" inputmode="url" autocomplete="off" spellcheck="false" maxlength="${MAX_REPO_URL}" value="${esc(repo)}" placeholder="${esc(L.yourRepoPh)}">` +
     (repo ? `<a class="repo-open" href="${esc(safeUrl(repo))}" target="_blank" rel="noopener noreferrer" title="${esc(L.repoOpen)}" aria-label="${esc(L.repoOpen)}">↗</a>` : '') + `</div>` +
     `<p class="repo-err" id="projRepoErr" role="alert" hidden>${esc(L.repoInvalid)}</p>` +
     linkList(p.links) +
     `<button class="complete-action ${done ? 'done' : ''}" data-pdone>${esc(done ? L.markUndone : L.markDone)}</button>`;
-  if (focused) box.querySelector(`[data-req="${CSS.escape(focused)}"]`)?.focus();
+  if (refocus) box.querySelector(refocus)?.focus();
 }
 
 /* ---------- interactions ---------- */
@@ -1960,6 +1977,9 @@ function wireDnd() {
     if (e.target.matches('[data-req]')) {
       const id = e.target.dataset.req, on = e.target.checked;
       editProject(proj, o => { if (on) o.req[id] = true; else delete o.req[id]; if (on && projStatus(proj) === 'todo') o.status = 'working'; });
+    } else if (e.target.matches('[data-stretch]')) {
+      const id = e.target.dataset.stretch, on = e.target.checked;
+      editProject(proj, o => { if (on) o.stretch[id] = true; else delete o.stretch[id]; });
     } else if (e.target.id === 'projRepo') {
       const v = e.target.value.trim();
       if (v && !okRepo(v)) { $('projRepoErr').hidden = false; return; }

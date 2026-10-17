@@ -172,11 +172,11 @@ Hands-on projects that span several topics, at three levels. With `projects`, a 
 | `requirements` | what the project must do, as a checklist; `id` unique within the project |
 | `deliverable` | what to hand in (yellow box in the panel) |
 | `success` | how to know it is done |
-| `stretch` | ideas to go further; they count toward nothing |
+| `stretch` | extra challenges (a list of strings) the user can check off; they do not count toward finishing the project |
 | `time` | free text ("1 to 2 weeks") |
 | `links` | `[{ "title": "…", "url": "https://…" }]` |
 
 - Projects do not count toward the roadmap's progress bar, which still measures main topics. The Projects view has its own count.
-- Each project's progress (state, checked requirements and the link to your repository) is stored with the rest of the progress, under `state.projects`.
+- Each project's progress (state, checked requirements and extra challenges, and the link to your repository) is stored with the rest of the progress, under `state.projects`. Extra challenges are keyed by their text, so rewording one unchecks it.
 - `check` reports `uses` pointing to a missing id, an invalid `level` and duplicate ids, and warns when a project has neither `uses` nor `requirements`, or when there are more than 20 projects (or more than 8 in one level).
 - The view's labels (`viewProjects`, `level_beginner`, `requirements`, `deliverable`, `stretch`...) can be overridden through `labels`, like any other.

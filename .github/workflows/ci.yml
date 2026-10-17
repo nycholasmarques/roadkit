@@ -95,9 +95,9 @@ jobs:
           curl -sf http://127.0.0.1:8765/api/state/ci-smoke | grep -q finished
 
           # project progress is stored, and a client that only knows nodes and tasks does not erase it
-          curl -sf -X PUT -H "$H" -d '{"updatedAt": 2, "state": {"nodes": {"first": "finished"}, "tasks": {}, "projects": {"p1": {"status": "working", "repo": "https://example.com/r", "req": {"a": true}}}}}' http://127.0.0.1:8765/api/state/ci-smoke
+          curl -sf -X PUT -H "$H" -d '{"updatedAt": 2, "state": {"nodes": {"first": "finished"}, "tasks": {}, "projects": {"p1": {"status": "working", "repo": "https://example.com/r", "req": {"a": true}, "stretch": {"s": true}}}}}' http://127.0.0.1:8765/api/state/ci-smoke
           curl -sf -X PUT -H "$H" -d '{"updatedAt": 3, "state": {"nodes": {}, "tasks": {}}}' http://127.0.0.1:8765/api/state/ci-smoke
-          curl -sf http://127.0.0.1:8765/api/state/ci-smoke | python3 -c "import json,sys; s=json.load(sys.stdin)['state']; assert s['projects']['p1']['status']=='working' and s['nodes']=={}, s"
+          curl -sf http://127.0.0.1:8765/api/state/ci-smoke | python3 -c "import json,sys; s=json.load(sys.stdin)['state']; assert s['projects']['p1']['status']=='working' and s['projects']['p1']['stretch']=={'s': True} and s['nodes']=={}, s"
           test "$(curl -s -o /dev/null -w '%{http_code}' -X PUT -H "$H" -d '{"updatedAt": 4, "state": {"projects": {"p1": {"repo": "javascript:alert(1)"}}}}' http://127.0.0.1:8765/api/state/ci-smoke)" = 400
           curl -sf -X DELETE "http://127.0.0.1:8765/api/roadmaps/ci-smoke?progress=1"
           test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8765/api/state/ci-smoke)" = 204

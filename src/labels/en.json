@@ -192,6 +192,7 @@
   "requirements": "Requirements",
   "deliverable": "Deliverable",
   "stretch": "Going further",
+  "stretchHint": "Extra challenges for when you want to push further. Check the ones you take on; they do not count toward finishing the project.",
   "yourRepo": "Your repository",
   "yourRepoPh": "https://github.com/you/project",
   "repoOpen": "Open the repository",

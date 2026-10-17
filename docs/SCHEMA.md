@@ -172,11 +172,11 @@ Projetos práticos que atravessam vários tópicos, em três níveis. Com `proje
 | `requirements` | o que o projeto precisa fazer, como checklist; `id` único dentro do projeto |
 | `deliverable` | o que entregar (caixa amarela no painel) |
 | `success` | como saber que acabou |
-| `stretch` | ideias para ir além; não contam para nada |
+| `stretch` | desafios extras (lista de textos), que a pessoa pode marcar; não contam para concluir o projeto |
 | `time` | texto livre ("1 a 2 semanas") |
 | `links` | `[{ "title": "…", "url": "https://…" }]` |
 
 - Os projetos não entram na barra de progresso do roadmap, que continua medindo os tópicos principais. A tela Projetos tem a própria contagem.
-- O andamento de cada projeto (estado, requisitos marcados e o link do seu repositório) é guardado junto com o progresso, em `state.projects`.
+- O andamento de cada projeto (estado, requisitos e desafios extras marcados, e o link do seu repositório) é guardado junto com o progresso, em `state.projects`. Os desafios extras são identificados pelo texto, então reescrever um deles desmarca.
 - O `check` aponta `uses` com id que não existe, `level` inválido e ids repetidos, e avisa quando um projeto não tem `uses` nem `requirements`, ou quando há mais de 20 projetos (ou mais de 8 num nível).
 - Os rótulos da tela (`viewProjects`, `level_beginner`, `requirements`, `deliverable`, `stretch`...) podem ser trocados por `labels`, como os outros.

@@ -39,7 +39,8 @@ Clicar num projeto abre o painel dele, com o mesmo jeito do painel de um tópico
 - os quatro estados (a fazer, em andamento, em revisão, concluído);
 - os tópicos que ele usa, cada um com o seu estado, e um aviso discreto se ainda faltar algum. Não bloqueia nada;
 - os **requisitos**, como caixas de marcar. Marcar o primeiro passa o projeto para "em andamento". Marcar o projeto como concluído marca todos, e voltar para "a fazer" desmarca todos, como acontece com as tarefas de um tópico;
-- o entregável, o critério de sucesso e as ideias para ir além;
+- o entregável e o critério de sucesso;
+- **Para ir além** 🔥: desafios extras, que também dá para marcar. Eles ficam em tons de fogo, e cada um que você encara acende a chama. Não contam para concluir o projeto, e o cartão mostra quantos você já fez (🔥 1/2);
 - **Seu repositório**: cole o link do seu código para lembrar onde está. Ele fica salvo com o progresso e vira um botão para abrir.
 
 No painel de um tópico, a seção **Projetos que usam este tópico** leva aos projetos ligados a ele. Os projetos não entram na barra de progresso do topo: ela continua medindo os tópicos principais, e a tela de projetos tem a própria contagem.
