@@ -3,7 +3,7 @@
 What you learn does not fit in a "done". Notes keep the command that worked and the decision you made, and export takes everything out: to another machine, to a README or to a page anyone can open.
 
 <p align="center">
-  <img src="../media/notas.gif" alt="Writing a Markdown note, viewing it formatted, ticking a box and opening the roadmap notes" width="100%">
+  <img src="../media/en/notas.gif" alt="Writing a Markdown note, viewing it formatted, ticking a box and opening the roadmap notes" width="100%">
 </p>
 
 ## Notes

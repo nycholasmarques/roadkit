@@ -7,7 +7,7 @@ There are three ways to get a roadmap, and they all end in the same place: a JSO
 Click **New roadmap** (in the sidebar tools or at the bottom of the picker). The screen splits in two: the form on the left, and on the right the real roadmap, drawing itself as you type.
 
 <p align="center">
-  <img src="../media/criar-roadmap.gif" alt="Writing a roadmap in the editor, with the preview building up next to it" width="100%">
+  <img src="../media/en/criar-roadmap.gif" alt="Writing a roadmap in the editor, with the preview building up next to it" width="100%">
 </p>
 
 The form covers what most roadmaps need: name, language, icon, subtitle, colors, logo, phases and topics. Each topic has a time estimate and, under "Details", a summary, what to study, tasks, a hands-on challenge, the success criterion and links.

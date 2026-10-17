@@ -3,7 +3,7 @@
 A roadmap says what to study; a project is where you use it. Projects cut across several topics, come in three levels (beginner, intermediate and advanced) and have their own progress: requirements, extra challenges and the link to your repository.
 
 <p align="center">
-  <img src="../media/projetos.gif" alt="Opening the Projects view, checking requirements and an extra challenge, and finishing the project" width="100%">
+  <img src="../media/en/projetos.gif" alt="Opening the Projects view, checking requirements and an extra challenge, and finishing the project" width="100%">
 </p>
 
 ## In the interface
@@ -24,7 +24,7 @@ Clicking a project opens its panel, which works like a topic's:
 In a topic's panel, the **Projects that use this topic** section leads to the projects linked to it. Projects do not count toward the progress bar at the top: it still measures main topics, and the Projects view has its own count.
 
 <p align="center">
-  <img src="../media/projetos.png" alt="The Projects view with one column per level and a project panel open" width="88%">
+  <img src="../media/en/projetos.png" alt="The Projects view with one column per level and a project panel open" width="88%">
 </p>
 
 ## Writing projects in the JSON

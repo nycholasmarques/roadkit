@@ -43,9 +43,10 @@ def build(out, ver):
     (out / "icons").mkdir()
     for f in ICONS:
         shutil.copy2(ROOT / "src" / "icons" / f, out / "icons" / f)
-    (out / "media").mkdir()
-    for f in MEDIA:
+    (out / "media" / "en").mkdir(parents=True)
+    for f in MEDIA:   # the Portuguese set, and the English one the page starts with
         shutil.copy2(ROOT / "docs" / "media" / f, out / "media" / f)
+        shutil.copy2(ROOT / "docs" / "media" / "en" / f, out / "media" / "en" / f)
     page = out / "index.html"
     page.write_text(page.read_text("utf-8").replace("__ROADKIT_VERSION__", ver), "utf-8")
 

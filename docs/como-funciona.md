@@ -152,8 +152,9 @@ export ROADKIT_DATA=$(mktemp -d)
 python3 tools/roadkit.py serve --port 8791 &
 node tools/demos/record.cjs http://127.0.0.1:8791                  # todos
 node tools/demos/record.cjs http://127.0.0.1:8791 hoje,projetos    # só alguns
+RECORD_LANG=en node tools/demos/record.cjs http://127.0.0.1:8791  # o conjunto em inglês, em docs/media/en/
 ```
 
-As cenas são `hero`, `criar`, `ia`, `hoje`, `projetos`, `notas`, `busca` (os GIFs) e `fotos`, `stats`, `foco`, `temas`, `celular` (as capturas). Toda cena começa do mesmo estado: progresso em três roadmaps de exemplo, um projeto em andamento, notas, duas revisões vencidas e meses de histórico de atividade. O histórico é escrito direto na pasta de dados, por isso o servidor e o script usam o mesmo `ROADKIT_DATA`. Os quadros vêm do próprio Chromium (o screencast do DevTools) e o ffmpeg monta os GIFs, que ficam leves porque só guardam o que muda.
+As cenas são `hero`, `criar`, `ia`, `hoje`, `projetos`, `notas`, `busca` (os GIFs) e `fotos`, `stats`, `foco`, `temas`, `celular` (as capturas). Há dois conjuntos: em português (`docs/media/`, usado no README.pt-BR e nas docs em português) e em inglês (`docs/media/en/`, usado no README, nas docs em inglês e no site em inglês), cada um com a interface e os roadmaps de exemplo na sua língua. Toda cena começa do mesmo estado: progresso em três roadmaps de exemplo, um projeto em andamento, notas, duas revisões vencidas e meses de histórico de atividade. O histórico é escrito direto na pasta de dados, por isso o servidor e o script usam o mesmo `ROADKIT_DATA`. Os quadros vêm do próprio Chromium (o screencast do DevTools) e o ffmpeg monta os GIFs, que ficam leves porque só guardam o que muda.
 
 Rode contra um servidor descartável como acima, e não contra o seu: o script reescreve o progresso, as notas e a atividade.
