@@ -19,6 +19,24 @@ Both sidebars can be dragged by their edge to make them wider or narrower, and a
 
 Hidden roadmaps are left out, and so are the ones you never touched (states the author wrote in the JSON do not count as yours). The button with the roadmap's name, or `Esc`, goes back to it. **Settings → On open** makes Roadkit open straight on the Today screen.
 
+### Spaced review
+
+Off by default. With **Settings → Spaced review** on, every main topic you finish comes back for review 3 days later, in a **To review today** block on the Today screen, and the Today button shows how many reviews are due.
+
+- **I still remember** pushes the next review further: 3, 7, 21, 60 and 150 days. After the last one, the topic leaves the queue.
+- **I need to review** starts the intervals over, moves the topic back to "in review" and opens it. It stops counting as finished until you finish it again.
+
+What was already finished when you turn review on stays out of the queue: only what you finish from then on goes in. Optional topics and sub-topics are left out. The **Review this roadmap** box, in the settings, takes a roadmap out of review (handy for project roadmaps that are not about studying). The topic panel shows when the next review is. The queue lives on the server, so it works on every device.
+
+## Focus sessions
+
+Off by default. With **Settings → Focus sessions** on, the panel of every topic and project gets a **Focus** button. It opens a timer in the corner of the screen: pick 25 or 50 minutes, or open-ended (a stopwatch), and start. If the topic was still "to do", the timer offers to move it to "in progress".
+
+- The tab title shows the time left, so you can see it from another tab. Reloading the page or switching roadmaps does not stop the timer.
+- At the end a short sound plays and, if you turn on **Notify me when it ends**, a browser notification shows up. The permission is only asked when you turn that option on.
+- Sessions of 5 minutes or more are recorded on the topic (even when you stop early), and the panel shows the total: "Focus time: 3 h 20 min in 8 sessions". Offline, they wait in a queue and go up when the server is back.
+- After a session, you can take a 5-minute break, which is not recorded.
+
 ## The map
 
 The map draws the main topics in order, top to bottom, grouped by phase. Sub-topics and optional explorations sit to the right of their topic, connected by a line. When a topic and the next one are both done, the line between them turns green.
@@ -115,7 +133,7 @@ At the bottom of the picker is **Manage roadmaps**, the full list. From there yo
 
 ## Settings
 
-The button in the top right corner opens the settings: mode (light, dark or auto), theme, text size, interface language, what to open first (the last roadmap or the Today screen) and the skipped topic tolerance. With the language on "Automatic", it follows the `meta.language` of the open roadmap. Picking a fixed language applies to every roadmap.
+The button in the top right corner opens the settings: mode (light, dark or auto), theme, text size, interface language, what to open first (the last roadmap or the Today screen), spaced review, focus sessions and the skipped topic tolerance. With the language on "Automatic", it follows the `meta.language` of the open roadmap. Picking a fixed language applies to every roadmap.
 
 The mode says whether the screen is light or dark, and the theme picks the colors for each. There are three light themes and four dark ones:
 

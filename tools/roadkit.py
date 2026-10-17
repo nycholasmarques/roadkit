@@ -42,6 +42,10 @@ NOTE_KEY = re.compile(r"^(roadmap|node:[A-Za-z0-9._-]{1,100}|project:[A-Za-z0-9.
 MAX_NOTE_CHARS = 20_000
 ACTIVITY_DIR = DATA_DIR / "activity"                              # what you did and when, one small JSON per roadmap
 ACTIVITY_DAYS = 730                                               # daily totals kept; older days become monthly totals
+REVIEW_FILE = DATA_DIR / "review.json"                            # spaced review: when each finished topic comes back
+REVIEW_KEY = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,99}:[A-Za-z0-9._-]{1,100}$")   # <roadmap id>:<topic id>
+FOCUS_KEY = re.compile(r"^(project:)?[A-Za-z0-9._-]{1,100}$")
+MAX_FOCUS_MIN = 600
 
 SLUG = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 HEX = re.compile(r"^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$")
@@ -714,6 +718,35 @@ def record_activity(rid, old, new, at, tz):
     write_json(ACTIVITY_DIR / f"{rid}.json", act)
 
 
+def record_focus(rid, key, minutes, at, tz):
+    """A finished focus session: its minutes count on the day and on the topic (or "project:<id>")."""
+    at = min(int(at), int(datetime.now(timezone.utc).timestamp() * 1000) + 300_000)
+    day = local_day(at, tz)
+    act = read_activity(rid)
+    totals = act["days"].setdefault(day, {})
+    totals["focus"] = totals.get("focus", 0) + minutes
+    t = act["topics"].setdefault(key, {})
+    t["focus"] = t.get("focus", 0) + minutes if isinstance(t.get("focus"), int) else minutes
+    t["sessions"] = t.get("sessions", 0) + 1 if isinstance(t.get("sessions"), int) else 1
+    t["touched"] = max(at, t.get("touched", 0)) if isinstance(t.get("touched"), (int, float)) else at
+    compact_activity(act, day)
+    write_json(ACTIVITY_DIR / f"{rid}.json", act)
+    return t
+
+
+def valid_review(obj):
+    """Spaced review: {"updatedAt": ms, "on": bool, "skip": [roadmap ids left out],
+    "items": {"<roadmap id>:<topic id>": {"due": "YYYY-MM-DD", "step": 0..9}}}."""
+    if not isinstance(obj, dict) or not isinstance(obj.get("updatedAt"), (int, float)) or not isinstance(obj.get("on", False), bool):
+        return False
+    skip, items = obj.get("skip", []), obj.get("items", {})
+    if not isinstance(skip, list) or not all(isinstance(x, str) and STATE_ID.match(x) for x in skip):
+        return False
+    return isinstance(items, dict) and all(
+        isinstance(k, str) and REVIEW_KEY.match(k) and isinstance(v, dict) and set(v) <= {"due", "step"} and valid_day(v.get("due"))
+        and isinstance(v.get("step"), int) and not isinstance(v["step"], bool) and 0 <= v["step"] < 10 for k, v in items.items())
+
+
 class ApiError(Exception):
     def __init__(self, code, body):
         self.code, self.body = code, body
@@ -994,6 +1027,43 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             roadmaps[f.stem] = {"last": last, "topics": topics}
         return 200, {"days": totals, "roadmaps": roadmaps}
 
+    def activity_focus(self, rid, query):
+        """POST /api/activity/<id>/focus {"id": topic or "project:<id>", "min": 1..600, "t": ms, "tz": minutes}."""
+        if not STATE_ID.match(rid or ""):
+            raise ApiError(404, {"error": "unknown roadmap id"})
+        b = self.read_json()
+        ok = isinstance(b, dict) and isinstance(b.get("id"), str) and FOCUS_KEY.match(b["id"]) and isinstance(b.get("t"), (int, float)) \
+            and isinstance(b.get("min"), int) and not isinstance(b["min"], bool) and 1 <= b["min"] <= MAX_FOCUS_MIN
+        if not ok:
+            raise ApiError(400, {"error": f'send {{"id": "<topic>", "min": 1..{MAX_FOCUS_MIN}, "t": <ms>}}'})
+        with LOCK:
+            t = record_focus(rid, b["id"], b["min"], b["t"], b.get("tz"))
+        return 200, {"id": b["id"], "focus": t["focus"], "sessions": t["sessions"]}
+
+    # -- spaced review: GET/PUT /api/review, one file for every roadmap, the same sync rules as the progress --
+    def review_get(self, _, query):
+        try:
+            return 200, json.loads(REVIEW_FILE.read_text("utf-8"))
+        except FileNotFoundError:
+            return 204, None
+        except ValueError:
+            raise ApiError(500, {"error": "saved review is unreadable"})
+
+    def review_put(self, _, query):
+        incoming = self.read_json()
+        if not valid_review(incoming):
+            raise ApiError(400, {"error": "invalid review payload"})
+        with LOCK:
+            try:
+                current = json.loads(REVIEW_FILE.read_text("utf-8"))
+            except (OSError, ValueError):
+                current = None
+            if valid_review(current) and current["updatedAt"] > incoming["updatedAt"]:
+                return 409, current
+            out = {"updatedAt": incoming["updatedAt"], "on": incoming.get("on", False), "skip": incoming.get("skip", []), "items": incoming.get("items", {})}
+            write_json(REVIEW_FILE, out)
+        return 200, out
+
     def activity_get(self, rid, query):
         if not STATE_ID.match(rid or ""):
             raise ApiError(404, {"error": "unknown roadmap id"})
@@ -1086,6 +1156,8 @@ ROUTES = [
     (r"/api/notes/([^/]+)", {"GET": "notes_get", "PUT": "notes_put"}),
     (r"/api/activity", {"GET": "activity_all"}),
     (r"/api/activity/([^/]+)", {"GET": "activity_get"}),
+    (r"/api/activity/([^/]+)/focus", {"POST": "activity_focus"}),
+    (r"/api/review", {"GET": "review_get", "PUT": "review_put"}),
     (r"/api/validate", {"POST": "roadmap_validate"}),
     (r"/api/roadmaps", {"POST": "roadmap_create"}),
     (r"/api/roadmaps/([^/]+)", {"PUT": "roadmap_update", "DELETE": "roadmap_delete"}),

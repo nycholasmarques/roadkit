@@ -19,6 +19,24 @@ As duas barras laterais dá para arrastar pela borda para ficarem mais largas ou
 
 Roadmaps ocultos ficam de fora, e os que você nunca mexeu também (os estados escritos pelo autor no JSON não contam como seus). O botão com o nome do roadmap, ou `Esc`, volta para ele. Em **Ajustes → Ao abrir** dá para fazer o Roadkit abrir direto na tela Hoje.
 
+### Revisão espaçada
+
+Desligada por padrão. Com **Ajustes → Revisão espaçada** ligada, cada tópico principal que você concluir volta para revisão 3 dias depois, num bloco **Para revisar hoje** da tela Hoje, e o botão Hoje mostra quantas revisões venceram.
+
+- **Ainda lembro** afasta a próxima revisão: 3, 7, 21, 60 e 150 dias. Depois da última, o tópico sai da fila.
+- **Preciso rever** recomeça os intervalos, volta o tópico para "em revisão" e abre ele. Ele deixa de contar como concluído até você concluir de novo.
+
+O que já estava concluído quando você liga a revisão não entra na fila: só o que você concluir dali em diante. Opcionais e subtópicos ficam de fora. A caixa **Revisar este roadmap**, nos ajustes, tira um roadmap da revisão (útil para os de projeto, que não são de estudo). O painel do tópico mostra quando é a próxima revisão. A fila fica no servidor, então vale em todos os aparelhos.
+
+## Sessões de foco
+
+Desligadas por padrão. Com **Ajustes → Sessões de foco** ligadas, o painel de cada tópico e de cada projeto ganha um botão **Focar**. Ele abre um timer no canto da tela: escolha 25 ou 50 minutos, ou livre (um cronômetro), e comece. Se o tópico ainda estava "a fazer", o timer oferece movê-lo para "em andamento".
+
+- O título da aba mostra o tempo restante, para você ver de outra aba. Recarregar a página ou trocar de roadmap não para o timer.
+- No fim toca um som curto e, se você ligar **Avisar quando terminar**, aparece uma notificação do navegador. A permissão só é pedida quando você liga essa opção.
+- Sessões de 5 minutos ou mais ficam registradas no tópico (inclusive quando você para antes do fim), e o painel mostra o total: "Tempo de foco: 3 h 20 min em 8 sessões". Offline, elas esperam numa fila e sobem quando o servidor voltar.
+- Terminada uma sessão, dá para emendar uma pausa de 5 minutos, que não é registrada.
+
 ## O mapa
 
 O mapa desenha os tópicos principais em ordem, de cima para baixo, agrupados por fase. À direita do tópico ficam os subtópicos e as explorações opcionais, ligados por uma linha. Quando um tópico e o próximo estão concluídos, a linha entre eles fica verde.
@@ -115,7 +133,7 @@ No rodapé do seletor está **Gerenciar roadmaps**, a lista completa. Dali dá p
 
 ## Ajustes
 
-O botão no canto superior direito abre os ajustes: modo (claro, escuro ou automático), tema, tamanho do texto, idioma da interface, o que abrir primeiro (o último roadmap ou a tela Hoje) e a tolerância do aviso de pulados. O idioma em "automático" segue o `meta.language` do roadmap aberto. Escolher um idioma fixo vale para qualquer roadmap.
+O botão no canto superior direito abre os ajustes: modo (claro, escuro ou automático), tema, tamanho do texto, idioma da interface, o que abrir primeiro (o último roadmap ou a tela Hoje), a revisão espaçada, as sessões de foco e a tolerância do aviso de pulados. O idioma em "automático" segue o `meta.language` do roadmap aberto. Escolher um idioma fixo vale para qualquer roadmap.
 
 O modo diz se a tela é clara ou escura, e o tema escolhe as cores de cada um. Há três temas claros e quatro escuros:
 

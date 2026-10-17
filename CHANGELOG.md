@@ -4,6 +4,17 @@ Every notable change lives here, newest first. The format follows [Keep a Change
 
 Each GitHub release also lists the commits since the previous version on its own; this file is where the hand-written highlights go. To publish a version, see [`docs/en/releasing.md`](docs/en/releasing.md).
 
+## [1.8.0] - Unreleased
+
+### Spaced review (off by default)
+- With **Settings → Spaced review** on, each main topic you finish comes back for review on the Today screen after 3 days. **I still remember** pushes the next review to 7, 21, 60 and 150 days, then the topic leaves the queue. **I need to review** starts over, moves the topic back to "in review" and opens it.
+- The Today button shows how many reviews are due, the topic panel shows the next one, and **Review this roadmap** leaves a roadmap out. Topics already finished when you turn it on stay out of the queue.
+- The queue lives on the server in `data/review.json` (`GET`/`PUT /api/review`), synced like the notes.
+
+### Focus sessions (off by default)
+- With **Settings → Focus sessions** on, topics and projects get a **Focus** button: a 25-minute, 50-minute or open-ended timer in the corner of the screen, with pause and stop, the time left in the tab title, a short sound at the end and an optional browser notification.
+- Sessions of 5 minutes or more are recorded on the topic's activity (`POST /api/activity/<id>/focus`), and the panel shows the total focus time. The timer survives a reload, and sessions made offline wait in a queue.
+
 ## [1.7.0] - 2026-10-17
 
 ### Today screen

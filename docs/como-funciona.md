@@ -85,6 +85,12 @@ O arquivo tem duas partes:
 
 O tamanho depende do número de tópicos e de dois anos de dias, nunca de quantos cliques você dá: fica abaixo de 60 KB por roadmap mesmo com anos de uso, e nada fica na memória entre uma requisição e outra. O primeiro envio de um progresso que só existia no navegador não conta como atividade do dia, e "Reiniciar marcações" conta como uma mudança só.
 
+As sessões de foco também vão para esse arquivo: o navegador manda cada sessão terminada para `POST /api/activity/<id>/focus`, e o servidor soma os minutos no dia (`focus`) e no tópico (`focus` e `sessions`).
+
+## Onde a revisão espaçada é guardada
+
+A fila de revisão é uma agenda pessoal, não progresso de um roadmap, então fica num arquivo só para todos: `data/review.json`, com a hora da última alteração, se a revisão está ligada (`on`), os roadmaps tirados dela (`skip`) e um item por tópico (`"<roadmap>:<tópico>": {"due": "2026-11-02", "step": 1}`). As datas são dias, sem hora, para não depender de fuso. Quem decide quando um tópico entra ou sai é o navegador; o servidor só valida e guarda, com a mesma regra das notas: o navegador tem uma cópia e a mais nova vence.
+
 Nada dentro de `data/` é servido como arquivo comum: só pela API, que exige o token quando ele está ligado.
 
 ## A API
@@ -99,6 +105,9 @@ Tudo o que a interface pede ao servidor está abaixo. Pode ser útil para script
 | `GET /api/states` | o resumo de todos (estados de tópicos, tarefas e projetos), para os selos de andamento e a tela Hoje |
 | `GET /api/activity?days=30` | a atividade de todos os roadmaps: totais por dia no período e, por roadmap, quando cada tópico foi mexido |
 | `GET /api/activity/<id>` | o arquivo de atividade de um roadmap (`204` se não houver) |
+| `POST /api/activity/<id>/focus` | registra uma sessão de foco: `{"id": "<tópico ou project:<id>>", "min": 1 a 600, "t": <ms>, "tz": <minutos>}` |
+| `GET /api/review` | a fila de revisão espaçada (`204` se não houver) |
+| `PUT /api/review` | grava a fila, com a mesma regra do progresso (`409` se o servidor tiver uma versão mais nova) |
 | `GET /api/notes/<id>` | as notas de um roadmap (`204` se não houver) |
 | `PUT /api/notes/<id>` | grava as notas, com a mesma regra do progresso (`409` se o servidor tiver uma versão mais nova). Cada nota tem até 20 mil caracteres |
 | `POST /api/validate` | valida um JSON de roadmap sem gravar |

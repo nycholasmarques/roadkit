@@ -113,6 +113,24 @@ jobs:
           curl -sf "http://127.0.0.1:8765/api/activity?days=7" | python3 -c "import json,sys; a=json.load(sys.stdin); r=a['roadmaps']['ci-act']; assert r['last'] > 1700000100000 and sum(d['moves'] for d in a['days'].values()) >= 1, a"
           curl -sf http://127.0.0.1:8765/api/states | python3 -c "import json,sys; s=json.load(sys.stdin); assert s['ci-smoke']['projects']=={'p1': {'status': 'working'}} and 'tasks' in s['ci-act'], s"
 
+          # focus sessions add up on the topic and on the day; odd payloads are refused
+          now="$(date +%s)000"
+          curl -sf -X POST -H "$H" -d "{\"id\": \"first\", \"min\": 25, \"t\": $now}" http://127.0.0.1:8765/api/activity/ci-act/focus | python3 -c "import json,sys; r=json.load(sys.stdin); assert r=={'id': 'first', 'focus': 25, 'sessions': 1}, r"
+          curl -sf -X POST -H "$H" -d "{\"id\": \"first\", \"min\": 5, \"t\": $now}" http://127.0.0.1:8765/api/activity/ci-act/focus >/dev/null
+          curl -sf http://127.0.0.1:8765/api/activity/ci-act | python3 -c "import json,sys; a=json.load(sys.stdin); t=a['topics']['first']; assert t['focus']==30 and t['sessions']==2 and sum(d.get('focus', 0) for d in a['days'].values())==30, a"
+          for body in '{"id": "first", "min": 0, "t": 1}' '{"id": "../x", "min": 5, "t": 1}' '{"id": "first", "min": 601, "t": 1}' '{"id": "first", "min": true, "t": 1}'; do
+            test "$(curl -s -o /dev/null -w '%{http_code}' -X POST -H "$H" -d "$body" http://127.0.0.1:8765/api/activity/ci-act/focus)" = 400 || { echo "::error::focus accepted $body"; exit 1; }
+          done
+
+          # spaced review: one file, newest copy wins, items checked
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8765/api/review)" = 204
+          curl -sf -X PUT -H "$H" -d '{"updatedAt": 2, "on": true, "skip": ["ci-act"], "items": {"ci-smoke:first": {"due": "2026-11-02", "step": 1}}}' http://127.0.0.1:8765/api/review >/dev/null
+          curl -sf http://127.0.0.1:8765/api/review | python3 -c "import json,sys; r=json.load(sys.stdin); assert r['on'] is True and r['skip']==['ci-act'] and r['items']['ci-smoke:first']=={'due': '2026-11-02', 'step': 1}, r"
+          test "$(curl -s -o /dev/null -w '%{http_code}' -X PUT -H "$H" -d '{"updatedAt": 1, "items": {}}' http://127.0.0.1:8765/api/review)" = 409
+          for body in '{"updatedAt": 3, "items": {"x:y": {"due": "2026-13-01", "step": 0}}}' '{"updatedAt": 3, "items": {"nocolon": {"due": "2026-01-01", "step": 0}}}' '{"updatedAt": 3, "items": {"x:y": {"due": "2026-01-01", "step": -1}}}' '{"updatedAt": 3, "on": "yes"}'; do
+            test "$(curl -s -o /dev/null -w '%{http_code}' -X PUT -H "$H" -d "$body" http://127.0.0.1:8765/api/review)" = 400 || { echo "::error::review accepted $body"; exit 1; }
+          done
+
           # notes: saved and read back, empty ones dropped, size and key limits, newer server copy wins
           curl -sf -X PUT -H "$H" -d '{"updatedAt": 5, "notes": {"node:first": "# Hi\n<script>x</script>", "roadmap": "general", "node:other": "  "}}' http://127.0.0.1:8765/api/notes/ci-smoke
           curl -sf http://127.0.0.1:8765/api/notes/ci-smoke | python3 -c "import json,sys; n=json.load(sys.stdin)['notes']; assert n=={'node:first': '# Hi\n<script>x</script>', 'roadmap': 'general'}, n"
