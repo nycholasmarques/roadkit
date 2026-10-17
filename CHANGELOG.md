@@ -4,7 +4,7 @@ Todas as mudanças relevantes ficam aqui, da mais nova para a mais antiga. O for
 
 Cada release no GitHub também lista automaticamente os commits desde a versão anterior; este arquivo é onde ficam os destaques escritos à mão. Para publicar uma versão, veja [`docs/publicando-versoes.md`](docs/publicando-versoes.md).
 
-## [1.2.0] - não lançada
+## [1.2.0] - 2026-10-16
 
 ### Projetos
 - Roadmaps podem trazer projetos práticos em três níveis (iniciante, intermediário e avançado), num campo novo e opcional `projects`. Roadmaps sem projetos ficam exatamente como eram.
