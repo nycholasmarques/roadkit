@@ -4,11 +4,15 @@
 
 This is what I wish I had read when I started using Roadkit. It is not a reference manual. It is more of a conversation about how things work and why they are the way they are.
 
-If this is your first time, start with the interface tour. If you only want to create a roadmap, skip to the second one.
+If this is your first time, start with the interface tour, or open the [demo](https://nycholasmarques.github.io/roadkit/app/) and click around. If you only want to create a roadmap, skip to "Creating roadmaps".
 
 | Page | What it covers |
 |---|---|
-| [Using the interface](using-the-interface.md) | The screen, the map, the kanban, how progress is tracked and where the settings are |
+| [Using the interface](using-the-interface.md) | The screen, the map, the kanban, search and shortcuts, themes, phones and how progress is tracked |
+| [Day to day: Today, review and focus](daily-use.md) | The screen that gathers every roadmap, spaced review and the focus timer |
+| [Projects](projects.md) | Hands-on projects by level, in the interface and in the JSON |
+| [Notes, export and share](notes-and-export.md) | Markdown notes, the .zip, Markdown, the page to share and dates |
+| [Statistics](statistics.md) | Heatmap, streak, pace and forecast, and where the numbers come from |
 | [Creating roadmaps](creating-roadmaps.md) | Three ways to create one, and what makes a roadmap pleasant to use |
 | [Creating with AI](creating-with-ai.md) | The "Create with AI" button and the skill for coding agents |
 | [How it works](how-it-works.md) | What runs where, where everything is stored and how the code is organized |

@@ -68,6 +68,16 @@ h1 { margin: 0; font-size: clamp(36px, 5.2vw, 56px); line-height: 1.04; letter-s
 .demo p { color: var(--ink2); margin: 12px 0 20px; }
 .demo-gif { display: block; width: 100%; border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 20px 50px var(--shadow); }
 
+.tour-list { display: grid; gap: 34px; margin-top: 28px; }
+.tour-row { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 32px; align-items: center; }
+.tour-row:nth-child(even) { grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr); }
+.tour-row:nth-child(even) .tour-shot { order: 2; }
+.tour-shot { display: block; border: 1px solid var(--line); border-radius: 14px; overflow: hidden; background: var(--paper); box-shadow: 0 18px 44px var(--shadow); transition: transform .15s; }
+.tour-shot:hover { transform: translateY(-2px); }
+.tour-shot img { display: block; width: 100%; }
+.tour-text h3 { margin: 0 0 8px; font-size: 22px; letter-spacing: -.5px; }
+.tour-text p { margin: 0; color: var(--dim); }
+
 .why { list-style: none; margin: 22px 0 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 28px; }
 .why li { position: relative; padding-left: 30px; color: var(--dim); }
 .why li::before { content: ""; position: absolute; left: 0; top: 4px; width: 18px; height: 18px; border-radius: 50%; background: var(--green) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4 8.3l2.6 2.5L12 5.4' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/14px no-repeat; }
@@ -93,6 +103,8 @@ h1 { margin: 0; font-size: clamp(36px, 5.2vw, 56px); line-height: 1.04; letter-s
 
 @media (max-width: 900px) {
   .hero, .demo { grid-template-columns: 1fr; gap: 28px; padding-top: 36px; }
+  .tour-row, .tour-row:nth-child(even) { grid-template-columns: 1fr; gap: 14px; }
+  .tour-row:nth-child(even) .tour-shot { order: 0; }
   .cards { grid-template-columns: 1fr 1fr; }
   .top-nav { display: none; }
   .top-tools { margin-left: auto; }

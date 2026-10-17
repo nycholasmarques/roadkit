@@ -68,28 +68,48 @@ O progresso e os roadmaps criados pela interface ficam num volume, então sobrev
 Cada tópico passa por a fazer, em andamento, em revisão e concluído, no **mapa** ou no **kanban**, e os dois mostram o mesmo estado. Tópicos têm tarefas e subtópicos; concluir o de cima conclui o que está embaixo. O progresso é salvo no servidor, então o que você marca no notebook aparece no celular.
 
 <p align="center">
-  <img src="docs/media/visao-geral.gif" alt="Marcando um tópico, movendo um cartão no kanban e trocando para o tema escuro" width="100%">
+  <img src="docs/media/visao-geral.gif" alt="Concluindo um tópico, movendo um cartão no kanban, trocando para o tema escuro e abrindo a tela Hoje" width="100%">
 </p>
 
 ### Começar o dia
 
-A tela **Hoje** junta todos os roadmaps: o que está em andamento, do que você mexeu por último para o mais antigo, e o próximo tópico de cada roadmap que você está usando. Ela pode ser a primeira coisa que o Roadkit abre.
+A tela **Hoje** junta todos os roadmaps: o que está em andamento, do que você mexeu por último para o mais antigo, e o próximo tópico de cada roadmap que você está usando. Ela pode ser a primeira coisa que o Roadkit abre. Lá também ficam dois extras opcionais: a **revisão espaçada**, que traz de volta o que você concluiu antes de esquecer, e um **timer de foco**, que registra o tempo real de cada tópico. [Mais](docs/dia-a-dia.md).
+
+<p align="center">
+  <img src="docs/media/hoje.png" alt="A tela Hoje: o que está em andamento, as revisões do dia e o próximo tópico de cada roadmap" width="100%">
+</p>
 
 ### Ver o seu ritmo
 
-**Estatísticas** mostra um mapa de calor dos últimos 12 meses, os dias seguidos e, para cada roadmap, o ritmo por semana e quando ele deve terminar nesse ritmo.
+**Estatísticas** mostra um mapa de calor dos últimos 12 meses, os dias seguidos e, para cada roadmap, o ritmo por semana e quando ele deve terminar nesse ritmo. [Mais](docs/estatisticas.md).
+
+<p align="center">
+  <img src="docs/media/estatisticas.png" alt="A tela de estatísticas: dias seguidos, o mapa de calor do ano e o ritmo e a previsão de cada roadmap" width="100%">
+</p>
 
 ### Fazer projetos
 
-Um roadmap pode trazer projetos práticos do iniciante ao avançado, cada um ligado aos tópicos que pratica. A tela **Projetos** mostra quais já estão ao seu alcance, e cada projeto tem requisitos para marcar e um lugar para o link do seu repositório.
+Um roadmap pode trazer projetos práticos do iniciante ao avançado, cada um ligado aos tópicos que pratica. A tela **Projetos** mostra quais já estão ao seu alcance, e cada projeto tem requisitos para marcar, desafios extras 🔥 e um lugar para o link do seu repositório. [Mais](docs/projetos.md).
+
+<p align="center">
+  <img src="docs/media/projetos.gif" alt="Abrindo a tela Projetos, marcando requisitos e um desafio extra e concluindo o projeto" width="100%">
+</p>
 
 ### Anotar
 
-Cada tópico e projeto tem um bloco de notas em Markdown, salvo no servidor e offline: o comando que funcionou, a dúvida, a decisão. A busca encontra o que você anotou, e as notas de um roadmap saem juntas em Markdown.
+Cada tópico e projeto tem um bloco de notas em Markdown, salvo no servidor e offline: o comando que funcionou, a dúvida, a decisão. A busca encontra o que você anotou, e as notas de um roadmap saem juntas em Markdown. [Mais](docs/notas-e-exportar.md).
+
+<p align="center">
+  <img src="docs/media/notas.gif" alt="Escrevendo uma nota em Markdown, vendo formatada, marcando uma caixa e abrindo as notas do roadmap" width="100%">
+</p>
 
 ### Ir direto ao ponto
 
-`Ctrl+K` busca qualquer tópico, projeto ou ação em todos os roadmaps, e atalhos de uma letra mudam a visualização, o tópico e o estado sem tirar a mão do teclado.
+`Ctrl+K` busca qualquer tópico, projeto ou ação em todos os roadmaps, e atalhos de uma letra mudam a visualização, o tópico e o estado sem tirar a mão do teclado. Cada botão com atalho mostra a sua tecla.
+
+<p align="center">
+  <img src="docs/media/busca.gif" alt="Buscando "kstmz" e achando Kustomize, abrindo a tela Hoje e a lista de atalhos" width="100%">
+</p>
 
 ### Compartilhar
 
@@ -97,7 +117,11 @@ Exporte o roadmap em Markdown ou como uma página `.html` única que abre em qua
 
 ### Instalar e usar offline
 
-O Roadkit é um app instalável: abre em janela própria, com ícone, e depois da primeira vez funciona sem internet, com todos os roadmaps à mão. O que você marcar offline sobe quando a conexão voltar.
+O Roadkit é um app instalável: abre em janela própria, com ícone, e depois da primeira vez funciona sem internet, com todos os roadmaps à mão. O que você marcar offline sobe quando a conexão voltar. No celular, o mapa vira uma linha do tempo e todas as telas cabem.
+
+<p align="center">
+  <img src="docs/media/celular.png" alt="O mapa, a tela Hoje, os projetos e as estatísticas num celular" width="100%">
+</p>
 
 ### Criar, vendo o resultado
 
@@ -118,6 +142,10 @@ O botão **Criar com IA** monta um prompt a partir do que você quer aprender. V
 ### Organizar
 
 Cada subpasta de `roadmaps/` vira uma seção no seletor, e o seletor mostra o andamento de cada roadmap. Dá para ocultar, duplicar, exportar com o progresso num `.zip` e importar de volta. As barras laterais se ajustam ou recolhem, e há sete temas, três claros e quatro escuros, que podem seguir o modo claro ou escuro do sistema.
+
+<p align="center">
+  <img src="docs/media/temas.png" alt="O mesmo roadmap nos sete temas: Claro, Névoa, Papel, Noite, Grafite, Ameixa e Breu" width="100%">
+</p>
 
 ## Seus roadmaps
 
@@ -140,7 +168,11 @@ Salve em `roadmaps/` (ou numa subpasta, que vira a categoria) e rode `python3 to
 
 | | |
 |---|---|
-| [Usando a interface](docs/usando-a-interface.md) | um passeio pela tela |
+| [Usando a interface](docs/usando-a-interface.md) | um passeio pela tela, a busca, os atalhos e os temas |
+| [O dia a dia](docs/dia-a-dia.md) | a tela Hoje, a revisão espaçada e as sessões de foco |
+| [Projetos](docs/projetos.md) | projetos práticos, na interface e no JSON |
+| [Notas, exportar e compartilhar](docs/notas-e-exportar.md) | notas em Markdown, o .zip, o Markdown e a página para compartilhar |
+| [Estatísticas](docs/estatisticas.md) | mapa de calor, sequência, ritmo e previsão |
 | [Criando roadmaps](docs/criar-roadmaps.md) | três jeitos de criar, categorias e o que faz um bom roadmap |
 | [Criando com IA](docs/criar-com-ia.md) | o botão e a skill |
 | [Como funciona](docs/como-funciona.md) | o que roda onde, onde ficam os dados, a API |
