@@ -36,7 +36,7 @@ The release text has up to three parts, in this order:
 2. **What changed** (automatic): every commit between the previous release and this one, in groups: New features, Fixes, Performance, Documentation, Dependencies, Maintenance and Other changes. Maintenance and Dependencies come collapsed. Each line links to its commit, or to the pull request when the title ends with `(#12)`, and at the end there is a link comparing the two versions. The first release skips this part, because it would list the whole project.
 3. **How to install**: the zip, the checksum and the `docker pull` command for the version.
 
-The notes themselves are written in Portuguese, the project's main language.
+The notes are written in English, like the CHANGELOG, which is what most open source projects do and what people outside Brazil can read. The interface and the docs stay in both languages.
 
 Grouping reads the start of the commit title (or the PR title, which becomes the commit when you *squash*). You can help by writing in the [Conventional Commits](https://www.conventionalcommits.org/) style: `feat: export button`, `fix: error importing a zip`, `docs: explain categories`, `chore: update CI`. A `feat(deps):` or Dependabot lands in Dependencies, and a `!` after the type (`feat!: ...`) marks a breaking change. Without a prefix it still works: titles starting with "Add", "Fix" and similar are recognized, and the rest goes to "Other changes".
 

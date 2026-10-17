@@ -33,10 +33,12 @@ Em um ou dois minutos a release aparece em *Releases*, e a imagem Docker em algu
 O texto da release tem até três partes, nesta ordem:
 
 1. **Destaques escritos por você** (opcional): se o [`CHANGELOG.md`](../CHANGELOG.md) tem uma seção `## [1.1.0] - data`, ela vai no topo. Serve para contar o que importa em linguagem de gente, e é o que foi usado na 1.0.0.
-2. **O que mudou** (automático): cada commit entre a release anterior e esta, em grupos: Novidades, Correções, Desempenho, Documentação, Dependências, Manutenção e Outras mudanças. As duas últimas vêm recolhidas. Cada linha leva o link do commit, ou do pull request quando o título termina com `(#12)`, e no fim há um link para comparar as duas versões. Na primeira release essa parte não aparece, porque listaria o projeto inteiro.
-3. **Como instalar**: o zip, o checksum e o comando `docker pull` da versão.
+2. **What changed** (automático): cada commit entre a release anterior e esta, em grupos: New features, Fixes, Performance, Documentation, Dependencies, Maintenance e Other changes. As duas últimas vêm recolhidas. Cada linha leva o link do commit, ou do pull request quando o título termina com `(#12)`, e no fim há um link para comparar as duas versões. Na primeira release essa parte não aparece, porque listaria o projeto inteiro.
+3. **How to install**: o zip, o checksum e o comando `docker pull` da versão.
 
-O agrupamento lê o começo do título do commit (ou do PR, que vira o commit quando você faz *squash*). Dá para ajudar escrevendo no estilo [Conventional Commits](https://www.conventionalcommits.org/pt-br/): `feat: botão de exportar`, `fix: erro ao importar zip`, `docs: explica as categorias`, `chore: atualiza o CI`. Um `feat(deps):` ou o Dependabot caem em Dependências, e um `!` depois do tipo (`feat!: ...`) marca uma quebra de compatibilidade. Sem prefixo ainda funciona: títulos que começam com "Add", "Fix" e parecidos são reconhecidos, e o resto vai para "Outras mudanças".
+As notas e o CHANGELOG são escritos em inglês, como na maioria dos projetos abertos, para quem não lê português também entender o que mudou. A interface e a documentação continuam nas duas línguas.
+
+O agrupamento lê o começo do título do commit (ou do PR, que vira o commit quando você faz *squash*). Dá para ajudar escrevendo no estilo [Conventional Commits](https://www.conventionalcommits.org/pt-br/): `feat: botão de exportar`, `fix: erro ao importar zip`, `docs: explica as categorias`, `chore: atualiza o CI`. Um `feat(deps):` ou o Dependabot caem em Dependências, e um `!` depois do tipo (`feat!: ...`) marca uma quebra de compatibilidade. Sem prefixo ainda funciona: títulos que começam com "Add", "Fix" e parecidos são reconhecidos, e o resto vai para "Other changes".
 
 Dá para ver como ficaria antes de publicar:
 
