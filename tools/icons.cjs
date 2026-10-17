@@ -15,12 +15,13 @@ try { pw = require('playwright'); } catch { pw = require('playwright-core'); }
 
 const DIR = path.resolve(__dirname, '../src/icons');
 const svg = fs.readFileSync(path.join(DIR, 'icon.svg'), 'utf8');
-const inner = svg.replace(/^[\s\S]*?<svg[^>]*>/, '').replace(/<\/svg>\s*$/, '');
-const full = (size, bg = 'transparent') => `<html><body style="margin:0;background:${bg}">${svg.replace('<svg ', `<svg width="${size}" height="${size}" `)}</body></html>`;
-/* maskable: a square background (the gradient, no corners) and the drawing shrunk into the safe zone */
-const maskable = size => `<html><body style="margin:0"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="${size}" height="${size}">` +
-  inner.replace('<rect width="512" height="512" rx="116" fill="url(#bg)"/>', '<rect width="512" height="512" fill="url(#bg)"/><g transform="translate(256 256) scale(0.8) translate(-256 -256)">') +
-  '</g></svg></body></html>';
+const sized = (s, size) => s.replace('<svg ', `<svg width="${size}" height="${size}" `);
+const full = size => `<html><body style="margin:0;background:transparent">${sized(svg, size)}</body></html>`;
+/* maskable: a square shape (no rounded corners) and the drawing (#art) shrunk into the safe zone; the road
+   still starts below the frame, so it keeps coming in from outside after the system cuts its own shape */
+const maskSvg = svg.replace(/(<clipPath id="shape"><rect[^>]*?) rx="\d+"/, '$1').replace('<g id="art">', '<g id="art" transform="translate(256 256) scale(0.8) translate(-256 -256)">');
+if (maskSvg === svg || !maskSvg.includes('scale(0.8)')) throw new Error('icon.svg: expected a #shape clip path and a <g id="art">');
+const maskable = size => `<html><body style="margin:0">${sized(maskSvg, size)}</body></html>`;
 
 (async () => {
   const browser = await pw.chromium.launch(process.env.CHROME ? { executablePath: process.env.CHROME } : {});

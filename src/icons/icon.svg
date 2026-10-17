@@ -1,5 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Roadkit: a road winding up to the goal. The road starts below the frame, so it always comes from
+       outside, whatever shape the system cuts (tools/icons.cjs shrinks #art for the maskable icons). -->
   <defs>
+    <clipPath id="shape"><rect width="512" height="512" rx="116"/></clipPath>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#4069b8"/>
       <stop offset="1" stop-color="#16274a"/>
@@ -13,15 +16,17 @@
       <stop offset="1" stop-color="#5fe0a8" stop-opacity="0"/>
     </radialGradient>
   </defs>
-  <rect width="512" height="512" rx="116" fill="url(#bg)"/>
-  <!-- the road, winding from the bottom up to the goal -->
-  <path d="M150 512 C150 392 356 404 348 304 C341 218 164 246 172 168 C177 120 252 112 318 116" fill="none" stroke="url(#road)" stroke-width="66" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M150 500 C150 392 356 404 348 304 C341 218 164 246 172 168 C177 120 252 112 318 116" fill="none" stroke="#2a4579" stroke-width="7" stroke-linecap="round" stroke-dasharray="20 24" opacity="0.55"/>
-  <!-- checkpoints -->
-  <circle cx="348" cy="304" r="23" fill="#fff" stroke="#233b65" stroke-width="9"/>
-  <circle cx="172" cy="168" r="23" fill="#fff" stroke="#233b65" stroke-width="9"/>
-  <!-- the goal -->
-  <circle cx="362" cy="118" r="92" fill="url(#glow)"/>
-  <circle cx="362" cy="118" r="60" fill="#2fb37a" stroke="#fff" stroke-width="10"/>
-  <path d="M336 119l18 18 34-36" fill="none" stroke="#fff" stroke-width="15" stroke-linecap="round" stroke-linejoin="round"/>
+  <g clip-path="url(#shape)">
+    <rect width="512" height="512" fill="url(#bg)"/>
+    <g id="art">
+      <path d="M142 714 L120 512 C110 420 404 432 396 320 C388 214 108 250 116 158 C121 102 236 92 330 104" fill="none" stroke="url(#road)" stroke-width="62" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M142 714 L120 512 C110 420 404 432 396 320 C388 214 108 250 116 158 C121 102 236 92 330 104" fill="none" stroke="#2a4579" stroke-width="7" stroke-linecap="round" stroke-dasharray="20 22" opacity="0.55"/>
+      <circle cx="159" cy="459" r="22" fill="#fff" stroke="#233b65" stroke-width="9"/>
+      <circle cx="396" cy="320" r="22" fill="#fff" stroke="#233b65" stroke-width="9"/>
+      <circle cx="116" cy="158" r="22" fill="#fff" stroke="#233b65" stroke-width="9"/>
+      <circle cx="372" cy="110" r="92" fill="url(#glow)"/>
+      <circle cx="372" cy="110" r="60" fill="#2fb37a" stroke="#fff" stroke-width="10"/>
+      <path d="M346 111l18 18 34-36" fill="none" stroke="#fff" stroke-width="15" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+  </g>
 </svg>
