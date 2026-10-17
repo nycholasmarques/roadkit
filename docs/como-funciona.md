@@ -74,6 +74,17 @@ As notas ficam fora do arquivo de progresso, em `data/notes/<id>.json`, porque o
 
 O texto das notas nunca vira HTML: o renderizador em `src/markdown.js` escapa tudo antes de formatar e só aceita links `http(s)`. Ele tem testes próprios (`node tools/markdown.test.cjs`), que rodam no CI.
 
+## Onde a atividade é guardada
+
+Para a tela Hoje saber o que você mexeu por último, o servidor guarda a atividade de cada roadmap em `data/activity/<id>.json`. Quem escreve é o próprio servidor: a cada `PUT /api/state/<id>`, ele compara o progresso novo com o que tinha e anota a diferença. O navegador não muda nada, e o registro fica coerente mesmo vindo de vários aparelhos.
+
+O arquivo tem duas partes:
+
+- `days`: totais por dia (`moves`, as mudanças, e `done`, os tópicos concluídos), no dia de quem fez a mudança (o navegador manda o fuso junto). Ficam os últimos dois anos; o que é mais antigo vira um total por mês, em `months`.
+- `topics`: para cada tópico ou projeto (`project:<id>`) que você já mexeu, quando começou, quando foi concluído e a hora da última mudança.
+
+O tamanho depende do número de tópicos e de dois anos de dias, nunca de quantos cliques você dá: fica abaixo de 60 KB por roadmap mesmo com anos de uso, e nada fica na memória entre uma requisição e outra. O primeiro envio de um progresso que só existia no navegador não conta como atividade do dia, e "Reiniciar marcações" conta como uma mudança só.
+
 Nada dentro de `data/` é servido como arquivo comum: só pela API, que exige o token quando ele está ligado.
 
 ## A API
@@ -85,13 +96,15 @@ Tudo o que a interface pede ao servidor está abaixo. Pode ser útil para script
 | `GET /manifest.json` | a lista de roadmaps, com seções, contagens e ocultos |
 | `GET /api/state/<id>` | o progresso salvo de um roadmap (`204` se não houver) |
 | `PUT /api/state/<id>` | grava o progresso, ou devolve `409` com o que o servidor tem se for mais novo. As partes do progresso que o cliente não mandar ficam como estavam, então uma versão antiga, que só conhece tópicos e tarefas, não apaga os projetos |
-| `GET /api/states` | o resumo de todos, para os selos de andamento |
+| `GET /api/states` | o resumo de todos (estados de tópicos, tarefas e projetos), para os selos de andamento e a tela Hoje |
+| `GET /api/activity?days=30` | a atividade de todos os roadmaps: totais por dia no período e, por roadmap, quando cada tópico foi mexido |
+| `GET /api/activity/<id>` | o arquivo de atividade de um roadmap (`204` se não houver) |
 | `GET /api/notes/<id>` | as notas de um roadmap (`204` se não houver) |
 | `PUT /api/notes/<id>` | grava as notas, com a mesma regra do progresso (`409` se o servidor tiver uma versão mais nova). Cada nota tem até 20 mil caracteres |
 | `POST /api/validate` | valida um JSON de roadmap sem gravar |
 | `POST /api/roadmaps?category=` | cria um roadmap (`categoryTitle=` dá o nome de uma categoria nova) |
 | `PUT /api/roadmaps/<id>?category=` | substitui um roadmap criado pela interface, e troca de categoria se mudar o parâmetro |
-| `DELETE /api/roadmaps/<id>?progress=1` | exclui, e opcionalmente apaga o progresso junto |
+| `DELETE /api/roadmaps/<id>?progress=1` | exclui, e opcionalmente apaga o progresso, as notas e a atividade junto |
 | `PUT /api/hidden/<id>` | oculta ou restaura, com `{"hidden": true}` |
 | `GET /user/<categoria>/<id>.json` | o JSON de um roadmap criado pela interface |
 

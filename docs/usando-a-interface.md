@@ -10,6 +10,15 @@ Do lado esquerdo fica a barra lateral: o logo, o seletor de roadmaps, as fases d
 
 As duas barras laterais dá para arrastar pela borda para ficarem mais largas ou mais estreitas, e um duplo clique volta ao tamanho padrão. A da esquerda também recolhe para uma faixa só de ícones, pelo botão `‹` ao lado do logo, o que ajuda em telas pequenas. O que você escolher fica salvo no navegador.
 
+## A tela Hoje
+
+**Hoje**, no topo da barra lateral (ou a tecla `H`), responde "o que eu faço agora?" juntando todos os roadmaps numa tela só:
+
+- **Continuar**: os tópicos e projetos em andamento ou em revisão, de todos os roadmaps, do que você mexeu por último para o mais antigo. Cada linha mostra o roadmap, a fase, as tarefas feitas e quando foi a última mudança. Clicar abre o tópico no roadmap dele.
+- **A seguir**: o próximo tópico a fazer de cada roadmap que você usou nos últimos 30 dias, com o andamento do roadmap e o prazo, se houver. Sem nenhuma atividade recente, aparece o próximo tópico do último roadmap aberto, em **Para começar**.
+
+Roadmaps ocultos ficam de fora, e os que você nunca mexeu também (os estados escritos pelo autor no JSON não contam como seus). O botão com o nome do roadmap, ou `Esc`, volta para ele. Em **Ajustes → Ao abrir** dá para fazer o Roadkit abrir direto na tela Hoje.
+
 ## O mapa
 
 O mapa desenha os tópicos principais em ordem, de cima para baixo, agrupados por fase. À direita do tópico ficam os subtópicos e as explorações opcionais, ligados por uma linha. Quando um tópico e o próximo estão concluídos, a linha entre eles fica verde.
@@ -65,13 +74,14 @@ Fora de campos de texto, algumas teclas de uma letra funcionam direto:
 |---|---|
 | `/` | vai para a busca do topo |
 | `M` · `K` · `P` | Mapa, Kanban, Projetos |
+| `H` | abre ou fecha a tela Hoje |
 | `N` | próximo tópico a fazer |
 | `J` · `L` | tópico anterior / seguinte, na ordem do caminho |
 | `1` · `2` · `3` · `4` | a fazer, em andamento, em revisão, concluído, no tópico ou projeto aberto |
 | `T` | alterna entre modo claro e escuro |
 | `?` | mostra a lista de atalhos |
 
-Em **Ajustes → Atalhos de teclado** dá para desligar as teclas de uma letra (para quem usa leitor de tela ou extensões que já usam essas teclas); `Ctrl+K` e `Esc` continuam. No celular, a busca abre pela lupa e ocupa a tela inteira.
+No computador, os botões que têm atalho mostram a tecla ao lado (`H` em Hoje, `N` em Próximo tópico, `M` `K` `P` nas visualizações, `Ctrl K` na lupa), para você ir decorando. Em **Ajustes → Atalhos de teclado** dá para desligar as teclas de uma letra (para quem usa leitor de tela ou extensões que já usam essas teclas); `Ctrl+K` e `Esc` continuam. No celular, a busca abre pela lupa e ocupa a tela inteira.
 
 ## Notas
 
@@ -105,7 +115,7 @@ No rodapé do seletor está **Gerenciar roadmaps**, a lista completa. Dali dá p
 
 ## Ajustes
 
-O botão no canto superior direito abre os ajustes: modo (claro, escuro ou automático), tema, tamanho do texto, idioma da interface e a tolerância do aviso de pulados. O idioma em "automático" segue o `meta.language` do roadmap aberto. Escolher um idioma fixo vale para qualquer roadmap.
+O botão no canto superior direito abre os ajustes: modo (claro, escuro ou automático), tema, tamanho do texto, idioma da interface, o que abrir primeiro (o último roadmap ou a tela Hoje) e a tolerância do aviso de pulados. O idioma em "automático" segue o `meta.language` do roadmap aberto. Escolher um idioma fixo vale para qualquer roadmap.
 
 O modo diz se a tela é clara ou escura, e o tema escolhe as cores de cada um. Há três temas claros e quatro escuros:
 
