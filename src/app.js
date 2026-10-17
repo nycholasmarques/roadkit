@@ -1992,6 +1992,9 @@ function renderProjectDetail(p) {
 
 /* ---------- interactions ---------- */
 function setDrawer(open) {
+  const was = document.documentElement.classList.contains('detail-open');
+  document.documentElement.classList.toggle('detail-open', open);   // on a wide screen the panel is a column, shown only while open
+  if (was !== open && matchMedia('(min-width: 1600px)').matches) metricsChanged();
   $('detail').classList.toggle('open', open);
   $('scrim').classList.toggle('open', open);
   $('detailGrip').classList.toggle('open', open);
@@ -2065,21 +2068,6 @@ function wireDetailResize() {
   grip.addEventListener('pointerup', stop);
   grip.addEventListener('pointercancel', stop);
   grip.addEventListener('dblclick', () => { root.style.removeProperty('--detail-w'); store.set(DETAIL_KEY, ''); done(); });
-  /* fold the panel away on a wide screen (the button next to the settings): the map gets the room, and a topic
-     you pick opens its details over the content, as on smaller screens */
-  const toggle = $('detailToggle');
-  const paintToggle = () => {
-    const folded = root.dataset.detail === 'collapsed', label = (folded ? S.L.detailShow : S.L.detailHide) ?? '';
-    toggle.setAttribute('aria-pressed', String(folded)); toggle.title = label; toggle.setAttribute('aria-label', label);
-  };
-  toggle.addEventListener('click', () => {
-    const fold = root.dataset.detail !== 'collapsed';
-    if (fold) root.dataset.detail = 'collapsed'; else delete root.dataset.detail;
-    store.set('roadkit:v1:detail', fold ? 'collapsed' : 'open');
-    setDrawer(false); paintToggle(); metricsChanged();
-  });
-  addEventListener('labelschange', paintToggle);
-  paintToggle();
   grip.addEventListener('keydown', e => {
     const d = { ArrowLeft: 24, ArrowRight: -24 }[e.key];
     if (!d) return;

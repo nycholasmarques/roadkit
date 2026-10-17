@@ -6,9 +6,9 @@
 
 ## What is on the screen
 
-On the left is the sidebar: the logo, the **Today** button, the roadmap picker, the phases of the open roadmap and the tools (new roadmap, statistics, notes, export, import, reset, open file). At the top of the content are the title, the progress bar (with a small chart that opens that roadmap statistics), the roadmap search, the **Next topic** and **Start** buttons, the **Map / Kanban / Projects** switch, the global search, the panel button and the settings. On the right is the details panel for the selected topic.
+On the left is the sidebar: the logo, the **Today** button, the roadmap picker, the phases of the open roadmap and the tools (new roadmap, statistics, notes, export, import, reset, open file). At the top of the content are the title, the progress bar (with a small chart that opens that roadmap statistics), the roadmap search, the **Next topic** and **Start** buttons, the **Map / Kanban / Projects** switch, the global search and the settings. On the right, the details panel opens when you pick a topic or a project.
 
-Both sidebars can be dragged by their edge to make them wider or narrower, and a double click brings them back to the default size. The left one collapses into a strip of icons with the `‹` button next to the logo. The right one, on wide screens, folds away with the panel button next to the settings: the map gets the room, and a topic you pick opens on top, as on a smaller screen. With both folded, only the roadmap is left in the middle. Whatever you choose is saved in the browser.
+Both sidebars can be dragged by their edge to make them wider or narrower, and a double click brings them back to the default size. The left one collapses into a strip of icons with the `‹` button next to the logo. The right panel stays closed until you click a topic or project (or **Next topic**), and closes with the button in its corner or `Esc`. On wide screens it becomes a column next to the map; on smaller ones it opens on top, like a drawer. With the left sidebar folded and the panel closed, only the roadmap is left in the middle. Whatever you choose is saved in the browser.
 
 ## Where to go next
 

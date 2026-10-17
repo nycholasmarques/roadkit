@@ -11,7 +11,7 @@
   <link rel="apple-touch-icon" href="src/icons/apple-touch-icon.png">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="Roadkit">
-  <script>try{var m=localStorage.getItem('roadkit:v1:theme'),s=m==='dark'||(m!=='light'&&matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light',p=localStorage.getItem('roadkit:v1:palette-'+s),k={light:['light','mist','paper'],dark:['night','graphite','plum','black']}[s];document.documentElement.dataset.theme=s;document.documentElement.dataset.palette=k.indexOf(p)>=0?p:k[0];var f={small:.95,normal:1.1,large:1.25,xlarge:1.4}[localStorage.getItem('roadkit:v1:fs')];if(f)document.documentElement.style.setProperty('--fs',f);if(localStorage.getItem('roadkit:v1:side')==='collapsed')document.documentElement.dataset.side='collapsed';if(localStorage.getItem('roadkit:v1:detail')==='collapsed')document.documentElement.dataset.detail='collapsed';var w=parseInt(localStorage.getItem('roadkit:v1:sidew'),10);if(w)document.documentElement.style.setProperty('--side-open',Math.min(Math.max(w,200),420)+'px')}catch(e){}</script>
+  <script>try{var m=localStorage.getItem('roadkit:v1:theme'),s=m==='dark'||(m!=='light'&&matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light',p=localStorage.getItem('roadkit:v1:palette-'+s),k={light:['light','mist','paper'],dark:['night','graphite','plum','black']}[s];document.documentElement.dataset.theme=s;document.documentElement.dataset.palette=k.indexOf(p)>=0?p:k[0];var f={small:.95,normal:1.1,large:1.25,xlarge:1.4}[localStorage.getItem('roadkit:v1:fs')];if(f)document.documentElement.style.setProperty('--fs',f);if(localStorage.getItem('roadkit:v1:side')==='collapsed')document.documentElement.dataset.side='collapsed';var w=parseInt(localStorage.getItem('roadkit:v1:sidew'),10);if(w)document.documentElement.style.setProperty('--side-open',Math.min(Math.max(w,200),420)+'px')}catch(e){}</script>
   <link rel="stylesheet" href="src/style.css">
 </head>
 <body>
@@ -96,9 +96,6 @@
         <button class="icon-btn" id="paletteBtn" type="button" data-i18n-aria="paletteOpen" data-i18n-title="paletteOpen">
           <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6"/><path d="M15 15l5 5"/></svg><kbd class="kbd-hint" id="paletteKbd" aria-hidden="true">Ctrl K</kbd>
         </button>
-        <button class="icon-btn" id="detailToggle" type="button" aria-pressed="false" aria-controls="detail" data-i18n-aria="detailHide" data-i18n-title="detailHide">
-          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><path d="M14.5 4.5v15"/></svg>
-        </button>
         <button class="icon-btn" id="settingsBtn" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="settings" data-i18n-aria="settings" data-i18n-title="settings">
           <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h2M10 17h10" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/><circle cx="16" cy="7" r="2.3" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="8" cy="17" r="2.3" fill="none" stroke="currentColor" stroke-width="2"/></svg>
         </button>
@@ -181,7 +178,7 @@
       <section class="projects-wrap" id="projects"></section>
       <div class="detail-grip" id="detailGrip" role="separator" aria-orientation="vertical" tabindex="0" data-i18n-aria="resizeDetail"></div>
       <section class="detail" id="detail" aria-live="polite">
-        <button class="detail-close" id="detailClose" data-i18n-aria="close">×</button>
+        <button class="detail-close" id="detailClose" type="button" data-i18n-aria="close" data-i18n-title="close"><svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><path d="M14.5 4.5v15"/></svg></button>
         <div id="detailContent" class="detail-placeholder"></div>
       </section>
     </section>

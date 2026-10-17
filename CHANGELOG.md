@@ -7,8 +7,8 @@ Each GitHub release also lists the commits since the previous version on its own
 ## [1.11.0] - Unreleased
 
 ### Interface
-- The details panel can fold away on wide screens too, with a button next to the settings. The map takes the room, and a topic you pick opens on top, as on smaller screens. With both sidebars folded, only the roadmap is left in the middle.
-- The top bar only goes to a single row when the workspace really has the room, so the title no longer gets squeezed between 1560 and 1960 px with the details panel open.
+- The details panel stays closed until you pick a topic or project (or press **Next topic**), and closes with its own button in the corner or `Esc`. On wide screens it is a column next to the map only while it is open, so the map gets the whole width the rest of the time. With the left sidebar folded too, only the roadmap is left in the middle.
+- The top bar only goes to a single row when the workspace really has the room (from 1800 px with the panel closed, 2140 px with it open), so the title no longer gets squeezed and the settings button never falls off the edge.
 - The line that shows while you resize the details panel no longer paints over the top bar.
 - In the demo, the notice about progress staying in the browser became a card in the sidebar (the page footer on phones) instead of a bar over the app. It can be hidden for 30 days, and it also says what needs the server. Statistics explain why they are empty there.
 

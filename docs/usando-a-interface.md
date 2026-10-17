@@ -6,9 +6,9 @@
 
 ## O que tem na tela
 
-Do lado esquerdo fica a barra lateral: o logo, o botão **Hoje**, o seletor de roadmaps, as fases do roadmap aberto e as ferramentas (novo roadmap, estatísticas, notas, exportar, importar, reiniciar, abrir arquivo). No topo do conteúdo estão o título, a barra de progresso (com um pequeno gráfico que abre as estatísticas desse roadmap), a busca do roadmap, os botões **Próximo tópico** e **Começar**, o seletor **Mapa / Kanban / Projetos**, a busca geral, o botão do painel e os ajustes. Do lado direito fica o painel de detalhes do tópico escolhido.
+Do lado esquerdo fica a barra lateral: o logo, o botão **Hoje**, o seletor de roadmaps, as fases do roadmap aberto e as ferramentas (novo roadmap, estatísticas, notas, exportar, importar, reiniciar, abrir arquivo). No topo do conteúdo estão o título, a barra de progresso (com um pequeno gráfico que abre as estatísticas desse roadmap), a busca do roadmap, os botões **Próximo tópico** e **Começar**, o seletor **Mapa / Kanban / Projetos**, a busca geral e os ajustes. Do lado direito abre o painel de detalhes, quando você escolhe um tópico ou um projeto.
 
-As duas barras laterais dá para arrastar pela borda para ficarem mais largas ou mais estreitas, e um duplo clique volta ao tamanho padrão. A da esquerda recolhe para uma faixa de ícones pelo botão `‹` ao lado do logo. A da direita, em telas largas, some pelo botão de painel ao lado dos ajustes: o mapa ganha o espaço, e o tópico que você escolher abre por cima, como numa tela menor. Com as duas recolhidas, sobra só o roadmap no centro. O que você escolher fica salvo no navegador.
+As duas barras laterais dá para arrastar pela borda para ficarem mais largas ou mais estreitas, e um duplo clique volta ao tamanho padrão. A da esquerda recolhe para uma faixa de ícones pelo botão `‹` ao lado do logo. O painel da direita fica fechado até você clicar num tópico ou projeto (ou em **Próximo tópico**) e fecha pelo botão no canto dele ou com `Esc`. Em telas largas ele vira uma coluna ao lado do mapa; nas menores, abre por cima, como uma gaveta. Com a barra da esquerda recolhida e o painel fechado, sobra só o roadmap no centro. O que você escolher fica salvo no navegador.
 
 ## Aonde ir daqui
 
