@@ -13,7 +13,11 @@ Cada release no GitHub também lista automaticamente os commits desde a versão 
 - A API nunca vem de cache, e a página exportada para compartilhar continua sendo um arquivo único, sem service worker.
 
 ### Por dentro
-- `src/sw.js` (sem bibliotecas), servido em `/sw.js` com uma versão calculada a partir dos arquivos da interface; `src/manifest.webmanifest`; ícones gerados por `tools/icons.py`, só com a biblioteca padrão.
+- `src/sw.js` (sem bibliotecas), servido em `/sw.js` com uma versão calculada a partir dos arquivos da interface; `src/manifest.webmanifest`.
+
+### Ícone
+- O Roadkit ganhou um ícone: uma estrada que serpenteia até uma meta verde com um check, passando por pontos de controle. Aparece na aba do navegador (numa versão simplificada, legível em 16 px), no app instalado e na tela inicial do celular.
+- Os PNGs são gerados a partir do SVG por `tools/icons.cjs`, com um navegador de verdade, para ficarem idênticos.
 - O guia de Docker e rede explica o HTTPS necessário para instalar fora do `localhost` (Tailscale ou Caddy).
 
 ## [1.5.0] - 2026-10-17

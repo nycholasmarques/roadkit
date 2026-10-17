@@ -66,7 +66,7 @@ O `src/sw.js` é um service worker pequeno, sem bibliotecas, servido em `/sw.js`
 - **Roadmaps, `manifest.json` e textos da interface**: primeiro a rede, a última cópia como reserva. Ao abrir, o app pede ao worker que guarde uma cópia de todos os roadmaps da lista.
 - **API** (`/api/*`): nunca passa pelo worker. O progresso e as notas já têm a própria cópia offline no navegador.
 
-O `src/manifest.webmanifest` e os ícones em `src/icons/` (gerados por `tools/icons.py`, só com a biblioteca padrão) completam o que o navegador pede para oferecer a instalação.
+O `src/manifest.webmanifest` e os ícones em `src/icons/` completam o que o navegador pede para oferecer a instalação. O desenho é o `icon.svg`; o `favicon.svg` é a versão simplificada para a aba, legível em 16 px. Os PNGs (192, 512, *maskable* e o do iPhone) são gerados a partir do SVG com `node tools/icons.cjs` (precisa do Playwright, como o script das imagens da documentação).
 
 ## Onde as notas são guardadas
 

@@ -10,7 +10,7 @@ const SHELL_CACHE = `roadkit-shell-${VERSION}`;
 const DATA_CACHE = 'roadkit-data';   // survives updates: roadmaps you opened stay available offline
 const SHELL = [
   './', 'src/style.css', 'src/markdown.js', 'src/app.js', 'src/ai-prompt.txt', 'src/manifest.webmanifest',
-  'src/icons/icon.svg', 'src/icons/icon-192.png', 'src/icons/icon-512.png', 'src/icons/maskable-512.png', 'src/icons/apple-touch-icon.png',
+  'src/icons/icon.svg', 'src/icons/favicon.svg', 'src/icons/icon-192.png', 'src/icons/icon-512.png', 'src/icons/maskable-512.png', 'src/icons/apple-touch-icon.png',
 ];
 const scoped = path => new URL(path, self.registration.scope).href;
 

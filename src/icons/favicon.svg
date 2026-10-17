@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- the app icon simplified for a browser tab (16 to 32 px): a thick road and a big goal, no small details -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#4069b8"/>
+      <stop offset="1" stop-color="#16274a"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="104" fill="url(#bg)"/>
+  <path d="M146 512 C146 396 360 404 352 300 C345 214 156 244 166 160 C171 122 226 112 280 114" fill="none" stroke="#e8eefa" stroke-width="92" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="360" cy="128" r="96" fill="#2fb37a" stroke="#fff" stroke-width="18"/>
+  <path d="M312 130l32 32 60-62" fill="none" stroke="#fff" stroke-width="30" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

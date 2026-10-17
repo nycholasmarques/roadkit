@@ -123,7 +123,7 @@ jobs:
           node --check /tmp/sw.js
           curl -sf -D /tmp/wm.h http://127.0.0.1:8765/src/manifest.webmanifest | python3 -c "import json,sys; m=json.load(sys.stdin); assert m['display']=='standalone' and m['icons'], m"
           grep -qi '^content-type: application/manifest+json' /tmp/wm.h
-          for i in icon.svg icon-192.png icon-512.png maskable-512.png apple-touch-icon.png; do curl -sf -o /dev/null "http://127.0.0.1:8765/src/icons/$i"; done
+          for i in icon.svg favicon.svg icon-192.png icon-512.png maskable-512.png apple-touch-icon.png; do curl -sf -o /dev/null "http://127.0.0.1:8765/src/icons/$i"; done
           # writes from another origin are refused
           test "$(curl -s -o /dev/null -w '%{http_code}' -X PUT -H "$H" -H 'Origin: http://evil.example' -d '{}' http://127.0.0.1:8765/api/state/x)" = 403
           # the data folder and the server code are never served as files, however the path is spelled

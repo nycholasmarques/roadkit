@@ -66,7 +66,7 @@ Hidden roadmaps are just a list of ids in `data/_hidden.json`. Hiding neither de
 - **Roadmaps, `manifest.json` and interface texts**: network first, the last copy as a fallback. On load, the app asks the worker to keep a copy of every roadmap in the list.
 - **API** (`/api/*`): never goes through the worker. Progress and notes already have their own offline copy in the browser.
 
-`src/manifest.webmanifest` and the icons in `src/icons/` (drawn by `tools/icons.py`, standard library only) complete what the browser needs to offer installation.
+`src/manifest.webmanifest` and the icons in `src/icons/` complete what the browser needs to offer installation. The drawing is `icon.svg`; `favicon.svg` is the simplified version for the tab, readable at 16 px. The PNGs (192, 512, *maskable* and the iPhone one) are rendered from the SVG with `node tools/icons.cjs` (it needs Playwright, like the script that records the docs images).
 
 ## Where notes are stored
 

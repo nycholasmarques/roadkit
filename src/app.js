@@ -2670,7 +2670,7 @@ function roadmapMarkdown(withNotes) {
    it opens from the disk with no server and no network, read-only. */
 async function exportPage(withNotes) {
   const { rm } = S, safeJs = s => s.replace(/<\/script/gi, '<\\/script');
-  const [html, css, md, js, icon] = await Promise.all(['index.html', 'src/style.css', 'src/markdown.js', 'src/app.js', 'src/icons/icon.svg'].map(u => getText(u)));
+  const [html, css, md, js, icon] = await Promise.all(['index.html', 'src/style.css', 'src/markdown.js', 'src/app.js', 'src/icons/favicon.svg'].map(u => getText(u)));
   const langs = S.manifest.languages?.length ? S.manifest.languages : ['pt-BR'];
   const entry = entryById(rm.id) || { id: rm.id, title: rm.meta.title, icon: rm.meta.icon || '', topics: rm.core.length, coreIds: rm.core.map(n => n.id), doneByDefault: [] };
   const files = { 'manifest.json': JSON.stringify({ languages: langs, groups: [{ id: 'roadmaps', title: '' }], roadmaps: [{ ...entry, file: 'snapshot.json', group: 'roadmaps', hidden: false, editable: false }] }), 'snapshot.json': rm.sourceText };
@@ -2688,6 +2688,7 @@ async function exportPage(withNotes) {
   }
   page = page.replace(/<title>[^<]*<\/title>/, () => `<title>${esc(rm.meta.title)} · Roadkit</title>`)
     .replace(/\n\s*<link rel="(manifest|apple-touch-icon)"[^>]*>/g, '')   // not installable from a file: no manifest, no extra icons
+    .replace(/\n\s*<link rel="icon" href="src\/icons\/icon-192\.png"[^>]*>/, '')
     .replace(/<link rel="icon"[^>]*>/, () => `<link rel="icon" href="data:image/svg+xml,${encodeURIComponent(icon)}">`);
   download(new Blob([page], { type: 'text/html;charset=utf-8' }), `${rm.id}.html`);
 }
