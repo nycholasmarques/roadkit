@@ -115,13 +115,11 @@ The last line of the settings shows where progress is being saved: on the server
 
 ## Export, share and import
 
-**Export** opens a menu with four outputs:
+**Export** opens a menu with three outputs:
 
 - **Roadmap and progress (.zip)**: a folder named after the roadmap, with the roadmap JSON, a `progress.json` and your notes inside. It is a way to take everything to another machine or keep a copy.
 - **Markdown (.md)**: the roadmap as text, with phases as headings, `- [x]` on what is done, tasks, challenges, links, projects and, if you want, your notes at the end. It reads well on GitHub and in Obsidian.
 - **Page to share (.html)**: a single file that opens in any browser **with no server and no internet**. It is Roadkit itself, with the map, the kanban, the projects and the panels, frozen at today's progress and read-only. A strip at the top says when the progress is from. Send it to a mentor or publish it on GitHub Pages. The "Include my notes" box decides whether your notes go along.
-- **Calendar (.ics)**: an all-day event per phase and per dated topic, to import into Google Calendar, Outlook or Thunderbird. Exporting again updates the dates.
-
 ### Dates
 
 In the same menu, **Roadmap start** takes the day you started (or will start). From it, phase periods and topic times ("Weeks 1 and 2", "Week 3", "Month 2") become dates: each phase flag on the map and each topic panel show "by Sep 14", and anything past its date and not done gets an amber warning. The date is yours and lives with your progress; roadmap authors can also set dates in the JSON (`startDate`, `due`), which win over computed ones. With no date at all, nothing changes on screen.

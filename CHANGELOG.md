@@ -7,10 +7,8 @@ Cada release no GitHub também lista automaticamente os commits desde a versão 
 ## [1.5.0] - não lançada
 
 ### Exportar e compartilhar
-- O botão **Exportar** virou um menu: o `.zip` de sempre, **Markdown** (o roadmap em texto com `- [x]`, projetos e, se quiser, as notas), **página para compartilhar** e **calendário**.
+- O botão **Exportar** virou um menu: o `.zip` de sempre, **Markdown** (o roadmap em texto com `- [x]`, projetos e, se quiser, as notas) e **página para compartilhar**.
 - A **página para compartilhar** é um `.html` único que abre em qualquer navegador, sem servidor e sem internet: o próprio Roadkit, congelado no progresso do dia, somente leitura, com mapa, kanban, projetos e painéis. As notas vão junto só se você quiser.
-- O **calendário** (`.ics`) cria um evento de dia inteiro por fase e por tópico com data, para o Google Agenda, o Outlook ou o Thunderbird.
-
 ### Datas
 - **Começo do roadmap**: com o dia em que você começou, os períodos das fases e os prazos dos tópicos ("Semanas 1 e 2", "Mês 2") viram datas no mapa e no painel, com um aviso no que passou da data.
 - O JSON aceita `meta.startDate` e `due` em fases e tópicos, que valem mais que as datas calculadas. O `check` valida o formato e avisa quando uma fase vence antes da anterior.

@@ -85,7 +85,7 @@ Every topic and project has a Markdown notes box, saved on the server and offlin
 
 ### Share
 
-Export the roadmap as Markdown, as an `.ics` calendar with each phase's dates, or as a single `.html` page that opens in any browser with no server, to show your progress to someone.
+Export the roadmap as Markdown, or as a single `.html` page that opens in any browser with no server, to show your progress to someone.
 
 ### Create, watching the result
 

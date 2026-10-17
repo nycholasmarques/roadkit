@@ -2613,7 +2613,7 @@ function exportBundle() {
   ]), `${rm.id}.zip`);
 }
 
-/* ---------- export menu: zip, Markdown, a page to share, calendar ---------- */
+/* ---------- export menu: zip, Markdown, a page to share ---------- */
 const mdBox = done => (done ? '[x]' : '[ ]');
 
 /* The roadmap as Markdown: phases as headings, topics as task lists, then projects and (optionally) your notes. */
@@ -2664,20 +2664,6 @@ function roadmapMarkdown(withNotes) {
   return out.join('\n').replace(/\n{3,}/g, '\n\n') + '\n';
 }
 
-/* A calendar file: an all-day event on each phase's and topic's due date. */
-function calendarIcs() {
-  const { rm } = S, url = `${location.origin}${location.pathname}?r=${encodeURIComponent(rm.id)}`;
-  const icsText = s => str(s).replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\r?\n/g, '\\n');
-  const stamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d+/, '');
-  const events = [];
-  const add = (uid, day, title, desc) => events.push('BEGIN:VEVENT', `UID:${uid}@roadkit`, `DTSTAMP:${stamp}`, `DTSTART;VALUE=DATE:${day.replace(/-/g, '')}`,
-    `DTEND;VALUE=DATE:${toDay(fromDay(day) + dayMs).replace(/-/g, '')}`, `SUMMARY:${icsText(title)}`, `DESCRIPTION:${icsText(desc)}`, `URL:${url}`, 'TRANSP:TRANSPARENT', 'END:VEVENT');
-  rm.phases.forEach(ph => { const d = dueOf(ph); if (d && ph.nodes.length) add(`${rm.id}-phase-${ph.id}`, d, `${rm.meta.title} · ${ph.title}`, [ph.summary, ph.milestone, url].filter(Boolean).join('\n')); });
-  rm.nodes.forEach(n => { const d = dueOf(n); if (d) add(`${rm.id}-topic-${n.id}`, d, `${rm.meta.title} · ${n.title}`, [n.summary, n.challenge, url].filter(Boolean).join('\n')); });
-  const wrap = line => { const parts = []; let s = line; while (s.length > 60) { parts.push(s.slice(0, 60)); s = ` ${s.slice(60)}`; } parts.push(s); return parts.join('\r\n'); };   // lines stay short (RFC 5545)
-  return ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Roadkit//Roadkit//EN', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH', `X-WR-CALNAME:${icsText(rm.meta.title)}`, ...events, 'END:VCALENDAR'].map(wrap).join('\r\n') + '\r\n';
-}
-const hasDates = () => S.rm.phases.some(ph => ph.nodes.length && dueOf(ph)) || S.rm.nodes.some(n => dueOf(n));
 
 /* One HTML file that is the app itself, with this roadmap, its progress and the interface texts inside:
    it opens from the disk with no server and no network, read-only. */
@@ -2705,10 +2691,10 @@ async function exportPage(withNotes) {
 
 function openExport() {
   if (!S.rm || S.preview || S.readOnly) return;
-  const L = S.L, dates = hasDates();
+  const L = S.L;
   $('exportBody').innerHTML =
-    [['zip', L.exportZip, L.exportZipHint], ['md', L.exportMd, L.exportMdHint], ['html', L.exportHtml, L.exportHtmlHint], ['ics', L.exportIcs, dates ? L.exportIcsHint : L.exportIcsNone]]
-      .map(([k, t, hint]) => `<button type="button" class="exp-opt" data-export="${k}"${k === 'ics' && !dates ? ' disabled' : ''}><strong>${esc(t)}</strong><span>${esc(hint)}</span></button>`).join('') +
+    [['zip', L.exportZip, L.exportZipHint], ['md', L.exportMd, L.exportMdHint], ['html', L.exportHtml, L.exportHtmlHint]]
+      .map(([k, t, hint]) => `<button type="button" class="exp-opt" data-export="${k}"><strong>${esc(t)}</strong><span>${esc(hint)}</span></button>`).join('') +
     `<label class="ed-chk exp-notes"><input type="checkbox" id="expNotes" checked> ${esc(L.exportWithNotes)}</label>` +
     `<div class="exp-dates"><h3 class="ed-h">${esc(L.datesTitle)}</h3><div class="exp-date-row"><label for="startDay">${esc(L.startDay)}</label><input type="date" id="startDay" value="${esc(startDay())}"><button type="button" class="secondary" id="startDayClear"${S.state.dates?.start ? '' : ' hidden'}>${esc(L.startDayClear)}</button></div>` +
     `<p class="dlg-note">${esc(L.datesHint)}</p></div>`;
@@ -2727,7 +2713,6 @@ function wireExport() {
       if (opt.dataset.export === 'zip') exportBundle();
       if (opt.dataset.export === 'md') download(new Blob([roadmapMarkdown(notes)], { type: 'text/markdown;charset=utf-8' }), `${id}.md`);
       if (opt.dataset.export === 'html') await exportPage(notes);
-      if (opt.dataset.export === 'ics') download(new Blob([calendarIcs()], { type: 'text/calendar;charset=utf-8' }), `${id}.ics`);
       dlg.close();
     } catch (err) { alert(err.message); }
   });

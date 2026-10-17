@@ -53,7 +53,7 @@ Sem `phases`, o mapa é uma lista simples e a navegação por fase some.
 | `period` | "Semanas 1 a 3", "Q1"… (livre) |
 | `color` | hex; se omitido usa uma paleta |
 | `milestone` | marco exibido depois do último tópico principal da fase; fica verde quando a fase inteira está concluída. |
-| `due` | data alvo da fase (`AAAA-MM-DD`), mostrada na bandeira e no calendário; vale mais que a calculada pelo `period`. O `check` avisa se uma fase vence antes da anterior |
+| `due` | data alvo da fase (`AAAA-MM-DD`), mostrada na bandeira da fase; vale mais que a calculada pelo `period`. O `check` avisa se uma fase vence antes da anterior |
 
 A ordem do array define a ordem das fases.
 

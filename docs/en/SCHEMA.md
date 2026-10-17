@@ -53,7 +53,7 @@ Without `phases`, the map is a plain list and the phase navigation goes away.
 | `period` | "Weeks 1 to 3", "Q1"… (free text) |
 | `color` | hex; if omitted, a palette is used |
 | `milestone` | milestone shown after the phase's last main topic; turns green when the whole phase is done. |
-| `due` | target day for the phase (`YYYY-MM-DD`), shown on the flag and in the calendar; wins over the date computed from `period`. `check` warns when a phase is due before the previous one |
+| `due` | target day for the phase (`YYYY-MM-DD`), shown on the phase flag; wins over the date computed from `period`. `check` warns when a phase is due before the previous one |
 
 The order of the array sets the order of the phases.
 

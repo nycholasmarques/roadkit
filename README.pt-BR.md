@@ -83,7 +83,7 @@ Cada tópico e projeto tem um bloco de notas em Markdown, salvo no servidor e of
 
 ### Compartilhar
 
-Exporte o roadmap em Markdown, como um calendário `.ics` com as datas de cada fase, ou como uma página `.html` única que abre em qualquer navegador sem servidor, para mostrar o seu progresso a alguém.
+Exporte o roadmap em Markdown ou como uma página `.html` única que abre em qualquer navegador sem servidor, para mostrar o seu progresso a alguém.
 
 ### Criar, vendo o resultado
 

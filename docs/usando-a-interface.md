@@ -115,13 +115,11 @@ Na última linha dos ajustes aparece o estado do salvamento: se o progresso est�
 
 ## Exportar, compartilhar e importar
 
-**Exportar** abre um menu com quatro saídas:
+**Exportar** abre um menu com três saídas:
 
 - **Roadmap e progresso (.zip)**: uma pasta com o nome do roadmap, e dentro dela o JSON do roadmap, um `progress.json` e as suas notas. É um jeito de levar tudo para outra máquina ou de guardar uma cópia.
 - **Markdown (.md)**: o roadmap em texto, com fases como títulos, `- [x]` no que está concluído, tarefas, desafios, links, projetos e, se você quiser, as suas notas no fim. Abre bem no GitHub e no Obsidian.
 - **Página para compartilhar (.html)**: um arquivo só, que abre em qualquer navegador **sem servidor e sem internet**. É o próprio Roadkit, com o mapa, o kanban, os projetos e os painéis, congelado no progresso de hoje e somente leitura. Uma faixa no topo diz de quando é o progresso. Serve para mandar a um mentor ou publicar no GitHub Pages. A caixa "Incluir minhas notas" decide se as notas vão junto.
-- **Calendário (.ics)**: um evento de dia inteiro por fase e por tópico com data, para importar no Google Agenda, no Outlook ou no Thunderbird. Exportar de novo atualiza as datas.
-
 ### Datas
 
 No mesmo menu, **Começo do roadmap** recebe o dia em que você começou (ou vai começar). A partir dele, os períodos das fases e os prazos dos tópicos ("Semanas 1 e 2", "Semana 3", "Mês 2") viram datas: a bandeira de cada fase no mapa e o painel de cada tópico mostram "até 14 de set.", e o que passou da data sem estar concluído ganha um aviso amarelo. A data é sua e fica com o progresso; quem escreve o roadmap também pode fixar datas no JSON (`startDate`, `due`), que valem mais que as calculadas. Sem data nenhuma, nada muda na tela.
