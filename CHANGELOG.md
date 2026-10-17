@@ -15,6 +15,9 @@ Cada release no GitHub também lista automaticamente os commits desde a versão 
 - O editor ganhou uma seção de projetos, o **Criar com IA** pode pedir projetos junto, e a skill para agentes sabe escrevê-los.
 - Os exemplos de Argo CD e SQL, nas duas línguas, trazem projetos.
 
+### Segurança
+- O servidor deixou de entregar arquivos da pasta de dados e do código quando o endereço vinha codificado (por exemplo `/%64ata/<id>.json`). Antes, isso permitia ler o progresso salvo sem passar pela API e, portanto, sem o token. Atualize se você abre o Roadkit para outros aparelhos.
+
 ### Por dentro
 - O servidor passou a guardar as partes do progresso que um cliente não manda. Assim, um navegador com a versão anterior não apaga os projetos salvos por esta.
 - O `check` e o schema validam os projetos: nível, ids repetidos e tópicos que não existem.

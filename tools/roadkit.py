@@ -14,6 +14,7 @@ import http.server
 import hmac
 import json
 import os
+import posixpath
 import re
 import sys
 import tempfile
@@ -596,6 +597,13 @@ def known_ids():
     return {e["id"]: e for e in json.loads(build_manifest(write=False))["roadmaps"]}
 
 
+def private_path(path):
+    """Folders that are never served as static files. The check runs on the decoded, normalized path,
+    the same one the static server would open, so '/%64ata/...' or '/x/../data/...' cannot get around it."""
+    parts = [p for p in posixpath.normpath(unquote(path)).split("/") if p]
+    return bool(parts) and (parts[0].startswith(".git") or parts[0] in ("tools", "data"))
+
+
 class Handler(http.server.SimpleHTTPRequestHandler):
     def do_GET(self):
         path = self.path.split("?")[0]
@@ -603,11 +611,16 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             return self.api("GET", path)
         if path.startswith("/user/"):                 # roadmaps created in the UI live in the data folder
             return self.serve_user_file(path)
-        if path.startswith(("/.git", "/tools", "/data")):
+        if private_path(path):
             return self.send_error(404)
         if path == "/manifest.json":
             return self.send_text(build_manifest())
         super().do_GET()
+
+    def do_HEAD(self):
+        if private_path(self.path.split("?")[0]):
+            return self.send_error(404)
+        super().do_HEAD()
 
     def do_PUT(self):
         self.route_api("PUT")
