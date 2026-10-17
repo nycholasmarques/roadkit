@@ -38,7 +38,7 @@ Clicking a project opens its panel, which works like a topic's:
 
 - the four states (to do, working, review, finished);
 - the topics it uses, each with its state, and a quiet warning if any is missing. It blocks nothing;
-- the **requirements**, as checkboxes. Checking the first one moves the project to "working";
+- the **requirements**, as checkboxes. Checking the first one moves the project to "working". Marking the project as done checks them all, and moving it back to "to do" clears them all, just like a topic's tasks;
 - the deliverable, the success criterion and the ideas to go further;
 - **Your repository**: paste the link to your code so you remember where it is. It is saved with your progress and becomes a button to open it.
 

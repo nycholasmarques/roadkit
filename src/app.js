@@ -338,6 +338,15 @@ function editProject(p, fn) {
   changed();
 }
 
+/* Like a topic and its tasks: finishing a project checks every requirement, moving it back to todo clears them. */
+function setProjectStatus(p, st) {
+  editProject(p, o => {
+    o.status = st;
+    if (st === 'finished') p.requirements.forEach(r => { o.req[r.id] = true; });
+    if (st === 'todo') o.req = {};
+  });
+}
+
 function loadState(rm) {
   let st = emptyState(), saved = null;
   try { saved = JSON.parse(store.get(KEY.state(rm.id)) || 'null'); } catch { /* corrupt entry */ }
@@ -1936,8 +1945,8 @@ function wireDnd() {
     const proj = S.rm.projById[S.project];
     if (proj) {
       const ps = e.target.closest('[data-pstatus]');
-      if (ps) editProject(proj, o => { o.status = ps.dataset.pstatus; });
-      else if (e.target.closest('[data-pdone]')) editProject(proj, o => { o.status = projDone(proj) ? 'todo' : 'finished'; });
+      if (ps) setProjectStatus(proj, ps.dataset.pstatus);
+      else if (e.target.closest('[data-pdone]')) setProjectStatus(proj, projDone(proj) ? 'todo' : 'finished');
       return;
     }
     const sb = e.target.closest('[data-status]');
