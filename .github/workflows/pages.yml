@@ -1,0 +1,58 @@
+name: Pages
+
+# The site at https://nycholasmarques.github.io/roadkit/: the landing page (site/) and the live demo (the app as
+# static files, with the examples). It is built from a released version, never from main halfway through a feature:
+#   - release.yml calls it after publishing a release (a release made by the workflow's own token would not
+#     start other workflows on its own);
+#   - Actions > Pages > Run workflow rebuilds it from the branch or tag you pick.
+# The repository needs Settings > Pages > Source: GitHub Actions.
+on:
+  workflow_call:
+    inputs:
+      ref:
+        description: "Tag or branch to build"
+        type: string
+        required: true
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Build the site and the demo
+        run: python3 tools/build_site.py _site
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@v4

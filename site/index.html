@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Roadkit: study roadmaps that are yours</title>
+  <meta name="description" content="Free, open source study roadmaps: a JSON file, a browser and no sign-up. Map, kanban, projects, notes and stats in an app that runs on your machine.">
+  <meta property="og:title" content="Roadkit">
+  <meta property="og:description" content="Study roadmaps that are yours: map, kanban, projects, notes and stats, self-hosted and free.">
+  <meta property="og:image" content="media/mapa-claro.png">
+  <link rel="icon" href="icons/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="icons/icon-192.png" sizes="192x192" type="image/png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <script>try{var t=localStorage.getItem('roadkit-site:theme');if(t==='light'||t==='dark')document.documentElement.dataset.theme=t}catch(e){}</script>
+  <link rel="stylesheet" href="site.css">
+</head>
+<body>
+<header class="top">
+  <a class="brand" href="#top" aria-label="Roadkit"><img src="icons/icon.svg" alt="" width="30" height="30"><span>road<b>kit</b></span></a>
+  <nav class="top-nav">
+    <a href="#features" data-t="navFeatures">Features</a>
+    <a href="#install" data-t="navInstall">Install</a>
+    <a href="#roadmaps" data-t="navRoadmaps">Roadmaps</a>
+    <a href="https://github.com/nycholasmarques/roadkit" rel="noopener">GitHub</a>
+  </nav>
+  <div class="top-tools">
+    <button type="button" class="chip-btn" id="langBtn" aria-label="Português">PT</button>
+    <button type="button" class="chip-btn" id="themeBtn" data-t-aria="themeToggle" aria-label="Light or dark">
+      <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12.8A8.5 8.5 0 1 1 11.2 3a6.6 6.6 0 0 0 9.8 9.8z"/></svg>
+    </button>
+  </div>
+</header>
+
+<main id="top">
+  <section class="hero">
+    <div class="hero-text">
+      <p class="eyebrow" data-t="eyebrow">Study roadmaps, your way</p>
+      <h1 data-t="heroTitle">Roadmaps that are yours.</h1>
+      <p class="lead" data-t="heroLead">A JSON file, a browser and no sign-up. Map, kanban, projects, notes and stats in an app that runs on your machine, online or off.</p>
+      <div class="cta">
+        <a class="btn primary" href="app/" data-t="tryNow">Try it now</a>
+        <a class="btn" href="#install" data-t="installCta">Install</a>
+      </div>
+      <p class="fine" data-t="heroFine">Free and open source. No account, no tracking.</p>
+    </div>
+    <figure class="hero-shot">
+      <picture>
+        <source srcset="media/mapa-escuro.png" media="(prefers-color-scheme: dark)">
+        <img src="media/mapa-claro.png" alt="The Roadkit map: phases, topics and progress" width="1600" height="1000" id="heroImg">
+      </picture>
+    </figure>
+  </section>
+
+  <section class="sec" id="features">
+    <h2 data-t="featuresTitle">Everything a study plan needs</h2>
+    <p class="sec-lead" data-t="featuresLead">Each roadmap is a JSON file. Roadkit turns it into a place where the work happens.</p>
+    <div class="cards">
+      <article class="card"><span class="ico" aria-hidden="true">🗺️</span><h3 data-t="f1t">Map and kanban</h3><p data-t="f1p">The same roadmap as a path or a board. Each topic moves through to do, in progress, in review and finished, with tasks and sub-topics.</p></article>
+      <article class="card"><span class="ico" aria-hidden="true">☀️</span><h3 data-t="f2t">A Today screen</h3><p data-t="f2p">What is in progress across every roadmap and the next step of each one, on a single screen.</p></article>
+      <article class="card"><span class="ico" aria-hidden="true">🛠️</span><h3 data-t="f3t">Projects by level</h3><p data-t="f3p">Hands-on projects from beginner to advanced, linked to the topics they practice, with requirements to check off.</p></article>
+      <article class="card"><span class="ico" aria-hidden="true">📝</span><h3 data-t="f4t">Markdown notes</h3><p data-t="f4p">A notebook on every topic and project: the command that worked, the open question, the decision you made.</p></article>
+      <article class="card"><span class="ico" aria-hidden="true">📈</span><h3 data-t="f5t">Statistics</h3><p data-t="f5p">A heatmap of your year, your day streak and a forecast of when each roadmap ends at your pace.</p></article>
+      <article class="card"><span class="ico" aria-hidden="true">🔁</span><h3 data-t="f6t">Review and focus</h3><p data-t="f6p">Optional: finished topics come back for spaced review, and a focus timer records the real time each topic took.</p></article>
+      <article class="card"><span class="ico" aria-hidden="true">⌨️</span><h3 data-t="f7t">Search and shortcuts</h3><p data-t="f7p">Ctrl+K goes to any topic of any roadmap, and single-letter keys do the rest, with the key shown on each button.</p></article>
+      <article class="card"><span class="ico" aria-hidden="true">📲</span><h3 data-t="f8t">App, offline, shareable</h3><p data-t="f8p">Install it as an app, use it with no internet, and export a single page to show your progress to anyone.</p></article>
+      <article class="card"><span class="ico" aria-hidden="true">🤖</span><h3 data-t="f9t">Create with AI</h3><p data-t="f9p">Describe what you want to learn, take the prompt to any AI you like, and the roadmap opens in the editor. No API key.</p></article>
+    </div>
+  </section>
+
+  <section class="sec demo">
+    <div class="demo-text">
+      <h2 data-t="demoTitle">See it move</h2>
+      <p data-t="demoLead">Check off a topic, drag a card on the kanban, switch to dark. Or skip the video and open the real app with the example roadmaps: nothing to install, and your progress stays in your browser.</p>
+      <a class="btn primary" href="app/" data-t="tryNow">Try it now</a>
+    </div>
+    <img class="demo-gif" src="media/visao-geral.gif" alt="Checking off a topic, moving a card on the kanban and switching to the dark theme" width="1280" height="800" loading="lazy">
+  </section>
+
+  <section class="sec">
+    <h2 data-t="whyTitle">Why it is different</h2>
+    <ul class="why">
+      <li><b data-t="w1t">Free and open, for good.</b> <span data-t="w1p">MIT licensed. Nothing paid, no account, no telemetry.</span></li>
+      <li><b data-t="w2t">Your data is files you understand.</b> <span data-t="w2p">Roadmaps and progress are readable JSON, in a folder you can back up.</span></li>
+      <li><b data-t="w3t">Runs on your machine.</b> <span data-t="w3p">Python with no dependencies, or a small Docker image. No build step.</span></li>
+      <li><b data-t="w4t">Works offline and on your phone.</b> <span data-t="w4p">Install it as an app; changes made offline sync when you are back.</span></li>
+      <li><b data-t="w5t">Portuguese and English.</b> <span data-t="w5p">The interface and the docs come in both, and roadmaps can be in any language.</span></li>
+    </ul>
+  </section>
+
+  <section class="sec" id="install">
+    <h2 data-t="installTitle">Install</h2>
+    <p class="sec-lead" data-t="installLead">With Docker, one command. Then open http://localhost:8765.</p>
+    <div class="code"><code id="dockerCmd">docker run -d -p 127.0.0.1:8765:8765 -v roadkit-data:/app/data ghcr.io/nycholasmarques/roadkit:1</code><button type="button" class="copy" data-copy="dockerCmd" data-t="copy">Copy</button></div>
+    <p class="sec-lead" data-t="installPython">Or with nothing but Python 3: download the latest release, unzip it and run:</p>
+    <div class="code"><code id="pyCmd">python3 tools/roadkit.py serve</code><button type="button" class="copy" data-copy="pyCmd" data-t="copy">Copy</button></div>
+    <p class="links">
+      <a href="https://github.com/nycholasmarques/roadkit/releases/latest" data-t="latestRelease">Latest release</a> ·
+      <a href="https://github.com/nycholasmarques/roadkit/blob/main/docs/en/README.md" data-t-href="docsHref" data-t="docs">Documentation</a> ·
+      <a href="https://github.com/nycholasmarques/roadkit/blob/main/docs/en/docker-and-network.md" data-t-href="networkHref" data-t="network">Use it from your phone or another computer</a>
+    </p>
+  </section>
+
+  <section class="sec" id="roadmaps">
+    <h2 data-t="roadmapsTitle">Roadmaps to start with</h2>
+    <p class="sec-lead" data-t="roadmapsLead">They come with Roadkit. Open one in the demo, or make your own in the editor.</p>
+    <div class="cards ex" id="examples"></div>
+  </section>
+</main>
+
+<footer class="foot">
+  <img src="icons/icon.svg" alt="" width="22" height="22">
+  <span>Roadkit <span class="ver">v__ROADKIT_VERSION__</span></span>
+  <a href="https://github.com/nycholasmarques/roadkit">GitHub</a>
+  <a href="https://github.com/nycholasmarques/roadkit/blob/main/CHANGELOG.md">Changelog</a>
+  <a href="https://github.com/nycholasmarques/roadkit/blob/main/LICENSE" data-t="license">MIT license</a>
+  <span class="by"><span data-t="madeBy">made by</span> <a href="https://github.com/nycholasmarques">nycholasmarques</a></span>
+</footer>
+<script src="i18n.js"></script>
+<script src="site.js"></script>
+</body>
+</html>

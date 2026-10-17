@@ -404,5 +404,7 @@
   "statOnTime": "within the estimate",
   "statOver": "over the estimate",
   "statsEmpty": "Statistics show up as you check off topics. The activity record started in version 1.7.",
-  "paletteWords_stats": "statistics stats chart pace forecast streak heatmap history"
+  "paletteWords_stats": "statistics stats chart pace forecast streak heatmap history",
+  "demoBanner": "Demo: your progress stays in this browser only.",
+  "demoInstall": "Install Roadkit to keep it for real →"
 }

@@ -14,6 +14,8 @@ O que conta como "o contrato" é o formato do JSON dos roadmaps (veja o [`SCHEMA
 
 ## O caminho de uma release
 
+> Se a release mexeu em algum arquivo de `.github/workflows/`, o GitHub não deixa o token do próprio workflow criar a tag pelo **Run workflow**, e o passo falha com uma mensagem explicando. Nesse caso, crie a tag você mesmo: `git tag -a v1.2.3 <commit> -m "Roadkit 1.2.3" && git push origin refs/tags/v1.2.3`. O push da tag inicia a mesma release.
+
 As notas da release se escrevem sozinhas: o workflow junta os commits desde a release anterior, agrupa por tipo e monta o texto. Não precisa mexer em nenhum arquivo para publicar. Então o caminho mais curto é:
 
 1. Espere o CI da `main` ficar verde.
@@ -47,6 +49,21 @@ python3 .github/scripts/release_notes.py v1.1.0 nycholasmarques/roadkit
 ```
 
 (Ele precisa de uma tag `v1.1.0` local para comparar. Para um teste, crie a tag, rode e apague.)
+
+## O site no GitHub Pages
+
+O site (https://nycholasmarques.github.io/roadkit/) tem duas partes: a página de apresentação, em `site/`, e a demonstração em `/app/`, que é o próprio Roadkit servido como arquivos estáticos, com os exemplos. Sem servidor por trás, o app fica no modo local: o progresso é guardado só no navegador, e uma faixa no topo avisa isso e leva para a página de instalar.
+
+- Quem monta tudo é o `tools/build_site.py`, só com a biblioteca padrão: copia a página, os ícones e as imagens, gera o `manifest.json` só com os exemplos (com `"demo": true`), põe o service worker ao lado do app e escreve a versão no rodapé.
+- O workflow `pages.yml` publica o resultado. A `release.yml` chama ele no fim de cada release (menos as pré-releases), então o site mostra sempre a versão publicada, e não a `main` no meio de uma feature. Para refazer o site sem release, use **Actions → Pages → Run workflow**.
+- O repositório precisa de **Settings → Pages → Source: GitHub Actions**, uma vez só.
+- O CI monta o site em cada PR e confere os links, o manifest da demo e os textos nas duas línguas.
+
+Para ver o site antes de publicar:
+
+```bash
+python3 tools/build_site.py _site && python3 -m http.server 8790 --directory _site
+```
 
 ## O CI
 
