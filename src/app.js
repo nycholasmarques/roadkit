@@ -49,7 +49,11 @@ const store = {
   set(k, v) { try { localStorage.setItem(k, v); } catch { /* storage blocked */ } },
   del(k) { try { localStorage.removeItem(k); } catch { /* storage blocked */ } },
 };
+/* A page exported with "Page to share" carries everything it needs in ROADKIT_SNAPSHOT: it never touches the
+   network and nothing in it can be changed. */
+const SNAP = window.ROADKIT_SNAPSHOT && typeof window.ROADKIT_SNAPSHOT === 'object' ? window.ROADKIT_SNAPSHOT : null;
 async function getText(url) {
+  if (SNAP) { const f = SNAP.files?.[url]; if (typeof f === 'string') return f; throw new Error(`${url}: not in this page`); }
   const r = await fetch(url, { cache: 'no-store' });
   if (!r.ok) throw new Error(`${url}: HTTP ${r.status}`);
   return r.text();
@@ -57,6 +61,7 @@ async function getText(url) {
 const getJson = async url => JSON.parse(await getText(url));
 
 const S = {
+  readOnly: !!SNAP,
   manifest: null, defaults: {}, L: {}, labelCache: {},
   rm: null, localRm: null, state: { nodes: {}, tasks: {} }, view: 'map', selected: null, phase: 'all', search: '',
   links: [], legendEl: null, svg: null, warnOpen: new Set(),
@@ -152,7 +157,7 @@ function setSettingsOpen(open) {
 }
 
 function resetProgress() {
-  if (!confirm(S.L.confirmReset)) return;
+  if (S.readOnly || !confirm(S.L.confirmReset)) return;
   S.state = { nodes: {}, tasks: {} };
   changed();
 }
@@ -229,7 +234,7 @@ function normalize(raw, fallbackId) {
   const hasPhases = Array.isArray(raw.phases) && raw.phases.length > 0;
   const phases = (hasPhases ? raw.phases : [{ id: '_main' }]).map((p, i) => ({
     id: String(p.id ?? `p${i + 1}`), title: str(p.title), summary: str(p.summary), period: str(p.period),
-    milestone: str(p.milestone), color: hex(p.color) || PALETTE[i % PALETTE.length], index: i, nodes: [],
+    milestone: str(p.milestone), color: hex(p.color) || PALETTE[i % PALETTE.length], index: i, nodes: [], due: okDay(p.due) ? p.due : '',
   }));
   const phaseById = Object.fromEntries(phases.map(p => [p.id, p]));
   const byId = {}, nodes = [];
@@ -243,7 +248,7 @@ function normalize(raw, fallbackId) {
       id, phase, title: str(r.title) || id, time: str(r.time), summary: str(r.summary),
       topics: arr(r.topics).map(String), challenge: str(r.challenge), success: str(r.success),
       links: normLinks(r.links), optional: !!r.optional, parentId: str(r.parent) || (r.optional ? str(r.anchor) : ''),
-      tasks: normTasks(r.tasks), children: [], parent: null, depth: 0,
+      tasks: normTasks(r.tasks), children: [], parent: null, depth: 0, due: okDay(r.due) ? r.due : '',
     };
     n.explicit = STATUSES.includes(r.status);
     n.status = n.explicit ? r.status : null;   // settled below, once the tree is known
@@ -308,8 +313,10 @@ const isDone = n => nodeStatus(n) === 'finished';
 const finishedTasks = n => n.tasks.filter(t => taskStatus(n, t) === 'finished').length;
 const phaseDone = ph => ph.nodes.length > 0 && ph.nodes.every(isDone);
 
-const emptyState = () => ({ nodes: {}, tasks: {}, projects: {} });
-const hasProgress = st => ['nodes', 'tasks', 'projects'].some(k => Object.keys(st[k] || {}).length > 0);
+const emptyState = () => ({ nodes: {}, tasks: {}, projects: {}, dates: {} });
+const hasProgress = st => ['nodes', 'tasks', 'projects', 'dates'].some(k => Object.keys(st[k] || {}).length > 0);
+const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
+const okDay = v => typeof v === 'string' && ISO_DAY.test(v) && !Number.isNaN(Date.parse(`${v}T00:00:00Z`));
 const okRepo = u => typeof u === 'string' && u.length <= MAX_REPO_URL && /^https?:\/\/\S+$/i.test(u);
 
 /* A project's saved progress, keeping only valid fields and requirements that still exist. */
@@ -331,7 +338,39 @@ function cleanState(rm, saved) {
   for (const [id, v] of Object.entries(saved?.nodes || {})) if (rm.byId[id] && STATUSES.includes(v)) st.nodes[id] = v;
   for (const n of rm.nodes) for (const t of n.tasks) { const v = saved?.tasks?.[taskKey(n, t)]; if (STATUSES.includes(v)) st.tasks[taskKey(n, t)] = v; }
   for (const p of rm.projects) { const v = cleanProject(p, saved?.projects?.[p.id]); if (v) st.projects[p.id] = v; }
+  if (okDay(saved?.dates?.start)) st.dates.start = saved.dates.start;
   return st;
+}
+
+/* ---------- dates: a start day (yours, in the progress, or the roadmap's meta.startDate) turns the
+   phase periods and topic times ("Semanas 1 e 2", "Week 3", "Mês 2") into due dates; an explicit `due` wins ---------- */
+const dayMs = 86400000;
+const toDay = ms => new Date(ms).toISOString().slice(0, 10);
+const fromDay = d => Date.parse(`${d}T00:00:00Z`);
+const todayDay = () => { const n = new Date(); return toDay(Date.UTC(n.getFullYear(), n.getMonth(), n.getDate())); };
+function spanEnd(text) {   // how far into the roadmap a "Weeks 1 and 2" / "Mês 3" / "Days 4-6" ends, in days
+  const t = fold(text), nums = (t.match(/\d+/g) || []).map(Number).filter(n => n > 0 && n < 1000);
+  if (!nums.length) return 0;
+  const n = Math.max(...nums);
+  if (/seman|week|sem\b|wk/.test(t)) return n * 7;
+  if (/\bmes|mese|month/.test(t)) return n * 30;
+  if (/\bdia|\bday/.test(t)) return n;
+  return 0;
+}
+const startDay = () => S.state.dates?.start || (okDay(S.rm?.meta.startDate) ? S.rm.meta.startDate : '');
+function dueOf(item) {   // a phase or a node
+  if (okDay(item.due)) return item.due;
+  const start = startDay(), days = start ? spanEnd(item.period ?? item.time ?? '') : 0;
+  return days ? toDay(fromDay(start) + (days - 1) * dayMs) : '';
+}
+const fmtDay = d => new Date(fromDay(d)).toLocaleDateString(document.documentElement.lang || undefined, { day: 'numeric', month: 'short', timeZone: 'UTC' });
+const overdue = (due, done) => !!due && !done && due < todayDay();
+
+function setStartDay(day) {
+  if (S.readOnly) return;
+  if (okDay(day)) S.state.dates = { ...S.state.dates, start: day }; else S.state.dates = {};
+  changed();
+  if (S.svg && S.view === 'map') layout();   // the due line changes the height of the phase flags
 }
 
 /* ---------- projects: status, requirements and repository link (stored under state.projects) ---------- */
@@ -346,6 +385,7 @@ const missingFor = p => p.uses.filter(n => !isDone(n));
 const projReady = p => p.uses.length > 0 && !missingFor(p).length;
 
 function editProject(p, fn) {
+  if (S.readOnly) return;
   const o = { ...projState(p), req: { ...projState(p).req }, stretch: { ...projState(p).stretch } };
   fn(o);
   const v = cleanProject(p, o);
@@ -364,6 +404,7 @@ function setProjectStatus(p, st) {
 }
 
 function loadState(rm) {
+  if (SNAP) { S.state = cleanState(rm, SNAP.state); S.ts = 0; return; }
   let st = emptyState(), saved = null;
   try { saved = JSON.parse(store.get(KEY.state(rm.id)) || 'null'); } catch { /* corrupt entry */ }
   if (saved && typeof saved === 'object') {
@@ -379,7 +420,7 @@ function loadState(rm) {
 }
 
 function saveState() {
-  if (S.preview) return;   // editor drafts are never stored
+  if (S.preview || S.readOnly) return;   // editor drafts and shared pages are never stored
   store.set(KEY.state(S.rm.id), JSON.stringify(S.state));
   store.set(KEY.ts(S.rm.id), String(S.ts));
 }
@@ -390,7 +431,7 @@ const deriveNode = n => deriveStatus([...n.tasks.map(t => taskStatus(n, t)), ...
 function bubble(n) { for (let p = n.parent; p; p = p.parent) if (p.tasks.length || requiredKids(p).length) S.state.nodes[p.id] = deriveNode(p); }
 
 function setTaskStatus(n, t, st) {
-  if (taskStatus(n, t) === st) return;
+  if (S.readOnly || taskStatus(n, t) === st) return;
   S.state.tasks[taskKey(n, t)] = st;
   S.state.nodes[n.id] = deriveNode(n);
   bubble(n);
@@ -400,7 +441,7 @@ function setTaskStatus(n, t, st) {
 /* Moving a node to finished or todo applies to all its tasks; leaving finished reopens them too. */
 function setNodeStatus(n, st) {
   const prev = nodeStatus(n);
-  if (prev === st) return;
+  if (S.readOnly || prev === st) return;
   S.state.nodes[n.id] = st;
   if (st === 'finished' || st === 'todo' || prev === 'finished') {   // applies to all of its tasks and required sub-topics
     const apply = x => { x.tasks.forEach(t => { S.state.tasks[taskKey(x, t)] = st; }); requiredKids(x).forEach(c => { S.state.nodes[c.id] = st; apply(c); }); };
@@ -424,7 +465,7 @@ function changed() {
 const READY_KEY = id => `roadkit:v1:ready:${id}`;
 const readyNow = () => new Set((S.rm?.projects || []).filter(p => projReady(p) && !projDone(p)).map(p => p.id));
 function notifyReady() {
-  if (!S.rm?.projects.length || S.preview) return;
+  if (!S.rm?.projects.length || S.preview || S.readOnly) return;
   const now = readyNow(), before = S.readyBase || new Set();
   S.readyBase = now;
   let told = [];
@@ -461,7 +502,7 @@ function setSyncStatus(kind) {
   el.textContent = S.L?.['sync_' + kind] ?? '';
 }
 
-const syncEnabled = () => !!S.rm && !S.isLocal && !S.preview && sync.api && SYNC_ID.test(S.rm.id);
+const syncEnabled = () => !!S.rm && !S.isLocal && !S.preview && !S.readOnly && sync.api && SYNC_ID.test(S.rm.id);
 
 async function apiFetch(method, path, body, keepalive = false) {
   const call = () => fetch(path, {
@@ -542,6 +583,7 @@ const noteOf = key => S.notes[key] || '';
 const notesSync = { timer: 0, status: 'local' };
 
 function loadNotes(rm) {
+  if (SNAP) { S.notes = SNAP.notes && typeof SNAP.notes === 'object' ? { ...SNAP.notes } : {}; S.notesTs = 0; S.noteMode = {}; return; }
   let v = null;
   try { v = JSON.parse(store.get(KEY.notes(rm.id)) || 'null'); } catch { /* corrupt entry */ }
   S.notes = {};
@@ -551,7 +593,7 @@ function loadNotes(rm) {
 }
 
 function saveNotesLocal() {
-  if (S.preview || !S.rm) return;
+  if (S.preview || S.readOnly || !S.rm) return;
   store.set(KEY.notes(S.rm.id), JSON.stringify(S.notes));
   store.set(KEY.notesTs(S.rm.id), String(S.notesTs));
 }
@@ -564,6 +606,7 @@ function setNotesStatus(kind) {
 /* Typing in a note: cache now, send half a second after the last key. Card markers only change when a note
    appears or disappears. */
 function setNote(key, text) {
+  if (S.readOnly) return;
   const had = !!noteOf(key);
   text = str(text).slice(0, MAX_NOTE);
   if (text.trim()) S.notes[key] = text; else delete S.notes[key];
@@ -618,7 +661,9 @@ const pullNotes = () => queue(async () => {
 /* The notes box of a topic, a project or the roadmap: "Write" is a growing text area, "View" the rendered Markdown. */
 function noteBlock(key, title = S.L.notes) {
   if (S.preview) return '';
-  const L = S.L, text = noteOf(key), mode = S.noteMode[key] || (text ? 'view' : 'write');
+  const L = S.L, text = noteOf(key);
+  if (S.readOnly) return text ? `<section class="note" data-note="${esc(key)}"><div class="note-head"><h3>${ICON.note} ${esc(title)}</h3></div><div class="note-view md">${MD.render(text)}</div></section>` : '';
+  const mode = S.noteMode[key] || (text ? 'view' : 'write');
   return `<section class="note" data-note="${esc(key)}"><div class="note-head"><h3>${ICON.note} ${esc(title)}</h3>` +
     `<div class="seg small note-tabs" role="group" aria-label="${esc(L.notes)}"><button type="button" data-note-mode="write" aria-pressed="${mode === 'write'}">${esc(L.noteWrite)}</button><button type="button" data-note-mode="view" aria-pressed="${mode === 'view'}">${esc(L.noteView)}</button></div></div>` +
     (mode === 'write'
@@ -802,6 +847,7 @@ function progressOf(entry) {
 }
 
 async function loadRemoteStates() {
+  if (S.readOnly) return;
   try {
     const r = await apiFetch('GET', 'api/states');
     if (r.ok) S.remote = await r.json();
@@ -1301,7 +1347,7 @@ function focusEditorRow(id) {
 
 /* ---- enter / leave ---- */
 async function openEditor(entry = null) {
-  if (S.editing) return;
+  if (S.editing || S.readOnly) return;
   let base = null;
   if (entry) {
     try { base = JSON.parse(await getText(entry.file)); } catch (err) { return alert(err.message); }
@@ -1504,7 +1550,7 @@ function buildMap() {
     if (ph.title) {
       const f = document.createElement('div');
       f.className = 'phase-flag'; f.style.setProperty('--flag', ph.color);
-      f.innerHTML = `<div class="phase-kicker">${esc(L.phase)} ${String(ph.index + 1).padStart(2, '0')}${ph.period ? ' | ' + esc(ph.period) : ''}</div><strong>${esc(ph.title)}</strong>${ph.summary ? `<span>${esc(ph.summary)}</span>` : ''}`;
+      f.innerHTML = `<div class="phase-kicker">${esc(L.phase)} ${String(ph.index + 1).padStart(2, '0')}${ph.period ? ' | ' + esc(ph.period) : ''}</div><strong>${esc(ph.title)}</strong>${ph.summary ? `<span>${esc(ph.summary)}</span>` : ''}<em class="phase-due" hidden></em>`;
       map.append(f); ph.flagEl = f;
     }
     if (ph.milestone) {
@@ -1694,7 +1740,15 @@ function refresh() {
     n.el.querySelector('.node-check').setAttribute('aria-pressed', String(done));
     if (n.metaEl) n.metaEl.textContent = metaText(n);
   });
-  rm.phases.forEach(ph => ph.msEl?.classList.toggle('reached', phaseDone(ph)));
+  rm.phases.forEach(ph => {
+    ph.msEl?.classList.toggle('reached', phaseDone(ph));
+    const el = ph.flagEl?.querySelector('.phase-due');
+    if (!el) return;
+    const due = dueOf(ph), late = overdue(due, phaseDone(ph));
+    el.hidden = !due;
+    el.classList.toggle('late', late);
+    el.textContent = due ? fmt(late ? L.dueLate : L.dueBy, { date: fmtDay(due) }) : '';
+  });
   S.links.forEach(l => l.el.classList.toggle('done', !!(l.a.isDone() && l.b.isDone())));
   const real = S.preview ? rm.core.filter(n => !n.id.startsWith('ghost-')) : rm.core;   // editor placeholders don't count
   const qty = real.filter(isDone).length;
@@ -1856,9 +1910,10 @@ function drawDetail() {
   const projects = usedBy.length
     ? `<h3>${esc(L.projectsOfTopic)}</h3><div class="sublist">${usedBy.map(p => `<button type="button" class="subitem" data-project="${esc(p.id)}"><span class="kdot k-${projStatus(p)}"></span><span>${esc(p.title)}</span><em class="pj-lv lv-${p.level}">${esc(L[`level_${p.level}`])}</em></button>`).join('')}</div>`
     : '';
+  const due = dueOf(n), late = overdue(due, done);
   box.className = '';
   box.innerHTML =
-    `<div class="panel-kicker">${esc(kicker)}</div><h2>${esc(n.title)}</h2>` +
+    `<div class="panel-kicker">${esc(kicker)}${due ? ` <span class="due${late ? ' late' : ''}">· ${esc(fmt(late ? L.dueLate : L.dueBy, { date: fmtDay(due) }))}</span>` : ''}</div><h2>${esc(n.title)}</h2>` +
     `<div class="statusbar" role="group" aria-label="${esc(L.status)}">${STATUSES.map(s => `<button type="button" data-status="${s}" class="s-${s}${s === st ? ' on' : ''}" aria-pressed="${s === st}">${esc(L[STATUS_LABEL[s]])}</button>`).join('')}</div>` +
     (miss ? skipNote(miss) : '') +
     (n.summary ? `<p>${esc(n.summary)}</p>` : '') +
@@ -1890,18 +1945,19 @@ function renderProjectDetail(p) {
         `<div class="sublist">${p.uses.map(n => `<button type="button" class="subitem" data-goto="${esc(n.id)}"><span class="kdot k-${nodeStatus(n)}"></span><span>${esc(n.title)}</span></button>`).join('')}</div>`
       : '') +
     (p.requirements.length
-      ? `<h3>${esc(L.requirements)} <span class="h3-count">${reqCount(p)}/${p.requirements.length}</span></h3><div class="reqlist">${p.requirements.map(r => `<label class="req"><input type="checkbox" data-req="${esc(r.id)}"${reqDone(p, r) ? ' checked' : ''}><span>${esc(r.title)}</span></label>`).join('')}</div>`
+      ? `<h3>${esc(L.requirements)} <span class="h3-count">${reqCount(p)}/${p.requirements.length}</span></h3><div class="reqlist">${p.requirements.map(r => `<label class="req"><input type="checkbox" data-req="${esc(r.id)}"${reqDone(p, r) ? ' checked' : ''}${S.readOnly ? ' disabled' : ''}><span>${esc(r.title)}</span></label>`).join('')}</div>`
       : '') +
     (p.deliverable ? `<h3>${esc(L.deliverable)}</h3><div class="mission">${esc(p.deliverable)}</div>` : '') +
     (p.success ? `<h3>${esc(L.success)}</h3><p>${esc(p.success)}</p>` : '') +
     (p.stretch.length
       ? `<h3 class="stretch-h"><span aria-hidden="true">🔥</span> ${esc(L.stretch)} <span class="h3-count">${stretchCount(p)}/${p.stretch.length}</span></h3><p class="stretch-hint">${esc(L.stretchHint)}</p>` +
-        `<div class="stretchlist">${p.stretch.map(s => `<label class="stretch-item"><input type="checkbox" data-stretch="${esc(s.id)}"${stretchDone(p, s) ? ' checked' : ''}><span>${esc(s.title)}</span><b class="flame" aria-hidden="true">🔥</b></label>`).join('')}</div>`
+        `<div class="stretchlist">${p.stretch.map(s => `<label class="stretch-item"><input type="checkbox" data-stretch="${esc(s.id)}"${stretchDone(p, s) ? ' checked' : ''}${S.readOnly ? ' disabled' : ''}><span>${esc(s.title)}</span><b class="flame" aria-hidden="true">🔥</b></label>`).join('')}</div>`
       : '') +
     noteBlock(projectNote(p)) +
+    (S.readOnly ? (repo ? `<h3>${esc(L.yourRepo)}</h3><a class="resource" target="_blank" rel="noopener noreferrer" href="${esc(safeUrl(repo))}">${esc(repo)}</a>` : '') :
     `<h3><label for="projRepo">${esc(L.yourRepo)}</label></h3><div class="repo-row"><input type="url" id="projRepo" inputmode="url" autocomplete="off" spellcheck="false" maxlength="${MAX_REPO_URL}" value="${esc(repo)}" placeholder="${esc(L.yourRepoPh)}">` +
     (repo ? `<a class="repo-open" href="${esc(safeUrl(repo))}" target="_blank" rel="noopener noreferrer" title="${esc(L.repoOpen)}" aria-label="${esc(L.repoOpen)}">↗</a>` : '') + `</div>` +
-    `<p class="repo-err" id="projRepoErr" role="alert" hidden>${esc(L.repoInvalid)}</p>` +
+    `<p class="repo-err" id="projRepoErr" role="alert" hidden>${esc(L.repoInvalid)}</p>`) +
     linkList(p.links) +
     `<button class="complete-action ${done ? 'done' : ''}" data-pdone>${esc(done ? L.markUndone : L.markDone)}</button>`;
   if (refocus) box.querySelector(refocus)?.focus();
@@ -2094,7 +2150,7 @@ function dndEnd(drop) {
 function wireDnd() {
   document.addEventListener('pointerdown', e => {
     const el = e.target.closest('[data-drag]');
-    if (!el || (e.pointerType === 'mouse' && e.button !== 0) || e.target.closest('button')) return;
+    if (!el || S.readOnly || (e.pointerType === 'mouse' && e.button !== 0) || e.target.closest('button')) return;
     if (e.pointerType === 'touch' && !e.target.closest('.grip')) return;   // touch scrolls; the grip drags
     const root = el.closest('[data-dnd-root]');
     dnd.st = { el, root, x: e.clientX, y: e.clientY, lx: e.clientX, ly: e.clientY, started: false, from: el.closest('.dropcol')?.dataset.col, col: null, ghost: null, ox: 0, oy: 0, vx: 0, vy: 0, dock: false, vscroll: root.id === 'board' ? window : $('detail') };
@@ -2243,10 +2299,11 @@ function paletteActions() {
   if (S.rm && !S.preview) {
     list.push(a('next', L.nextTopic, next, 'N'), a('map', `${L.viewSwitch}: ${L.viewMap}`, () => setView('map'), 'M'), a('kanban', `${L.viewSwitch}: ${L.viewKanban}`, () => setView('kanban'), 'K'));
     if (S.rm.projects.length) list.push(a('projects', `${L.viewSwitch}: ${L.viewProjects}`, () => setView('projects'), 'P'));
-    list.push(a('notes', L.notesAll, openNotes), a('export', L.exportProgress, exportBundle), a('import', L.importProgress, () => $('importFile').click()));
+    list.push(a('notes', L.notesAll, openNotes));
+    if (!S.readOnly) list.push(a('export', L.exportProgress, openExport), a('import', L.importProgress, () => $('importFile').click()));
   }
-  list.push(a('new', L.newRoadmap, () => openEditor()), a('manage', L.manageRoadmaps, openManage), a('theme', L.toggleMode, toggleMode, 'T'),
-    a('settings', L.settings, () => setSettingsOpen(true)), a('keys', L.shortcuts, openShortcuts, '?'));
+  if (!S.readOnly) list.push(a('new', L.newRoadmap, () => openEditor()), a('manage', L.manageRoadmaps, openManage));
+  list.push(a('theme', L.toggleMode, toggleMode, 'T'), a('settings', L.settings, () => setSettingsOpen(true)), a('keys', L.shortcuts, openShortcuts, '?'));
   return list;
 }
 
@@ -2456,8 +2513,10 @@ async function openEntry(entry) {
   try {
     const rm = parseRoadmap(await getText(entry.file), entry.file.split('/').pop());
     await setRoadmap(rm);
-    store.set(KEY.last, rm.id);
-    history.replaceState(null, '', `?r=${encodeURIComponent(entry.id)}`);
+    if (!S.readOnly) {
+      store.set(KEY.last, rm.id);
+      history.replaceState(null, '', `?r=${encodeURIComponent(entry.id)}`);
+    }
   } catch (err) {
     console.error(err);
     showMessage(S.L.loadFail || 'Could not load the roadmap', `<code>${esc(entry.file)}</code><br>${esc(err.message)}`);
@@ -2554,6 +2613,112 @@ function exportBundle() {
   ]), `${rm.id}.zip`);
 }
 
+/* ---------- export menu: zip, Markdown, a page to share ---------- */
+const mdBox = done => (done ? '[x]' : '[ ]');
+
+/* The roadmap as Markdown: phases as headings, topics as task lists, then projects and (optionally) your notes. */
+function roadmapMarkdown(withNotes) {
+  const { rm, L } = S, out = [], qty = rm.core.filter(isDone).length;
+  out.push(`# ${rm.meta.icon ? `${rm.meta.icon} ` : ''}${rm.meta.title}`);
+  if (rm.meta.subtitle) out.push('', `> ${rm.meta.subtitle}`);
+  out.push('', `${fmt(L.mdProgress, { done: qty, total: rm.core.length })} · ${fmt(L.mdExported, { date: fmtDay(todayDay()) })}`);
+  const dueText = item => { const d = dueOf(item); return d ? fmt(L.dueBy, { date: fmtDay(d) }) : ''; };
+  const topic = (n, depth) => {
+    const pad = '  '.repeat(depth), inner = `${pad}  `;
+    const meta = [n.time, n.optional ? L.optionalTag : '', dueText(n)].filter(Boolean).join(' · ');
+    out.push(`${pad}- ${mdBox(isDone(n))} **${n.title}**${meta ? ` — ${meta}` : ''}`);
+    if (n.summary) out.push(`${inner}${n.summary}`);
+    if (n.challenge) out.push(`${inner}*${L.challenge}:* ${n.challenge}`);
+    n.tasks.forEach(t => out.push(`${inner}- ${mdBox(taskStatus(n, t) === 'finished')} ${t.title}`));
+    n.children.forEach(c => topic(c, depth + 1));
+    n.links.forEach(l => out.push(`${inner}- [${l.title}](${l.url})`));
+  };
+  for (const ph of rm.phases) {
+    if (!ph.nodes.length) continue;
+    if (rm.hasPhases) {
+      out.push('', `## ${ph.title}${ph.period ? ` (${ph.period})` : ''}`);
+      if (ph.summary) out.push('', ph.summary);
+      if (dueText(ph)) out.push('', `*${dueText(ph)}*`);
+    }
+    out.push('');
+    ph.nodes.forEach(n => topic(n, 0));
+    if (ph.milestone) out.push('', `${phaseDone(ph) ? '✅' : '🏁'} ${ph.milestone}`);
+  }
+  if (rm.projects.length) {
+    out.push('', `## ${L.viewProjects}`);
+    for (const lv of LEVELS) {
+      const list = rm.projects.filter(p => p.level === lv);
+      if (!list.length) continue;
+      out.push('', `### ${L[`level_${lv}`]}`, '');
+      list.forEach(p => {
+        out.push(`- ${mdBox(projDone(p))} **${p.title}**${p.summary ? ` — ${p.summary}` : ''}`);
+        p.requirements.forEach(r => out.push(`  - ${mdBox(reqDone(p, r))} ${r.title}`));
+        p.stretch.forEach(s => out.push(`  - ${mdBox(stretchDone(p, s))} 🔥 ${s.title}`));
+        if (projState(p).repo) out.push(`  - ${L.yourRepo}: ${projState(p).repo}`);
+      });
+    }
+  }
+  if (withNotes && Object.keys(S.notes).length) {   // the notes, one level down, under their own heading
+    out.push('', '---', '', `## ${L.notesAll}`, '', notesMarkdown().replace(/^# .*\n\n?/, '').replace(/^## /gm, '### ').trim());
+  }
+  return out.join('\n').replace(/\n{3,}/g, '\n\n') + '\n';
+}
+
+
+/* One HTML file that is the app itself, with this roadmap, its progress and the interface texts inside:
+   it opens from the disk with no server and no network, read-only. */
+async function exportPage(withNotes) {
+  const { rm } = S, safeJs = s => s.replace(/<\/script/gi, '<\\/script');
+  const [html, css, md, js] = await Promise.all(['index.html', 'src/style.css', 'src/markdown.js', 'src/app.js'].map(u => getText(u)));
+  const langs = S.manifest.languages?.length ? S.manifest.languages : ['pt-BR'];
+  const entry = entryById(rm.id) || { id: rm.id, title: rm.meta.title, icon: rm.meta.icon || '', topics: rm.core.length, coreIds: rm.core.map(n => n.id), doneByDefault: [] };
+  const files = { 'manifest.json': JSON.stringify({ languages: langs, groups: [{ id: 'roadmaps', title: '' }], roadmaps: [{ ...entry, file: 'snapshot.json', group: 'roadmaps', hidden: false, editable: false }] }), 'snapshot.json': rm.sourceText };
+  for (const c of langs) files[`src/labels/${c}.json`] = JSON.stringify(await loadLabels(c));
+  const snap = { exportedAt: new Date().toISOString(), files, state: S.state, notes: withNotes ? S.notes : {}, view: S.view };
+  const parts = [
+    ['<link rel="stylesheet" href="src/style.css">', `<style>\n${css}\n</style>`],
+    ['<script src="src/markdown.js"></script>', `<script>\n${safeJs(md)}\n</script>`],
+    ['<script src="src/app.js"></script>', `<script>window.ROADKIT_SNAPSHOT = ${JSON.stringify(snap).replace(/</g, '\\u003c')};</script>\n<script>\n${safeJs(js)}\n</script>`],
+  ];
+  let page = html;
+  for (const [from, to] of parts) {
+    if (!page.includes(from)) throw new Error(`index.html: missing ${from}`);
+    page = page.replace(from, () => to);
+  }
+  page = page.replace(/<title>[^<]*<\/title>/, () => `<title>${esc(rm.meta.title)} · Roadkit</title>`);
+  download(new Blob([page], { type: 'text/html;charset=utf-8' }), `${rm.id}.html`);
+}
+
+function openExport() {
+  if (!S.rm || S.preview || S.readOnly) return;
+  const L = S.L;
+  $('exportBody').innerHTML =
+    [['zip', L.exportZip, L.exportZipHint], ['md', L.exportMd, L.exportMdHint], ['html', L.exportHtml, L.exportHtmlHint]]
+      .map(([k, t, hint]) => `<button type="button" class="exp-opt" data-export="${k}"><strong>${esc(t)}</strong><span>${esc(hint)}</span></button>`).join('') +
+    `<label class="ed-chk exp-notes"><input type="checkbox" id="expNotes" checked> ${esc(L.exportWithNotes)}</label>` +
+    `<div class="exp-dates"><h3 class="ed-h">${esc(L.datesTitle)}</h3><div class="exp-date-row"><label for="startDay">${esc(L.startDay)}</label><input type="date" id="startDay" value="${esc(startDay())}"><button type="button" class="secondary" id="startDayClear"${S.state.dates?.start ? '' : ' hidden'}>${esc(L.startDayClear)}</button></div>` +
+    `<p class="dlg-note">${esc(L.datesHint)}</p></div>`;
+  if (!$('exportDlg').open) $('exportDlg').showModal();
+}
+
+function wireExport() {
+  const dlg = $('exportDlg');
+  dlg.addEventListener('click', async e => {
+    if (e.target === dlg || e.target.closest('[data-close]')) return dlg.close();
+    if (e.target.closest('#startDayClear')) { setStartDay(''); openExport(); return; }
+    const opt = e.target.closest('[data-export]');
+    if (!opt || opt.disabled) return;
+    const notes = $('expNotes').checked, id = S.rm.id;
+    try {
+      if (opt.dataset.export === 'zip') exportBundle();
+      if (opt.dataset.export === 'md') download(new Blob([roadmapMarkdown(notes)], { type: 'text/markdown;charset=utf-8' }), `${id}.md`);
+      if (opt.dataset.export === 'html') await exportPage(notes);
+      dlg.close();
+    } catch (err) { alert(err.message); }
+  });
+  dlg.addEventListener('change', e => { if (e.target.id === 'startDay') { setStartDay(e.target.value); openExport(); } });
+}
+
 /* notes.json from an export: keeps only valid keys and text, and replaces this roadmap's notes. */
 function importNotes(obj) {
   const notes = {};
@@ -2632,7 +2797,7 @@ function wire() {
   document.addEventListener('click', e => {
     const act = e.target.closest('[data-act]');
     if (act) {
-      ({ export: exportBundle, import: () => $('importFile').click(), open: () => $('openFile').click(), reset: resetProgress, new: () => openEditor(), manage: openManage, notes: openNotes })[act.dataset.act]?.();
+      if (!S.readOnly || act.dataset.act === 'notes') ({ export: openExport, import: () => $('importFile').click(), open: () => $('openFile').click(), reset: resetProgress, new: () => openEditor(), manage: openManage, notes: openNotes })[act.dataset.act]?.();
       setSettingsOpen(false);
     } else if (!$('settings').hidden && !e.target.closest('#settings, #settingsBtn')) setSettingsOpen(false);
   });
@@ -2676,7 +2841,7 @@ function wire() {
   addEventListener('drop', e => {
     e.preventDefault(); document.body.classList.remove('dragging');
     const f = [...(e.dataTransfer?.files || [])].find(x => /\.json$/i.test(x.name));
-    if (f && !S.editing) openLocalFile(f);
+    if (f && !S.editing && !S.readOnly) openLocalFile(f);
   });
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'hidden') {
@@ -2693,8 +2858,20 @@ function wire() {
   wireSidebar();
 }
 
+/* A shared page: a banner says when the progress is from, and the app opens on the view that was exported. */
+function startSnapshot() {
+  document.body.classList.add('read-only');
+  const bar = document.createElement('div');
+  bar.className = 'snap-bar';
+  const when = new Date(SNAP.exportedAt || Date.now());
+  bar.innerHTML = `<span>${esc(fmt(S.L.snapBanner, { date: when.toLocaleDateString(document.documentElement.lang || undefined, { day: 'numeric', month: 'long', year: 'numeric' }) }))}</span>` +
+    `<a href="https://github.com/nycholasmarques/roadkit" target="_blank" rel="noopener noreferrer">${esc(S.L.snapMade)}</a>`;
+  document.body.prepend(bar);
+}
+
 async function init() {
   wire();
+  wireExport();
   applyTheme();
   applyFont();
   $('skipSel').value = skipSetting();
@@ -2716,6 +2893,7 @@ async function init() {
     return;
   }
   await openEntry(entry);
+  if (SNAP) { startSnapshot(); if (SNAP.view) setView(SNAP.view, false); }
 }
 
 init();

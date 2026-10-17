@@ -83,6 +83,10 @@ Every topic and project has a Markdown notes box, saved on the server and offlin
 
 `Ctrl+K` finds any topic, project or action across every roadmap, and single-letter shortcuts change the view, the topic and its state without leaving the keyboard.
 
+### Share
+
+Export the roadmap as Markdown, or as a single `.html` page that opens in any browser with no server, to show your progress to someone.
+
 ### Create, watching the result
 
 **New roadmap** opens an editor with the form on one side and the real roadmap on the other, drawing itself as you type. You can build phases, topics, sub-topics up to two levels deep, optional topics, colors, logo and category. A line at the bottom tells you what is wrong as you go.

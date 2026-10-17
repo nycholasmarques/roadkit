@@ -31,6 +31,7 @@ Formal source: [`schema/roadmap.schema.json`](../../schema/roadmap.schema.json).
 | `sidebarNote` | note at the bottom of the sidebar; `\n` breaks the line |
 | `footer` | page footer |
 | `defaultView` | view opened first: `map` (default) or `kanban`. The user's choice is saved per roadmap |
+| `startDate` | day the roadmap starts (`YYYY-MM-DD`). With it, phase `period`s and topic `time`s become dates. Users can set their own start in the app, which wins |
 
 ## `theme`
 
@@ -52,6 +53,7 @@ Without `phases`, the map is a plain list and the phase navigation goes away.
 | `period` | "Weeks 1 to 3", "Q1"… (free text) |
 | `color` | hex; if omitted, a palette is used |
 | `milestone` | milestone shown after the phase's last main topic; turns green when the whole phase is done. |
+| `due` | target day for the phase (`YYYY-MM-DD`), shown on the phase flag; wins over the date computed from `period`. `check` warns when a phase is due before the previous one |
 
 The order of the array sets the order of the phases.
 
@@ -73,6 +75,7 @@ The order of the array sets the order of the phases.
 | `anchor` | old name for `parent`, used only by optional topics. Still works |
 | `status` | initial kanban column: `todo`, `working`, `review` or `finished`. If omitted, it comes from the tasks (or `todo`) |
 | `tasks` | the topic's task list, shown as a small kanban inside the card (see below) |
+| `due` | target day for the topic (`YYYY-MM-DD`); wins over the date computed from `time` |
 
 Every field other than `id` and `title` is optional; empty sections are not shown.
 

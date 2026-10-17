@@ -113,9 +113,18 @@ No modo automático aparecem as duas fileiras: você escolhe um tema para quando
 
 Na última linha dos ajustes aparece o estado do salvamento: se o progresso está sendo guardado no servidor ou só neste navegador.
 
-## Exportar e importar
+## Exportar, compartilhar e importar
 
-**Exportar** baixa um `.zip` com uma pasta com o nome do roadmap, e dentro dela o JSON do roadmap e um `progress.json`. É um jeito de levar tudo para outra máquina ou de guardar uma cópia. **Importar** lê esse zip de volta: se o roadmap já existe aqui, só o progresso é aplicado, e se não existe ele abre a partir do arquivo (para guardar de vez, copie o JSON para a pasta `roadmaps/`). Também aceita um `progress.json` solto ou um JSON de roadmap.
+**Exportar** abre um menu com três saídas:
+
+- **Roadmap e progresso (.zip)**: uma pasta com o nome do roadmap, e dentro dela o JSON do roadmap, um `progress.json` e as suas notas. É um jeito de levar tudo para outra máquina ou de guardar uma cópia.
+- **Markdown (.md)**: o roadmap em texto, com fases como títulos, `- [x]` no que está concluído, tarefas, desafios, links, projetos e, se você quiser, as suas notas no fim. Abre bem no GitHub e no Obsidian.
+- **Página para compartilhar (.html)**: um arquivo só, que abre em qualquer navegador **sem servidor e sem internet**. É o próprio Roadkit, com o mapa, o kanban, os projetos e os painéis, congelado no progresso de hoje e somente leitura. Uma faixa no topo diz de quando é o progresso. Serve para mandar a um mentor ou publicar no GitHub Pages. A caixa "Incluir minhas notas" decide se as notas vão junto.
+### Datas
+
+No mesmo menu, **Começo do roadmap** recebe o dia em que você começou (ou vai começar). A partir dele, os períodos das fases e os prazos dos tópicos ("Semanas 1 e 2", "Semana 3", "Mês 2") viram datas: a bandeira de cada fase no mapa e o painel de cada tópico mostram "até 14 de set.", e o que passou da data sem estar concluído ganha um aviso amarelo. A data é sua e fica com o progresso; quem escreve o roadmap também pode fixar datas no JSON (`startDate`, `due`), que valem mais que as calculadas. Sem data nenhuma, nada muda na tela.
+
+### Importar **Importar** lê esse zip de volta: se o roadmap já existe aqui, só o progresso é aplicado, e se não existe ele abre a partir do arquivo (para guardar de vez, copie o JSON para a pasta `roadmaps/`). Também aceita um `progress.json` solto ou um JSON de roadmap.
 
 Arrastar um `.json` para a janela ou usar **Abrir arquivo JSON** mostra um roadmap sem guardar nada no servidor.
 
