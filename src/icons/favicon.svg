@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- the app icon for a browser tab (16 to 32 px): same road and goal, thicker, no checkpoints -->
+  <defs>
+    <clipPath id="shape"><rect width="512" height="512" rx="104"/></clipPath>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#4069b8"/>
+      <stop offset="1" stop-color="#16274a"/>
+    </linearGradient>
+  </defs>
+  <g clip-path="url(#shape)">
+    <rect width="512" height="512" fill="url(#bg)"/>
+    <path d="M140 714 L118 512 C108 420 410 432 402 318 C394 212 102 248 110 154 C115 106 220 96 300 104" fill="none" stroke="#e8eefa" stroke-width="96" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M140 714 L118 512 C108 420 410 432 402 318 C394 212 102 248 110 154 C115 106 220 96 300 104" fill="none" stroke="#2a4579" stroke-width="16" stroke-linecap="round" stroke-dasharray="34 40" opacity="0.6"/>
+    <circle cx="372" cy="120" r="98" fill="#2fb37a" stroke="#fff" stroke-width="18"/>
+    <path d="M324 122l32 32 60-62" fill="none" stroke="#fff" stroke-width="30" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+</svg>

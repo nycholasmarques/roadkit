@@ -5,6 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#f6f7fb">
   <title>Roadkit</title>
+  <link rel="manifest" href="src/manifest.webmanifest">
+  <link rel="icon" href="src/icons/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="src/icons/icon-192.png" sizes="192x192" type="image/png">
+  <link rel="apple-touch-icon" href="src/icons/apple-touch-icon.png">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Roadkit">
   <script>try{var m=localStorage.getItem('roadkit:v1:theme'),s=m==='dark'||(m!=='light'&&matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light',p=localStorage.getItem('roadkit:v1:palette-'+s),k={light:['light','mist','paper'],dark:['night','graphite','plum','black']}[s];document.documentElement.dataset.theme=s;document.documentElement.dataset.palette=k.indexOf(p)>=0?p:k[0];var f={small:.95,normal:1.1,large:1.25,xlarge:1.4}[localStorage.getItem('roadkit:v1:fs')];if(f)document.documentElement.style.setProperty('--fs',f);if(localStorage.getItem('roadkit:v1:side')==='collapsed')document.documentElement.dataset.side='collapsed';var w=parseInt(localStorage.getItem('roadkit:v1:sidew'),10);if(w)document.documentElement.style.setProperty('--side-open',Math.min(Math.max(w,200),420)+'px')}catch(e){}</script>
   <link rel="stylesheet" href="src/style.css">
 </head>
@@ -118,6 +124,8 @@
               <option value="off" data-i18n="skipWarnNever"></option>
             </select></div>
             <span class="set-hint" data-i18n="skipWarnHint"></span></div>
+          <div class="set-row" id="installRow" hidden><button type="button" class="secondary" id="installBtn" data-i18n="installApp"></button>
+            <span class="set-hint" data-i18n="installHint"></span></div>
           <div class="set-row"><label class="set-label" for="keysSel" data-i18n="shortcuts"></label>
             <div class="sel-wrap"><select id="keysSel">
               <option value="on" data-i18n="keysOnOpt"></option>

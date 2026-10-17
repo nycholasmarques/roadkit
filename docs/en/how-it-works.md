@@ -58,6 +58,16 @@ A roadmap's section is decided by its folder. In the editor, the Category field 
 
 Hidden roadmaps are just a list of ids in `data/_hidden.json`. Hiding neither deletes nor touches the file.
 
+## Offline and installable
+
+`src/sw.js` is a small service worker with no libraries, served at `/sw.js` with the app version (a hash of the interface files). It handles three kinds of request differently:
+
+- **Interface** (the page and `src/*`): installed all at once into a cache named after the version, and served from it. A new version installs its own cache, waits for you to accept "Reload", and deletes the old one.
+- **Roadmaps, `manifest.json` and interface texts**: network first, the last copy as a fallback. On load, the app asks the worker to keep a copy of every roadmap in the list.
+- **API** (`/api/*`): never goes through the worker. Progress and notes already have their own offline copy in the browser.
+
+`src/manifest.webmanifest` and the icons in `src/icons/` complete what the browser needs to offer installation. The drawing is `icon.svg`; `favicon.svg` is the simplified version for the tab, readable at 16 px. The PNGs (192, 512, *maskable* and the iPhone one) are rendered from the SVG with `node tools/icons.cjs` (it needs Playwright, like the script that records the docs images).
+
 ## Where notes are stored
 
 Notes live outside the progress file, in `data/notes/<id>.json`, because the progress is rewritten on every click and a large text would make each write heavy. The file has the time of its last change and a map of notes: `roadmap` for the general note, `node:<id>` for a topic and `project:<id>` for a project. Syncing works like the progress: the browser keeps a copy, the newest version wins, and nothing is lost if the server goes down.

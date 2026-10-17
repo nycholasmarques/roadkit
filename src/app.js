@@ -947,6 +947,7 @@ async function reloadManifest() {
   S.manifest = await getJson('manifest.json');
   updatePickerBtn(); renderManage();
   if (!$('rmPop').hidden) renderPicker();
+  warmOffline();   // a roadmap made or changed here is kept for offline use too
 }
 
 /* Runs a server call for the manager; on failure tells the user why. */
@@ -2669,7 +2670,7 @@ function roadmapMarkdown(withNotes) {
    it opens from the disk with no server and no network, read-only. */
 async function exportPage(withNotes) {
   const { rm } = S, safeJs = s => s.replace(/<\/script/gi, '<\\/script');
-  const [html, css, md, js] = await Promise.all(['index.html', 'src/style.css', 'src/markdown.js', 'src/app.js'].map(u => getText(u)));
+  const [html, css, md, js, icon] = await Promise.all(['index.html', 'src/style.css', 'src/markdown.js', 'src/app.js', 'src/icons/favicon.svg'].map(u => getText(u)));
   const langs = S.manifest.languages?.length ? S.manifest.languages : ['pt-BR'];
   const entry = entryById(rm.id) || { id: rm.id, title: rm.meta.title, icon: rm.meta.icon || '', topics: rm.core.length, coreIds: rm.core.map(n => n.id), doneByDefault: [] };
   const files = { 'manifest.json': JSON.stringify({ languages: langs, groups: [{ id: 'roadmaps', title: '' }], roadmaps: [{ ...entry, file: 'snapshot.json', group: 'roadmaps', hidden: false, editable: false }] }), 'snapshot.json': rm.sourceText };
@@ -2685,7 +2686,10 @@ async function exportPage(withNotes) {
     if (!page.includes(from)) throw new Error(`index.html: missing ${from}`);
     page = page.replace(from, () => to);
   }
-  page = page.replace(/<title>[^<]*<\/title>/, () => `<title>${esc(rm.meta.title)} · Roadkit</title>`);
+  page = page.replace(/<title>[^<]*<\/title>/, () => `<title>${esc(rm.meta.title)} · Roadkit</title>`)
+    .replace(/\n\s*<link rel="(manifest|apple-touch-icon)"[^>]*>/g, '')   // not installable from a file: no manifest, no extra icons
+    .replace(/\n\s*<link rel="icon" href="src\/icons\/icon-192\.png"[^>]*>/, '')
+    .replace(/<link rel="icon"[^>]*>/, () => `<link rel="icon" href="data:image/svg+xml,${encodeURIComponent(icon)}">`);
   download(new Blob([page], { type: 'text/html;charset=utf-8' }), `${rm.id}.html`);
 }
 
@@ -2858,6 +2862,56 @@ function wire() {
   wireSidebar();
 }
 
+/* ---------- installable app and offline use (service worker, src/sw.js served at /sw.js) ---------- */
+const pwa = { reg: null, prompt: null, reloading: false };
+
+function wirePwa() {
+  if (SNAP || !('serviceWorker' in navigator) || !/^https?:$/.test(location.protocol)) return;   // http only works on localhost; elsewhere it needs HTTPS
+  addEventListener('beforeinstallprompt', e => { e.preventDefault(); pwa.prompt = e; $('installRow').hidden = false; });
+  addEventListener('appinstalled', () => { pwa.prompt = null; $('installRow').hidden = true; });
+  $('installBtn').addEventListener('click', async () => {
+    if (!pwa.prompt) return;
+    pwa.prompt.prompt();
+    await pwa.prompt.userChoice.catch(() => null);
+    pwa.prompt = null; $('installRow').hidden = true;
+  });
+  navigator.serviceWorker.addEventListener('controllerchange', () => { if (pwa.reloading) location.reload(); });
+  navigator.serviceWorker.register('sw.js').then(reg => {
+    pwa.reg = reg;
+    const offer = () => { if (reg.waiting && navigator.serviceWorker.controller) showUpdate(); };   // not on the very first install
+    offer();
+    reg.addEventListener('updatefound', () => {
+      const w = reg.installing;
+      w?.addEventListener('statechange', () => { if (w.state === 'installed') offer(); });
+    });
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') reg.update().catch(() => {}); });
+    setInterval(() => reg.update().catch(() => {}), 30 * 60 * 1000);   // a window left open also notices new versions
+    warmOffline();
+  }).catch(err => console.warn('service worker:', err));
+}
+
+/* A new version is installed and waiting: offer to switch, never reload on our own (you may be typing). */
+function showUpdate() {
+  if ($('updateBar')) return;
+  const bar = document.createElement('div');
+  bar.id = 'updateBar'; bar.className = 'update-bar'; bar.setAttribute('role', 'status');
+  bar.innerHTML = `<span>${esc(S.L.updateReady)}</span><button type="button" class="primary">${esc(S.L.updateReload)}</button><button type="button" class="dlg-x" aria-label="${esc(S.L.rmClose)}">×</button>`;
+  bar.querySelector('.primary').addEventListener('click', () => {
+    pwa.reloading = true;
+    if (pwa.reg?.waiting) pwa.reg.waiting.postMessage({ type: 'skipWaiting' }); else location.reload();
+  });
+  bar.querySelector('.dlg-x').addEventListener('click', () => bar.remove());
+  document.body.append(bar);
+}
+
+/* Asks the worker to keep a copy of every roadmap in the list (and the interface texts), so they open offline
+   even if you never opened them on this device. */
+function warmOffline() {
+  if (!pwa.reg || !S.manifest) return;
+  const urls = ['manifest.json', ...(S.manifest.languages || []).map(c => `src/labels/${c}.json`), ...visibleRoadmaps().map(e => e.file)];
+  navigator.serviceWorker.ready.then(reg => reg.active?.postMessage({ type: 'warm', urls })).catch(() => {});
+}
+
 /* A shared page: a banner says when the progress is from, and the app opens on the view that was exported. */
 function startSnapshot() {
   document.body.classList.add('read-only');
@@ -2885,6 +2939,7 @@ async function init() {
   S.L = langSetting() === 'auto' ? S.defaults : { ...S.defaults, ...await loadLabels(langSetting()) };
   applyI18n();
   buildSwitch();
+  wirePwa();
   const asked = new URLSearchParams(location.search).get('r'), last = store.get(KEY.last), visible = visibleRoadmaps();
   const entry = entryById(asked) || visible.find(r => r.id === last) || visible[0];
   loadRemoteStates().then(updatePickerBtn);

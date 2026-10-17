@@ -4,7 +4,23 @@ Todas as mudanças relevantes ficam aqui, da mais nova para a mais antiga. O for
 
 Cada release no GitHub também lista automaticamente os commits desde a versão anterior; este arquivo é onde ficam os destaques escritos à mão. Para publicar uma versão, veja [`docs/publicando-versoes.md`](docs/publicando-versoes.md).
 
-## [1.5.0] - não lançada
+## [1.6.0] - não lançada
+
+### App instalável e offline
+- O Roadkit virou um app instalável (PWA): ícone próprio, janela sem a barra do navegador e **Ajustes → Instalar como app**.
+- Depois de aberto uma vez, ele **abre sem internet**, com a interface e uma cópia de todos os roadmaps da lista, mesmo os que você nunca abriu naquele aparelho. Progresso e notas feitos offline sobem quando a conexão volta.
+- Quando sai uma versão nova, uma faixa oferece **Recarregar**; o app nunca recarrega sozinho.
+- A API nunca vem de cache, e a página exportada para compartilhar continua sendo um arquivo único, sem service worker.
+
+### Por dentro
+- `src/sw.js` (sem bibliotecas), servido em `/sw.js` com uma versão calculada a partir dos arquivos da interface; `src/manifest.webmanifest`.
+
+### Ícone
+- O Roadkit ganhou um ícone: uma estrada que serpenteia até uma meta verde com um check, passando por pontos de controle. Aparece na aba do navegador (numa versão simplificada, legível em 16 px), no app instalado e na tela inicial do celular.
+- Os PNGs são gerados a partir do SVG por `tools/icons.cjs`, com um navegador de verdade, para ficarem idênticos.
+- O guia de Docker e rede explica o HTTPS necessário para instalar fora do `localhost` (Tailscale ou Caddy).
+
+## [1.5.0] - 2026-10-17
 
 ### Exportar e compartilhar
 - O botão **Exportar** virou um menu: o `.zip` de sempre, **Markdown** (o roadmap em texto com `- [x]`, projetos e, se quiser, as notas) e **página para compartilhar**.
@@ -88,6 +104,7 @@ A primeira versão estável. O formato do JSON dos roadmaps e a API do servidor 
 - Imagem Docker com volume para os dados e a pasta `roadmaps/` somente leitura.
 - Documentação em `docs/` e GIFs gerados por um script.
 
+[1.6.0]: https://github.com/nycholasmarques/roadkit/releases/tag/v1.6.0
 [1.5.0]: https://github.com/nycholasmarques/roadkit/releases/tag/v1.5.0
 [1.4.0]: https://github.com/nycholasmarques/roadkit/releases/tag/v1.4.0
 [1.3.0]: https://github.com/nycholasmarques/roadkit/releases/tag/v1.3.0

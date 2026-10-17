@@ -45,6 +45,16 @@ Clicking a project opens its panel, which works like a topic's:
 
 In a topic's panel, the **Projects that use this topic** section leads to the projects linked to it. Projects do not count toward the progress bar at the top: it still measures main topics, and the Projects view has its own count.
 
+## Install it and use it offline
+
+Roadkit is an installable app (PWA). In Chrome and Edge the install icon shows up in the address bar, and **Settings → Install as an app** does the same. Once installed, it opens in its own window, with an icon, and can sit in the taskbar or on your phone's home screen. On an iPhone, use **Share → Add to Home Screen**.
+
+After opening it once, Roadkit **opens with no internet**: the interface is kept in the browser, along with a copy of every roadmap in the list, even the ones you never opened on that device. Offline, you keep checking off progress and writing notes; the settings line says it is saving on this device only, and everything goes up to the server when the connection returns.
+
+When a new Roadkit version comes out, a quiet strip at the bottom says **A new version is available · Reload**. It never reloads by itself, so it never interrupts what you are typing.
+
+This works on `http://localhost` and on any HTTPS address. To use it from another device on your network, see [Docker and network](docker-and-network.md#installable-app-and-https).
+
 ## Search and keyboard shortcuts
 
 `Ctrl+K` (`⌘K` on a Mac), or the magnifier at the top, opens a search that goes anywhere: topics and projects of **every** roadmap, the roadmaps themselves and the actions (new roadmap, export, notes, switch view, toggle mode, settings). It ignores accents and case and accepts skipped letters, like "kstmz" for Kustomize. Results from the open roadmap come first, each topic with its roadmap, phase and state. `↑` `↓` pick, `Enter` opens and `Esc` closes. With an empty box, the items you opened last show up.
