@@ -2067,6 +2067,7 @@ function select(id, scroll = false, { drawer = true } = {}) {
 }
 
 function setPhase(key) {
+  closeToday();   // a phase of the journey is a place in the roadmap: leave Today to show it
   S.phase = key;
   document.querySelectorAll('[data-phase]').forEach(b => b.classList.toggle('active', b.dataset.phase === key));
   applyFilters();
@@ -2428,7 +2429,11 @@ function wirePalette() {
   $('keysDlg').addEventListener('click', e => { if (e.target === $('keysDlg') || e.target.closest('[data-close]')) $('keysDlg').close(); });
   $('paletteBtn').addEventListener('click', openPalette);
   $('keysSel').value = keysOn() ? 'on' : 'off';
-  $('keysSel').addEventListener('change', e => store.set(KEYS_KEY, e.target.value));
+  /* the buttons show their key (H, N, M...) while single-letter shortcuts are on */
+  const paintKeys = () => document.documentElement.classList.toggle('keys-off', !keysOn());
+  $('paletteKbd').textContent = /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘K' : 'Ctrl K';
+  $('keysSel').addEventListener('change', e => { store.set(KEYS_KEY, e.target.value); paintKeys(); });
+  paintKeys();
 
   addEventListener('keydown', e => {
     if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && e.key.toLowerCase() === 'k') {   // always on, even while typing
@@ -2562,7 +2567,7 @@ function renderToday() {
   if (!today.open) return;
   const L = S.L, m = todayModel(today.list);
   const date = new Date().toLocaleDateString(document.documentElement.lang || undefined, { weekday: 'long', day: 'numeric', month: 'long' });
-  const back = S.rm && !S.preview ? `<button type="button" class="secondary td-back" data-today-close><span aria-hidden="true">←</span> ${esc(S.rm.meta.title)}</button>` : '';
+  const back = S.rm && !S.preview ? `<button type="button" class="secondary td-back" data-today-close><span aria-hidden="true">←</span> ${esc(S.rm.meta.title)}<kbd class="kbd-hint" aria-hidden="true">Esc</kbd></button>` : '';
   const head = `<div class="td-head"><div><div class="td-date">${esc(date)}</div><h1 id="todayH">${esc(L.todayTitle)}</h1>` +
     (m.cont.length ? `<p class="td-sum">${esc(fmt(L.todaySummary, { n: m.cont.length }))}</p>` : '') + `</div>${back}</div>`;
   if (m.empty) {

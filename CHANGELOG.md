@@ -9,6 +9,10 @@ Cada release no GitHub também lista automaticamente os commits desde a versão 
 ### Tela Hoje
 - Uma tela **Hoje**, no topo da barra lateral (ou a tecla `H`), que junta todos os roadmaps: **Continuar** traz os tópicos e projetos em andamento ou em revisão, do que você mexeu por último para o mais antigo, e **A seguir** traz o próximo tópico de cada roadmap usado nos últimos 30 dias, com andamento e prazo.
 - **Ajustes → Ao abrir** faz o Roadkit abrir direto na tela Hoje. Ela também está na busca (`Ctrl+K`) e na lista de atalhos.
+- Clicar numa fase da jornada sai da tela Hoje e leva para a fase.
+
+### Atalhos à vista
+- No computador, os botões com atalho mostram a tecla ao lado: `H` em Hoje, `N` em Próximo tópico, `M` `K` `P` nas visualizações, `Ctrl K` (ou `⌘K`) na busca e `Esc` no botão de voltar da tela Hoje. Somem com os atalhos de uma letra desligados e no celular.
 
 ### Atividade
 - O servidor passa a guardar quando cada tópico começou, foi concluído e foi mexido por último, e quanto você fez em cada dia, em `data/activity/<id>.json`. O arquivo tem tamanho limitado (dois anos de totais por dia; o resto vira totais por mês) e é escrito pelo próprio servidor a partir das mudanças de progresso, no fuso de quem fez a mudança.

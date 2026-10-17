@@ -81,7 +81,7 @@ Fora de campos de texto, algumas teclas de uma letra funcionam direto:
 | `T` | alterna entre modo claro e escuro |
 | `?` | mostra a lista de atalhos |
 
-Em **Ajustes → Atalhos de teclado** dá para desligar as teclas de uma letra (para quem usa leitor de tela ou extensões que já usam essas teclas); `Ctrl+K` e `Esc` continuam. No celular, a busca abre pela lupa e ocupa a tela inteira.
+No computador, os botões que têm atalho mostram a tecla ao lado (`H` em Hoje, `N` em Próximo tópico, `M` `K` `P` nas visualizações, `Ctrl K` na lupa), para você ir decorando. Em **Ajustes → Atalhos de teclado** dá para desligar as teclas de uma letra (para quem usa leitor de tela ou extensões que já usam essas teclas); `Ctrl+K` e `Esc` continuam. No celular, a busca abre pela lupa e ocupa a tela inteira.
 
 ## Notas
 

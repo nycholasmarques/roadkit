@@ -81,7 +81,7 @@ Outside text fields, a few single-letter keys work right away:
 | `T` | toggles light and dark mode |
 | `?` | shows the list of shortcuts |
 
-**Settings → Keyboard shortcuts** turns the single-letter keys off (for screen reader users or extensions that already use those keys); `Ctrl+K` and `Esc` keep working. On a phone, search opens from the magnifier and takes the whole screen.
+On a computer, buttons that have a shortcut show its key next to them (`H` on Today, `N` on Next topic, `M` `K` `P` on the views, `Ctrl K` on the magnifier), so you pick them up as you go. **Settings → Keyboard shortcuts** turns the single-letter keys off (for screen reader users or extensions that already use those keys); `Ctrl+K` and `Esc` keep working. On a phone, search opens from the magnifier and takes the whole screen.
 
 ## Notes
 
