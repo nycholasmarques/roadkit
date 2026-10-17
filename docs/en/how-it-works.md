@@ -17,7 +17,7 @@ It only uses the Python standard library. There is no database, no build step an
 
 ## What happens when you open a roadmap
 
-1. The browser requests `manifest.json`. The server walks `roadmaps/` (and the data folder), reads the title, icon, topic count and a few other things from each JSON, and answers with the list, already organized into sections by folder.
+1. The browser requests `manifest.json`. The server walks `roadmaps/` (and the data folder), reads the title, icon, topic count and a few other things from each JSON, and answers with the list, already organized into sections by folder. Each roadmap also carries a light index of its topics and projects (id, title and phase or level), which is what the `Ctrl+K` search uses to find things across every roadmap without downloading each JSON.
 2. You pick a roadmap (or the URL carries `?r=<id>`) and the browser downloads that JSON.
 3. The JSON goes through a lenient reader (`normalize`, in `src/app.js`): duplicate ids are ignored, unknown phases fall back to the first one, parent cycles are cut. The idea is to open even an imperfect file and report what looked odd in the console. Strictness is `check`'s job.
 4. Something else happens in parallel: the browser asks the server for that roadmap's saved progress and applies it.

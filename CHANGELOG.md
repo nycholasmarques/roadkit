@@ -4,7 +4,17 @@ Todas as mudanças relevantes ficam aqui, da mais nova para a mais antiga. O for
 
 Cada release no GitHub também lista automaticamente os commits desde a versão anterior; este arquivo é onde ficam os destaques escritos à mão. Para publicar uma versão, veja [`docs/publicando-versoes.md`](docs/publicando-versoes.md).
 
-## [1.3.0] - não lançada
+## [1.4.0] - não lançada
+
+### Busca e atalhos
+- `Ctrl+K` (ou a lupa no topo) abre uma busca que vai para qualquer tópico ou projeto de todos os roadmaps, para os próprios roadmaps e para as ações. Ela ignora acentos e aceita letras pulando no meio, e mostra o estado de cada tópico e os itens abertos por último.
+- Atalhos de uma letra: `/` busca, `M` `K` `P` visualizações, `N` próximo tópico, `J` `L` anterior e seguinte, `1` a `4` estados, `T` modo claro ou escuro e `?` a lista de atalhos. Eles não disparam enquanto você digita e podem ser desligados nos ajustes.
+- No celular, a busca ocupa a tela inteira.
+
+### Por dentro
+- O `manifest.json` traz um índice leve dos tópicos e projetos de cada roadmap, para a busca não precisar baixar todos os arquivos.
+
+## [1.3.0] - 2026-10-16
 
 ### Notas
 - Cada tópico e cada projeto tem um bloco **Minhas notas** no painel, em Markdown, com as abas Escrever e Ver. O texto é salvo sozinho no servidor e funciona offline, como o progresso.
@@ -69,6 +79,7 @@ A primeira versão estável. O formato do JSON dos roadmaps e a API do servidor 
 - Imagem Docker com volume para os dados e a pasta `roadmaps/` somente leitura.
 - Documentação em `docs/` e GIFs gerados por um script.
 
+[1.4.0]: https://github.com/nycholasmarques/roadkit/releases/tag/v1.4.0
 [1.3.0]: https://github.com/nycholasmarques/roadkit/releases/tag/v1.3.0
 [1.2.1]: https://github.com/nycholasmarques/roadkit/releases/tag/v1.2.1
 [1.2.0]: https://github.com/nycholasmarques/roadkit/releases/tag/v1.2.0
