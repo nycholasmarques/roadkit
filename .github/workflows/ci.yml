@@ -101,6 +101,17 @@ jobs:
           curl -sf -X PUT -H "$H" -d '{"updatedAt": 3, "state": {"nodes": {}, "tasks": {}}}' http://127.0.0.1:8765/api/state/ci-smoke
           curl -sf http://127.0.0.1:8765/api/state/ci-smoke | python3 -c "import json,sys; s=json.load(sys.stdin)['state']; assert s['projects']['p1']['status']=='working' and s['projects']['p1']['stretch']=={'s': True} and s['nodes']=={}, s"
           test "$(curl -s -o /dev/null -w '%{http_code}' -X PUT -H "$H" -d '{"updatedAt": 4, "state": {"projects": {"p1": {"repo": "javascript:alert(1)"}}}}' http://127.0.0.1:8765/api/state/ci-smoke)" = 400
+          curl -sf http://127.0.0.1:8765/api/activity/ci-smoke | python3 -c "import json,sys; a=json.load(sys.stdin); assert a['topics']['project:p1']['started'] and 'finished' not in a['topics']['first'], a"
+
+          # activity: a first upload is not counted, a change lands on the client's day (tz), old days become months
+          curl -sf -X PUT -H "$H" -d '{"updatedAt": 1700000000000, "tz": 180, "state": {"nodes": {"first": "working"}, "tasks": {}}}' http://127.0.0.1:8765/api/state/ci-act
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8765/api/activity/ci-act)" = 204
+          curl -sf -X PUT -H "$H" -d '{"updatedAt": 1700000100000, "tz": 180, "state": {"nodes": {"first": "finished"}, "tasks": {"first/t": "finished"}}}' http://127.0.0.1:8765/api/state/ci-act
+          curl -sf http://127.0.0.1:8765/api/activity/ci-act | python3 -c "import json,sys; a=json.load(sys.stdin); assert a['days']=={'2023-11-15': {'moves': 2, 'done': 1}}, a; t=a['topics']['first']; assert t=={'touched': 1700000100000, 'started': '2023-11-15', 'finished': '2023-11-15'}, t"
+          curl -sf -X PUT -H "$H" -d "{\"updatedAt\": $(date +%s)000, \"state\": {\"nodes\": {\"first\": \"review\"}, \"tasks\": {}}}" http://127.0.0.1:8765/api/state/ci-act
+          curl -sf http://127.0.0.1:8765/api/activity/ci-act | python3 -c "import json,sys; a=json.load(sys.stdin); assert a['months']['2023-11']=={'moves': 2, 'done': 1} and '2023-11-15' not in a['days'] and len(a['days'])==1, a; assert 'finished' not in a['topics']['first'], a"
+          curl -sf "http://127.0.0.1:8765/api/activity?days=7" | python3 -c "import json,sys; a=json.load(sys.stdin); r=a['roadmaps']['ci-act']; assert r['last'] > 1700000100000 and sum(d['moves'] for d in a['days'].values()) >= 1, a"
+          curl -sf http://127.0.0.1:8765/api/states | python3 -c "import json,sys; s=json.load(sys.stdin); assert s['ci-smoke']['projects']=={'p1': {'status': 'working'}} and 'tasks' in s['ci-act'], s"
 
           # notes: saved and read back, empty ones dropped, size and key limits, newer server copy wins
           curl -sf -X PUT -H "$H" -d '{"updatedAt": 5, "notes": {"node:first": "# Hi\n<script>x</script>", "roadmap": "general", "node:other": "  "}}' http://127.0.0.1:8765/api/notes/ci-smoke
@@ -113,6 +124,7 @@ jobs:
           curl -sf -X DELETE "http://127.0.0.1:8765/api/roadmaps/ci-smoke?progress=1"
           test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8765/api/state/ci-smoke)" = 204
           test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8765/api/notes/ci-smoke)" = 204
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8765/api/activity/ci-smoke)" = 204
           # the app can be installed and opened offline: the worker is served from the root with its version,
           # the manifest has the right type and its icons exist, and the worker never answers /api/ itself
           curl -sf -D /tmp/sw.h http://127.0.0.1:8765/sw.js -o /tmp/sw.js

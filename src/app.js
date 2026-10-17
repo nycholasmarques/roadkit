@@ -358,9 +358,9 @@ function spanEnd(text) {   // how far into the roadmap a "Weeks 1 and 2" / "Mês
   return 0;
 }
 const startDay = () => S.state.dates?.start || (okDay(S.rm?.meta.startDate) ? S.rm.meta.startDate : '');
-function dueOf(item) {   // a phase or a node
+function dueOf(item, start = startDay()) {   // a phase or a node
   if (okDay(item.due)) return item.due;
-  const start = startDay(), days = start ? spanEnd(item.period ?? item.time ?? '') : 0;
+  const days = start ? spanEnd(item.period ?? item.time ?? '') : 0;
   return days ? toDay(fromDay(start) + (days - 1) * dayMs) : '';
 }
 const fmtDay = d => new Date(fromDay(d)).toLocaleDateString(document.documentElement.lang || undefined, { day: 'numeric', month: 'short', timeZone: 'UTC' });
@@ -544,7 +544,8 @@ const push = (keepalive = false) => queue(async () => {
   if (!syncEnabled()) return;
   if (!S.ts) { S.ts = Date.now(); saveState(); }   // progress saved before sync existed: give it a date
   try {
-    const r = await api('PUT', rm, { updatedAt: S.ts, state: S.state }, keepalive);
+    // tz: the server counts the change on your day, not on its own clock's
+    const r = await api('PUT', rm, { updatedAt: S.ts, state: S.state, tz: -new Date(S.ts).getTimezoneOffset() }, keepalive);
     if (r.status === 409) { adopt(rm, await r.json()); setSyncStatus('on'); }
     else if (r.ok) setSyncStatus('on');
     else if (r.status === 401) setSyncStatus('auth');
@@ -909,6 +910,7 @@ function setPicker(open) {
 
 async function openById(id) {
   setPicker(false);
+  closeToday();
   if (id === '__local__') return setRoadmap(S.localRm, { local: true });
   const entry = entryById(id);
   if (entry && !(S.rm?.id === id && !S.isLocal)) await openEntry(entry);
@@ -945,6 +947,7 @@ async function openManage() {
 
 async function reloadManifest() {
   S.manifest = await getJson('manifest.json');
+  today.cache.clear();
   updatePickerBtn(); renderManage();
   if (!$('rmPop').hidden) renderPicker();
   warmOffline();   // a roadmap made or changed here is kept for offline use too
@@ -1348,6 +1351,7 @@ function focusEditorRow(id) {
 
 /* ---- enter / leave ---- */
 async function openEditor(entry = null) {
+  closeToday();
   if (S.editing || S.readOnly) return;
   let base = null;
   if (entry) {
@@ -2303,7 +2307,7 @@ function paletteActions() {
     list.push(a('notes', L.notesAll, openNotes));
     if (!S.readOnly) list.push(a('export', L.exportProgress, openExport), a('import', L.importProgress, () => $('importFile').click()));
   }
-  if (!S.readOnly) list.push(a('new', L.newRoadmap, () => openEditor()), a('manage', L.manageRoadmaps, openManage));
+  if (!S.readOnly) list.push(a('today', L.todayTitle, openToday, 'H'), a('new', L.newRoadmap, () => openEditor()), a('manage', L.manageRoadmaps, openManage));
   list.push(a('theme', L.toggleMode, toggleMode, 'T'), a('settings', L.settings, () => setSettingsOpen(true)), a('keys', L.shortcuts, openShortcuts, '?'));
   return list;
 }
@@ -2390,7 +2394,7 @@ function openPalette() {
 }
 
 /* The shortcut list, shown with "?" and from the palette. */
-const SHORTCUTS = [['Ctrl K', 'key_palette'], ['/', 'key_search'], ['M · K · P', 'key_views'], ['N', 'key_next'], ['J · L', 'key_step'], ['1 · 2 · 3 · 4', 'key_status'], ['T', 'key_theme'], ['?', 'key_help'], ['Esc', 'key_close']];
+const SHORTCUTS = [['Ctrl K', 'key_palette'], ['/', 'key_search'], ['M · K · P', 'key_views'], ['H', 'key_today'], ['N', 'key_next'], ['J · L', 'key_step'], ['1 · 2 · 3 · 4', 'key_status'], ['T', 'key_theme'], ['?', 'key_help'], ['Esc', 'key_close']];
 function openShortcuts() {
   const L = S.L, mac = /Mac|iPhone|iPad/.test(navigator.platform);
   $('keysBody').innerHTML = `<table class="keys-table"><tbody>${SHORTCUTS.map(([k, label]) => `<tr><td>${k.split(' · ').map(x => `<kbd>${esc(mac ? x.replace('Ctrl', '⌘') : x)}</kbd>`).join(' ')}</td><td>${esc(L[label])}</td></tr>`).join('')}</tbody></table>` +
@@ -2437,6 +2441,7 @@ function wirePalette() {
     if (typingIn(e.target) || document.querySelector('dialog[open]') || !$('settings').hidden) return;
     const k = e.key.length === 1 ? e.key.toLowerCase() : e.key;
     if (k === '?') { e.preventDefault(); openShortcuts(); return; }
+    if (k === 'h' && !e.shiftKey && !S.readOnly) { e.preventDefault(); toggleToday(); return; }
     if (e.shiftKey || !S.rm || S.preview) return;
     const proj = S.rm.projById[S.project], node = S.rm.byId[S.selected];
     const act = {
@@ -2445,9 +2450,174 @@ function wirePalette() {
       n: next, j: () => stepTopic(-1), l: () => stepTopic(1), t: toggleMode,
     }[k];
     const st = { 1: 'todo', 2: 'working', 3: 'review', 4: 'finished' }[k];
-    if (act) { e.preventDefault(); act(); }
-    else if (st && (proj || node)) { e.preventDefault(); if (proj) setProjectStatus(proj, st); else setNodeStatus(node, st); }
+    if (act) { e.preventDefault(); if (k !== 't') closeToday(); act(); }
+    else if (st && (proj || node) && !today.open) { e.preventDefault(); if (proj) setProjectStatus(proj, st); else setNodeStatus(node, st); }
   });
+}
+
+/* ---------- Today: what to do now, across every roadmap ----------
+   Continue: topics and projects in progress or in review, the most recently touched first (the server's activity
+   says when each one moved). Up next: the next topic of each roadmap used in the last 30 days. */
+const HOME_KEY = 'roadkit:v1:home';
+const today = { open: false, all: false, list: [], cache: new Map(), activity: null };
+const homeSetting = () => (store.get(HOME_KEY) === 'today' ? 'today' : 'last');
+const stNode = (st, n) => st.nodes[n.id] ?? n.status;
+const stProj = (st, p) => st.projects[p.id]?.status || 'todo';
+
+/* A roadmap of the list, parsed once per session; the open one is used live. */
+async function rmFor(entry) {
+  if (S.rm?.id === entry.id && !S.isLocal && !S.preview) return S.rm;
+  if (!today.cache.has(entry.file)) today.cache.set(entry.file, parseRoadmap(await getText(entry.file), entry.file.split('/').pop()));
+  return today.cache.get(entry.file);
+}
+
+/* The saved progress of any roadmap (the server's copy or this browser's, the newest) and when it changed. */
+function savedState(entry, rm) {
+  if (S.rm === rm) return { st: S.state, ts: S.ts };
+  const remote = S.remote?.[entry.id], lts = Number(store.get(KEY.ts(entry.id))) || 0;
+  let local = null;
+  try { local = JSON.parse(store.get(KEY.state(entry.id)) || 'null'); } catch { /* ignore */ }
+  const useRemote = remote && (remote.updatedAt >= lts || !local);
+  return { st: cleanState(rm, useRemote ? remote : local), ts: (useRemote ? remote.updatedAt : lts) || 0 };
+}
+
+async function loadToday() {
+  const activity = async () => {
+    try {
+      const r = await apiFetch('GET', 'api/activity?days=30');
+      today.activity = r.ok && (r.headers.get('Content-Type') || '').includes('json') ? await r.json() : null;
+    } catch { today.activity = null; }
+  };
+  const [list] = await Promise.all([
+    Promise.all(visibleRoadmaps().map(async e => {
+      try { return { e, rm: await rmFor(e) }; } catch (err) { console.warn(err); return null; }
+    })),
+    loadRemoteStates(), activity(),
+  ]);
+  return list.filter(Boolean);
+}
+
+function todayModel(list) {
+  const acts = today.activity?.roadmaps || {}, cont = [], next = [];
+  for (const { e, rm } of list) {
+    const { st, ts } = savedState(e, rm), act = acts[rm.id] || {};
+    const when = k => act.topics?.[k]?.touched || ts;
+    const used = ts > 0 || act.last > 0;   // statuses written in a roadmap you never touched are the author's, not yours
+    for (const n of used ? rm.nodes : []) {
+      const s = stNode(st, n);
+      if (s === 'working' || s === 'review') cont.push({ e, rm, n, s, when: when(n.id), tasks: n.tasks.filter(t => (st.tasks[taskKey(n, t)] ?? t.status) === 'finished').length });
+    }
+    for (const p of used ? rm.projects : []) {
+      const s = stProj(st, p);
+      if (s === 'working' || s === 'review') cont.push({ e, rm, p, s, when: when(`project:${p.id}`) });
+    }
+    const up = rm.core.find(n => stNode(st, n) === 'todo');
+    const start = st.dates?.start || (okDay(rm.meta.startDate) ? rm.meta.startDate : '');
+    if (up) next.push({ e, rm, n: up, last: Math.max(act.last || 0, ts), done: rm.core.filter(n => stNode(st, n) === 'finished').length, due: dueOf(up, start) });
+  }
+  cont.sort((a, b) => b.when - a.when);
+  let upNext = next.filter(x => x.last && Date.now() - x.last <= 30 * dayMs).sort((a, b) => b.last - a.last), starter = false;
+  if (!upNext.length && !cont.length) {   // nothing recent: the next topic of the last roadmap you opened
+    const pick = next.find(x => x.e.id === store.get(KEY.last)) || next[0];
+    if (pick) { upNext = [pick]; starter = true; }
+  }
+  return { cont, upNext, starter, empty: !list.length };
+}
+
+/* "today", "yesterday", "3 days ago", by calendar day. */
+function daysAgo(ms) {
+  const d0 = new Date(ms), d1 = new Date();
+  const days = Math.round((new Date(d1.getFullYear(), d1.getMonth(), d1.getDate()) - new Date(d0.getFullYear(), d0.getMonth(), d0.getDate())) / dayMs);
+  if (days <= 0) return S.L.todayToday;
+  try { return new Intl.RelativeTimeFormat(document.documentElement.lang || undefined, { numeric: 'auto' }).format(-days, 'day'); } catch { return `-${days}d`; }
+}
+
+function todayItem(x) {
+  const L = S.L, rmTag = `<span class="td-rm"><span class="td-ico" aria-hidden="true">${esc(x.rm.meta.icon || '▦')}</span><span>${esc(x.rm.meta.title)}</span></span>`;
+  const status = `<span class="td-st"><span class="kdot k-${x.s}"></span>${esc(L[STATUS_LABEL[x.s]])}</span>`;
+  const touched = x.when ? `<span>${esc(fmt(L.todayTouched, { when: daysAgo(x.when) }))}</span>` : '';
+  if (x.p) {
+    return `<button type="button" class="td-item s-${x.s}" data-go="project" data-rm="${esc(x.rm.id)}" data-id="${esc(x.p.id)}">${rmTag}` +
+      `<span class="td-title">${esc(x.p.title)}</span><span class="td-meta">${status}<span class="pj-lv lv-${x.p.level}">${esc(L.todayProject)} · ${esc(L[`level_${x.p.level}`])}</span>${touched}</span></button>`;
+  }
+  const n = x.n, trail = []; for (let p = n.parent; p; p = p.parent) trail.unshift(p.title);
+  const where = n.parent ? trail.join(' › ') : x.rm.phaseById[n.phase]?.title;
+  return `<button type="button" class="td-item s-${x.s}" data-go="topic" data-rm="${esc(x.rm.id)}" data-id="${esc(n.id)}">${rmTag}` +
+    `<span class="td-title">${esc(n.title)}</span><span class="td-meta">${status}${where ? `<span>${esc(where)}</span>` : ''}` +
+    (n.tasks.length ? `<span>${esc(fmt(L.todayTasks, { done: x.tasks, total: n.tasks.length }))}</span>` : '') + `${touched}</span></button>`;
+}
+
+function nextItem(x) {
+  const L = S.L, n = x.n, pct = Math.round(x.done / x.rm.core.length * 100), late = overdue(x.due, false);
+  return `<button type="button" class="td-item td-next" data-go="topic" data-rm="${esc(x.rm.id)}" data-id="${esc(n.id)}">` +
+    `<span class="td-rm"><span class="td-ico" aria-hidden="true">${esc(x.rm.meta.icon || '▦')}</span><span>${esc(x.rm.meta.title)}</span><b>${x.done}/${x.rm.core.length}</b></span>` +
+    `<span class="td-title"><span class="td-num">${n.num}</span>${esc(n.title)}</span>` +
+    `<span class="td-meta">${[x.rm.phaseById[n.phase]?.title, n.time].filter(Boolean).map(t => `<span>${esc(t)}</span>`).join('')}` +
+    (x.due ? `<span class="due${late ? ' late' : ''}">${esc(fmt(late ? L.dueLate : L.dueBy, { date: fmtDay(x.due) }))}</span>` : '') + `</span>` +
+    `<span class="rm-bar"><i style="width:${pct}%"></i></span></button>`;
+}
+
+const TODAY_MAX = 8;
+function renderToday() {
+  if (!today.open) return;
+  const L = S.L, m = todayModel(today.list);
+  const date = new Date().toLocaleDateString(document.documentElement.lang || undefined, { weekday: 'long', day: 'numeric', month: 'long' });
+  const back = S.rm && !S.preview ? `<button type="button" class="secondary td-back" data-today-close><span aria-hidden="true">←</span> ${esc(S.rm.meta.title)}</button>` : '';
+  const head = `<div class="td-head"><div><div class="td-date">${esc(date)}</div><h1 id="todayH">${esc(L.todayTitle)}</h1>` +
+    (m.cont.length ? `<p class="td-sum">${esc(fmt(L.todaySummary, { n: m.cont.length }))}</p>` : '') + `</div>${back}</div>`;
+  if (m.empty) {
+    $('today').innerHTML = head + `<p class="td-empty">${esc(L.rmNone)}</p>`;
+    return;
+  }
+  const shown = today.all ? m.cont : m.cont.slice(0, TODAY_MAX);
+  const cont = `<section class="td-sec"><h2>${esc(L.todayContinue)}${m.cont.length ? ` <b>${m.cont.length}</b>` : ''}</h2>` +
+    (m.cont.length ? `<div class="td-list">${shown.map(todayItem).join('')}</div>` +
+      (shown.length < m.cont.length ? `<button type="button" class="secondary td-more" data-today-all>${esc(fmt(L.todayShowAll, { n: m.cont.length }))}</button>` : '')
+      : `<p class="td-empty">${esc(L.todayContinueEmpty)}</p>`) + `</section>`;
+  const next = `<section class="td-sec"><h2>${esc(m.starter ? L.todayStart : L.todayNext)}${m.upNext.length && !m.starter ? ` <b>${m.upNext.length}</b>` : ''}</h2>` +
+    `<p class="td-hint">${esc(m.starter ? L.todayStartHint : L.todayNextHint)}</p>` +
+    (m.upNext.length ? `<div class="td-grid">${m.upNext.map(nextItem).join('')}</div>` : `<p class="td-empty">${esc(L.todayNextEmpty)}</p>`) + `</section>`;
+  $('today').innerHTML = head + cont + next;
+}
+
+async function openToday() {
+  if (S.editing || S.readOnly || !S.manifest) return;
+  today.open = true; today.all = false;
+  document.body.classList.add('today-on');
+  $('todayBtn').classList.add('active'); $('todayBtn').setAttribute('aria-pressed', 'true');
+  setDrawer(false); setPicker(false);
+  window.scrollTo({ top: 0 });
+  if (!today.list.length) $('today').innerHTML = `<p class="td-empty td-loading">…</p>`;
+  else renderToday();   // the last picture right away, then fresh data
+  const list = await loadToday();
+  if (!today.open) return;
+  today.list = list;
+  renderToday();
+}
+
+function closeToday() {
+  if (!today.open) return;
+  today.open = false;
+  document.body.classList.remove('today-on');
+  $('todayBtn').classList.remove('active'); $('todayBtn').setAttribute('aria-pressed', 'false');
+  requestAnimationFrame(() => { syncToolbarHeight(); if (S.rm && S.svg && S.view === 'map') layout(); });
+}
+
+const toggleToday = () => (today.open ? closeToday() : openToday());
+
+function wireToday() {
+  $('todayBtn').addEventListener('click', toggleToday);
+  $('today').addEventListener('click', e => {
+    const go = e.target.closest('[data-go]');
+    if (go) { closeToday(); (go.dataset.go === 'project' ? goProject : goTopic)(go.dataset.rm, go.dataset.id); return; }
+    if (e.target.closest('[data-today-close]')) closeToday();
+    else if (e.target.closest('[data-today-all]')) { today.all = true; renderToday(); }
+  });
+  addEventListener('keydown', e => {
+    if (e.key === 'Escape' && today.open && !document.querySelector('dialog[open]') && $('rmPop').hidden && $('settings').hidden) closeToday();
+  });
+  $('homeSel').value = homeSetting();
+  $('homeSel').addEventListener('change', e => store.set(HOME_KEY, e.target.value));
 }
 
 /* ---------- roadmap loading ---------- */
@@ -2471,6 +2641,7 @@ async function setRoadmap(rm, { local = false, keep = false, preview = false } =
   S.isLocal = local;
   S.preview = preview;
   if (local) S.localRm = rm;
+  if (!keep) closeToday();
   if (!(keep && preview)) loadState(rm);
   if (!keep) loadNotes(rm);
   clearTimeout(sync.timer); sync.timer = 0;
@@ -2814,6 +2985,7 @@ function wire() {
     store.set(LANG_KEY, e.target.value);
     if (S.rm) await setRoadmap(S.rm, { local: S.isLocal, keep: true, preview: S.preview });
     else { S.L = { ...S.defaults, ...await loadLabels(uiLang(null)) }; applyI18n(); }
+    renderToday();
     buildLangSel(); renderManage();
     if (!$('rmPop').hidden) renderPicker();
     if (S.editing) { buildCategorySelect(); $('editTitle').textContent = ed.id ? S.L.edTitleEdit : S.L.edTitleNew; if (ed.mode === 'form') renderForm(); if (!S.rm) await showPreviewHint(); }
@@ -2860,6 +3032,7 @@ function wire() {
   wirePalette();
   wireDetailResize();
   wireSidebar();
+  wireToday();
 }
 
 /* ---------- installable app and offline use (service worker, src/sw.js served at /sw.js) ---------- */
@@ -2948,6 +3121,7 @@ async function init() {
     return;
   }
   await openEntry(entry);
+  if (!SNAP && !asked && homeSetting() === 'today') openToday();
   if (SNAP) { startSnapshot(); if (SNAP.view) setView(SNAP.view, false); }
 }
 

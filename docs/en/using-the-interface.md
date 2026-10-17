@@ -10,6 +10,15 @@ On the left is the sidebar: the logo, the roadmap picker, the phases of the open
 
 Both sidebars can be dragged by their edge to make them wider or narrower, and a double click brings them back to the default size. The left one also collapses into a strip of icons with the `‹` button next to the logo, which helps on small screens. Whatever you choose is saved in the browser.
 
+## The Today screen
+
+**Today**, at the top of the sidebar (or the `H` key), answers "what do I do now?" by gathering every roadmap on one screen:
+
+- **Continue**: topics and projects in progress or in review, from every roadmap, the one you touched last first. Each row shows the roadmap, the phase, the tasks done and when it last changed. Clicking opens the topic in its roadmap.
+- **Up next**: the next topic to do in each roadmap you used in the last 30 days, with the roadmap's progress and the due date, if there is one. With no recent activity, the next topic of the last roadmap you opened shows up under **To get started**.
+
+Hidden roadmaps are left out, and so are the ones you never touched (states the author wrote in the JSON do not count as yours). The button with the roadmap's name, or `Esc`, goes back to it. **Settings → On open** makes Roadkit open straight on the Today screen.
+
 ## The map
 
 The map draws the main topics in order, top to bottom, grouped by phase. Sub-topics and optional explorations sit to the right of their topic, connected by a line. When a topic and the next one are both done, the line between them turns green.
@@ -65,6 +74,7 @@ Outside text fields, a few single-letter keys work right away:
 |---|---|
 | `/` | jumps to the search box |
 | `M` · `K` · `P` | Map, Kanban, Projects |
+| `H` | opens or closes the Today screen |
 | `N` | next topic to do |
 | `J` · `L` | previous / next topic, in path order |
 | `1` · `2` · `3` · `4` | to do, working, review, finished, on the open topic or project |
@@ -105,7 +115,7 @@ At the bottom of the picker is **Manage roadmaps**, the full list. From there yo
 
 ## Settings
 
-The button in the top right corner opens the settings: mode (light, dark or auto), theme, text size, interface language and the skipped topic tolerance. With the language on "Automatic", it follows the `meta.language` of the open roadmap. Picking a fixed language applies to every roadmap.
+The button in the top right corner opens the settings: mode (light, dark or auto), theme, text size, interface language, what to open first (the last roadmap or the Today screen) and the skipped topic tolerance. With the language on "Automatic", it follows the `meta.language` of the open roadmap. Picking a fixed language applies to every roadmap.
 
 The mode says whether the screen is light or dark, and the theme picks the colors for each. There are three light themes and four dark ones:
 

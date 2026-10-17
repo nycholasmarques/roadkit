@@ -69,6 +69,10 @@ Cada tópico passa por a fazer, em andamento, em revisão e concluído, no **map
   <img src="docs/media/visao-geral.gif" alt="Marcando um tópico, movendo um cartão no kanban e trocando para o tema escuro" width="100%">
 </p>
 
+### Começar o dia
+
+A tela **Hoje** junta todos os roadmaps: o que está em andamento, do que você mexeu por último para o mais antigo, e o próximo tópico de cada roadmap que você está usando. Ela pode ser a primeira coisa que o Roadkit abre.
+
 ### Fazer projetos
 
 Um roadmap pode trazer projetos práticos do iniciante ao avançado, cada um ligado aos tópicos que pratica. A tela **Projetos** mostra quais já estão ao seu alcance, e cada projeto tem requisitos para marcar e um lugar para o link do seu repositório.

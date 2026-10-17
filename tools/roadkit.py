@@ -20,7 +20,7 @@ import re
 import sys
 import tempfile
 import threading
-from datetime import date
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from urllib.parse import parse_qs, unquote, urlsplit
 
@@ -40,6 +40,8 @@ MAX_STATE_BYTES = 1_000_000
 NOTES_DIR = DATA_DIR / "notes"                                    # personal notes, one JSON per roadmap
 NOTE_KEY = re.compile(r"^(roadmap|node:[A-Za-z0-9._-]{1,100}|project:[A-Za-z0-9._-]{1,100})$")
 MAX_NOTE_CHARS = 20_000
+ACTIVITY_DIR = DATA_DIR / "activity"                              # what you did and when, one small JSON per roadmap
+ACTIVITY_DAYS = 730                                               # daily totals kept; older days become monthly totals
 
 SLUG = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 HEX = re.compile(r"^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$")
@@ -621,6 +623,97 @@ def valid_notes(obj):
         isinstance(k, str) and NOTE_KEY.match(k) and isinstance(v, str) and len(v) <= MAX_NOTE_CHARS for k, v in notes.items())
 
 
+"""Activity: data/activity/<id>.json keeps totals per day ("moves", "done") and, per topic or project
+("project:<id>"), when it started, finished and was last touched. Its size depends on the number of topics and
+on two years of days, never on how much you click; nothing stays in memory between requests."""
+DAY_TOTALS = ("moves", "done", "focus")
+
+
+def local_day(ms, tz):
+    """The day of a moment (ms) where the client is: tz is its offset in minutes east of UTC, when it sent one."""
+    if isinstance(tz, int) and not isinstance(tz, bool) and -840 <= tz <= 840:
+        return datetime.fromtimestamp(ms / 1000 + tz * 60, timezone.utc).strftime("%Y-%m-%d")
+    return datetime.fromtimestamp(ms / 1000).strftime("%Y-%m-%d")
+
+
+def read_activity(rid):
+    try:
+        v = json.loads((ACTIVITY_DIR / f"{rid}.json").read_text("utf-8"))
+    except (OSError, ValueError):
+        v = None
+    out = {"v": 1, "days": {}, "months": {}, "topics": {}}
+    if isinstance(v, dict):
+        for part in ("days", "months", "topics"):
+            if isinstance(v.get(part), dict):
+                out[part] = {k: x for k, x in v[part].items() if isinstance(k, str) and isinstance(x, dict)}
+    return out
+
+
+def compact_activity(act, today):
+    """Days older than ACTIVITY_DAYS are folded into totals per month."""
+    cutoff = (date.fromisoformat(today) - timedelta(days=ACTIVITY_DAYS)).isoformat()
+    for day in [d for d in act["days"] if d < cutoff]:
+        month = act["months"].setdefault(day[:7], {})
+        for k, n in act["days"].pop(day).items():
+            if k in DAY_TOTALS and isinstance(n, (int, float)):
+                month[k] = month.get(k, 0) + n
+
+
+def record_activity(rid, old, new, at, tz):
+    """Adds what changed between two saved progresses to the roadmap's activity, on the day it happened."""
+    at = min(int(at), int(datetime.now(timezone.utc).timestamp() * 1000) + 300_000)   # a clock ahead does not write the future
+    day = local_day(at, tz)
+    moves = []   # (key, before, after) for topics and projects
+    for k in set(old.get("nodes", {})) | set(new.get("nodes", {})):
+        a, b = old.get("nodes", {}).get(k), new.get("nodes", {}).get(k)
+        if a != b:
+            moves.append((k, a, b))
+    po, pn = old.get("projects", {}), new.get("projects", {})
+    touched, minor = set(), 0
+    for k in set(po) | set(pn):
+        a, b = po.get(k) or {}, pn.get(k) or {}
+        if a.get("status") != b.get("status"):
+            moves.append((f"project:{k}", a.get("status"), b.get("status")))
+        checks = sum(1 for part in ("req", "stretch") for c in set(a.get(part, {})) | set(b.get(part, {}))
+                     if a.get(part, {}).get(c) != b.get(part, {}).get(c))
+        if checks:
+            minor += checks
+            touched.add(f"project:{k}")
+    for k in set(old.get("tasks", {})) | set(new.get("tasks", {})):
+        if old.get("tasks", {}).get(k) != new.get("tasks", {}).get(k):
+            minor += 1
+            touched.add(k.rsplit("/", 1)[0])
+    if not moves and not minor:
+        return
+    act = read_activity(rid)
+    totals = act["days"].setdefault(day, {})
+    emptied = not any(new.get(p) for p in ("nodes", "tasks", "projects"))
+    if emptied:   # "reset marks": one move, and nothing counts as started or finished any more
+        totals["moves"] = totals.get("moves", 0) + 1
+        for t in act["topics"].values():
+            t.pop("started", None)
+            t.pop("finished", None)
+    else:
+        totals["moves"] = totals.get("moves", 0) + len(moves) + minor
+        for k, a, b in moves:
+            t = act["topics"].setdefault(k, {})
+            t["touched"] = at
+            if b in ("working", "review", "finished"):
+                t.setdefault("started", day)
+            if b == "finished":
+                t["finished"] = day
+                totals["done"] = totals.get("done", 0) + 1
+            elif b in (None, "todo"):
+                t.pop("started", None)
+                t.pop("finished", None)
+            else:
+                t.pop("finished", None)
+        for k in touched:
+            act["topics"].setdefault(k, {})["touched"] = at
+    compact_activity(act, day)
+    write_json(ACTIVITY_DIR / f"{rid}.json", act)
+
+
 class ApiError(Exception):
     def __init__(self, code, body):
         self.code, self.body = code, body
@@ -826,6 +919,11 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             out = {"updatedAt": incoming["updatedAt"], "state": {
                 **kept, "nodes": {}, "tasks": {}, **incoming["state"]}}
             write_json(f, out)
+            if valid_state(current):   # a first upload (progress made before syncing) is not today's activity
+                try:
+                    record_activity(rid, current["state"], out["state"], incoming["updatedAt"], incoming.get("tz"))
+                except (OSError, ValueError) as e:   # the progress is saved; the activity failing must not undo that
+                    print(f"activity: {rid}: {e}", file=sys.stderr)
         return 200, out
 
     # -- notes: GET/PUT /api/notes/<id>, the same sync rules as the progress, in a file of their own --
@@ -867,8 +965,41 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             except (OSError, ValueError):
                 continue
             if STATE_ID.match(f.stem) and valid_state(v):
-                out[f.stem] = {"updatedAt": v["updatedAt"], "nodes": v["state"].get("nodes", {})}
+                st = v["state"]
+                out[f.stem] = {"updatedAt": v["updatedAt"], "nodes": st.get("nodes", {}), "tasks": st.get("tasks", {}),
+                               "projects": {k: {"status": p["status"]} for k, p in st.get("projects", {}).items() if p.get("status")},
+                               "dates": st.get("dates", {})}
         return 200, out
+
+    # -- activity: GET /api/activity?days=30 (all roadmaps, for the Today screen), GET /api/activity/<id> --
+    def activity_all(self, _, query):
+        try:
+            days = max(1, min(ACTIVITY_DAYS, int(query.get("days", ["30"])[0])))
+        except ValueError:
+            raise ApiError(400, {"error": "days must be a number"})
+        cutoff = (date.today() - timedelta(days=days)).isoformat()
+        totals, roadmaps = {}, {}
+        for f in ACTIVITY_DIR.glob("*.json") if ACTIVITY_DIR.is_dir() else []:
+            if not STATE_ID.match(f.stem):
+                continue
+            act = read_activity(f.stem)
+            for day, t in act["days"].items():
+                if day >= cutoff:
+                    into = totals.setdefault(day, {})
+                    for k in DAY_TOTALS:
+                        if isinstance(t.get(k), (int, float)):
+                            into[k] = into.get(k, 0) + t[k]
+            topics = {k: {x: t[x] for x in ("touched", "started", "finished") if x in t} for k, t in act["topics"].items()}
+            last = max((t.get("touched", 0) for t in topics.values() if isinstance(t.get("touched"), (int, float))), default=0)
+            roadmaps[f.stem] = {"last": last, "topics": topics}
+        return 200, {"days": totals, "roadmaps": roadmaps}
+
+    def activity_get(self, rid, query):
+        if not STATE_ID.match(rid or ""):
+            raise ApiError(404, {"error": "unknown roadmap id"})
+        if not (ACTIVITY_DIR / f"{rid}.json").is_file():
+            return 204, None
+        return 200, read_activity(rid)
 
     # -- roadmaps made in the UI: POST /api/roadmaps, PUT/DELETE /api/roadmaps/<id>; ?category=<path>&categoryTitle=<name> --
     def check_roadmap(self, data):
@@ -927,8 +1058,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             raise ApiError(405 if rid in known_ids() else 404, {"error": "only roadmaps created in the interface can be deleted; hide the others"})
         with LOCK:
             f.unlink()
-            if query.get("progress", [""])[0] == "1":   # the progress and the notes go together
-                for path in (self.state_file, self.notes_file):
+            if query.get("progress", [""])[0] == "1":   # the progress, the notes and the activity go together
+                for path in (self.state_file, self.notes_file, lambda r: ACTIVITY_DIR / f"{r}.json"):
                     try:
                         path(rid).unlink()
                     except (FileNotFoundError, ApiError):
@@ -953,6 +1084,8 @@ ROUTES = [
     (r"/api/state/([^/]+)", {"GET": "state_get", "PUT": "state_put"}),
     (r"/api/states", {"GET": "states_get"}),
     (r"/api/notes/([^/]+)", {"GET": "notes_get", "PUT": "notes_put"}),
+    (r"/api/activity", {"GET": "activity_all"}),
+    (r"/api/activity/([^/]+)", {"GET": "activity_get"}),
     (r"/api/validate", {"POST": "roadmap_validate"}),
     (r"/api/roadmaps", {"POST": "roadmap_create"}),
     (r"/api/roadmaps/([^/]+)", {"PUT": "roadmap_update", "DELETE": "roadmap_delete"}),

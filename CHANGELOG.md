@@ -4,6 +4,16 @@ Todas as mudanças relevantes ficam aqui, da mais nova para a mais antiga. O for
 
 Cada release no GitHub também lista automaticamente os commits desde a versão anterior; este arquivo é onde ficam os destaques escritos à mão. Para publicar uma versão, veja [`docs/publicando-versoes.md`](docs/publicando-versoes.md).
 
+## [1.7.0] - não lançada
+
+### Tela Hoje
+- Uma tela **Hoje**, no topo da barra lateral (ou a tecla `H`), que junta todos os roadmaps: **Continuar** traz os tópicos e projetos em andamento ou em revisão, do que você mexeu por último para o mais antigo, e **A seguir** traz o próximo tópico de cada roadmap usado nos últimos 30 dias, com andamento e prazo.
+- **Ajustes → Ao abrir** faz o Roadkit abrir direto na tela Hoje. Ela também está na busca (`Ctrl+K`) e na lista de atalhos.
+
+### Atividade
+- O servidor passa a guardar quando cada tópico começou, foi concluído e foi mexido por último, e quanto você fez em cada dia, em `data/activity/<id>.json`. O arquivo tem tamanho limitado (dois anos de totais por dia; o resto vira totais por mês) e é escrito pelo próprio servidor a partir das mudanças de progresso, no fuso de quem fez a mudança.
+- Rotas novas: `GET /api/activity` e `GET /api/activity/<id>`. O `GET /api/states` também traz as tarefas, os projetos e as datas. Excluir um roadmap com o progresso leva a atividade junto.
+
 ## [1.6.0] - 2026-10-17
 
 ### App instalável e offline

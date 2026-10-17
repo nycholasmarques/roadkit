@@ -74,6 +74,17 @@ Notes live outside the progress file, in `data/notes/<id>.json`, because the pro
 
 Note text never becomes HTML: the renderer in `src/markdown.js` escapes everything before formatting and only accepts `http(s)` links. It has its own tests (`node tools/markdown.test.cjs`), which run in CI.
 
+## Where activity is stored
+
+So the Today screen knows what you touched last, the server keeps each roadmap's activity in `data/activity/<id>.json`. The server writes it itself: on every `PUT /api/state/<id>`, it compares the new progress with what it had and records the difference. The browser changes nothing, and the record stays consistent across devices.
+
+The file has two parts:
+
+- `days`: totals per day (`moves`, the changes, and `done`, the topics finished), on the day of whoever made the change (the browser sends its time zone). The last two years are kept; older days become a total per month, in `months`.
+- `topics`: for each topic or project (`project:<id>`) you ever touched, when it started, when it was finished and the time of its last change.
+
+Its size depends on the number of topics and on two years of days, never on how many clicks you make: it stays under 60 KB per roadmap even after years of use, and nothing stays in memory between requests. The first upload of progress that only existed in the browser does not count as that day's activity, and "Reset checkmarks" counts as a single change.
+
 Nothing inside `data/` is served as a plain file: only through the API, which requires the token when one is set.
 
 ## The API
@@ -85,13 +96,15 @@ Everything the interface asks of the server is below. It can be useful for scrip
 | `GET /manifest.json` | the list of roadmaps, with sections, counts and hidden ones |
 | `GET /api/state/<id>` | a roadmap's saved progress (`204` if there is none) |
 | `PUT /api/state/<id>` | saves progress, or returns `409` with what the server has if that is newer. Parts of the progress the client does not send stay as they were, so an older version that only knows topics and tasks does not erase the projects |
-| `GET /api/states` | a summary of all of them, for the progress badges |
+| `GET /api/states` | a summary of all of them (topic, task and project states), for the progress badges and the Today screen |
+| `GET /api/activity?days=30` | the activity of every roadmap: totals per day in the period and, per roadmap, when each topic was touched |
+| `GET /api/activity/<id>` | a roadmap's activity file (`204` if there is none) |
 | `GET /api/notes/<id>` | a roadmap's notes (`204` if there are none) |
 | `PUT /api/notes/<id>` | saves the notes, with the same rule as the progress (`409` if the server has a newer copy). Each note holds up to 20,000 characters |
 | `POST /api/validate` | validates a roadmap JSON without saving it |
 | `POST /api/roadmaps?category=` | creates a roadmap (`categoryTitle=` names a new category) |
 | `PUT /api/roadmaps/<id>?category=` | replaces a roadmap created in the interface, and moves it if the category changes |
-| `DELETE /api/roadmaps/<id>?progress=1` | deletes it, and optionally erases its progress too |
+| `DELETE /api/roadmaps/<id>?progress=1` | deletes it, and optionally erases its progress, notes and activity too |
 | `PUT /api/hidden/<id>` | hides or restores it, with `{"hidden": true}` |
 | `GET /user/<category>/<id>.json` | the JSON of a roadmap created in the interface |
 

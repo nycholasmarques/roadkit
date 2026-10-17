@@ -71,6 +71,10 @@ Each topic moves through to do, working, review and finished, on the **map** or 
   <img src="docs/media/visao-geral.gif" alt="Checking off a topic, moving a card on the kanban and switching to the dark theme" width="100%">
 </p>
 
+### Start your day
+
+The **Today** screen gathers every roadmap: what is in progress, the most recently touched first, and the next topic of each roadmap you are using. It can be the first thing Roadkit opens.
+
 ### Build projects
 
 A roadmap can come with hands-on projects from beginner to advanced, each linked to the topics it practices. The **Projects** view shows which ones are within reach, and each project has requirements to check off and a place for the link to your repository.
