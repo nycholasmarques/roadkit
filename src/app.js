@@ -1552,11 +1552,11 @@ function setView(v, persist = true) {
 }
 
 /* ---------- projects view: one column per level (tabs on narrow screens) ---------- */
-const pips = lv => `<span class="pips" aria-hidden="true">${LEVELS.map((x, i) => `<i${i <= LEVELS.indexOf(lv) ? ' class="on"' : ''}></i>`).join('')}</span>`;
+const pips = lv => `<span class="pips lv-${lv}" aria-hidden="true">${LEVELS.map((x, i) => `<i${i <= LEVELS.indexOf(lv) ? ' class="on"' : ''}></i>`).join('')}</span>`;
 
 function projectCard(p) {
   const L = S.L, st = projStatus(p), tot = p.requirements.length, fin = reqCount(p), ready = projReady(p) && st === 'todo';
-  return `<button type="button" class="pj-card s-${st}${S.project === p.id ? ' selected' : ''}" data-project="${esc(p.id)}">` +
+  return `<button type="button" class="pj-card lv-${p.level} s-${st}${S.project === p.id ? ' selected' : ''}" data-project="${esc(p.id)}">` +
     `<span class="pj-top"><span class="pj-status s-${st}">${esc(L[STATUS_LABEL[st]])}</span>${ready ? `<span class="pj-ready">${esc(L.projectReady)}</span>` : ''}</span>` +
     `<span class="pj-title">${esc(p.title)}</span>` +
     (p.summary ? `<span class="pj-sum">${esc(p.summary)}</span>` : '') +
@@ -1573,10 +1573,10 @@ function renderProjects() {
   $('projects').innerHTML =
     `<div class="pj-head"><p class="pj-count">${esc(fmt(L.projectsDone, { done, total: rm.projects.length }))}</p>` +
     `<label class="pj-filter"><input type="checkbox" data-ready-only${S.readyOnly ? ' checked' : ''}> ${esc(L.projectsReadyOnly)}</label></div>` +
-    `<div class="seg small pj-tabs" role="group">${LEVELS.map(lv => `<button type="button" data-level="${lv}" aria-pressed="${S.projLevel === lv}">${esc(L[`level_${lv}`])}</button>`).join('')}</div>` +
+    `<div class="seg small pj-tabs" role="group">${LEVELS.map(lv => `<button type="button" class="lv-${lv}" data-level="${lv}" aria-pressed="${S.projLevel === lv}">${esc(L[`level_${lv}`])}</button>`).join('')}</div>` +
     `<div class="pj-cols">${LEVELS.map(lv => {
       const list = shown.filter(p => p.level === lv);
-      return `<section class="pj-col${S.projLevel === lv ? ' on' : ''}" data-col-level="${lv}"><h3 class="pj-col-h">${pips(lv)}<span>${esc(L[`level_${lv}`])}</span><b>${list.length}</b></h3>` +
+      return `<section class="pj-col lv-${lv}${S.projLevel === lv ? ' on' : ''}" data-col-level="${lv}"><h3 class="pj-col-h">${pips(lv)}<span>${esc(L[`level_${lv}`])}</span><b>${list.length}</b></h3>` +
         `<div class="pj-list">${list.map(projectCard).join('') || `<div class="kempty">${esc(L.projectsNone)}</div>`}</div></section>`;
     }).join('')}</div>`;
 }
@@ -1629,7 +1629,7 @@ function renderDetail() {
     : '';
   const usedBy = rm.projects.filter(p => p.uses.includes(n));
   const projects = usedBy.length
-    ? `<h3>${esc(L.projectsOfTopic)}</h3><div class="sublist">${usedBy.map(p => `<button type="button" class="subitem" data-project="${esc(p.id)}"><span class="kdot k-${projStatus(p)}"></span><span>${esc(p.title)}</span><em class="pj-lv">${esc(L[`level_${p.level}`])}</em></button>`).join('')}</div>`
+    ? `<h3>${esc(L.projectsOfTopic)}</h3><div class="sublist">${usedBy.map(p => `<button type="button" class="subitem" data-project="${esc(p.id)}"><span class="kdot k-${projStatus(p)}"></span><span>${esc(p.title)}</span><em class="pj-lv lv-${p.level}">${esc(L[`level_${p.level}`])}</em></button>`).join('')}</div>`
     : '';
   box.className = '';
   box.innerHTML =
