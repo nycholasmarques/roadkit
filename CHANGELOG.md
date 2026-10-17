@@ -4,6 +4,15 @@ Todas as mudanças relevantes ficam aqui, da mais nova para a mais antiga. O for
 
 Cada release no GitHub também lista automaticamente os commits desde a versão anterior; este arquivo é onde ficam os destaques escritos à mão. Para publicar uma versão, veja [`docs/publicando-versoes.md`](docs/publicando-versoes.md).
 
+## [1.3.0] - não lançada
+
+### Notas
+- Cada tópico e cada projeto tem um bloco **Minhas notas** no painel, em Markdown, com as abas Escrever e Ver. O texto é salvo sozinho no servidor e funciona offline, como o progresso.
+- O Markdown aceita títulos, negrito, itálico, listas, código, citações, links e caixas `- [ ]`, que dá para marcar na própria visualização. Nada do que você escreve vira HTML.
+- Cartões com notas ganham um ícone, e a busca do topo também procura dentro das notas.
+- **Notas do roadmap**, nas ferramentas, junta a nota geral do roadmap e todas as notas em ordem, e copia tudo em Markdown.
+- As notas vão no export (`notes.json`) e voltam no import. Excluir um roadmap com o progresso também apaga as notas.
+
 ## [1.2.1] - 2026-10-16
 
 ### Segurança
@@ -60,6 +69,7 @@ A primeira versão estável. O formato do JSON dos roadmaps e a API do servidor 
 - Imagem Docker com volume para os dados e a pasta `roadmaps/` somente leitura.
 - Documentação em `docs/` e GIFs gerados por um script.
 
+[1.3.0]: https://github.com/nycholasmarques/roadkit/releases/tag/v1.3.0
 [1.2.1]: https://github.com/nycholasmarques/roadkit/releases/tag/v1.2.1
 [1.2.0]: https://github.com/nycholasmarques/roadkit/releases/tag/v1.2.0
 [1.1.0]: https://github.com/nycholasmarques/roadkit/releases/tag/v1.1.0

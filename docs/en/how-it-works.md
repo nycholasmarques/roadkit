@@ -58,6 +58,14 @@ A roadmap's section is decided by its folder. In the editor, the Category field 
 
 Hidden roadmaps are just a list of ids in `data/_hidden.json`. Hiding neither deletes nor touches the file.
 
+## Where notes are stored
+
+Notes live outside the progress file, in `data/notes/<id>.json`, because the progress is rewritten on every click and a large text would make each write heavy. The file has the time of its last change and a map of notes: `roadmap` for the general note, `node:<id>` for a topic and `project:<id>` for a project. Syncing works like the progress: the browser keeps a copy, the newest version wins, and nothing is lost if the server goes down.
+
+Note text never becomes HTML: the renderer in `src/markdown.js` escapes everything before formatting and only accepts `http(s)` links. It has its own tests (`node tools/markdown.test.cjs`), which run in CI.
+
+Nothing inside `data/` is served as a plain file: only through the API, which requires the token when one is set.
+
 ## The API
 
 Everything the interface asks of the server is below. It can be useful for scripts, and it is what the Claude Code skill uses when it needs to write to the volume.
@@ -68,6 +76,8 @@ Everything the interface asks of the server is below. It can be useful for scrip
 | `GET /api/state/<id>` | a roadmap's saved progress (`204` if there is none) |
 | `PUT /api/state/<id>` | saves progress, or returns `409` with what the server has if that is newer. Parts of the progress the client does not send stay as they were, so an older version that only knows topics and tasks does not erase the projects |
 | `GET /api/states` | a summary of all of them, for the progress badges |
+| `GET /api/notes/<id>` | a roadmap's notes (`204` if there are none) |
+| `PUT /api/notes/<id>` | saves the notes, with the same rule as the progress (`409` if the server has a newer copy). Each note holds up to 20,000 characters |
 | `POST /api/validate` | validates a roadmap JSON without saving it |
 | `POST /api/roadmaps?category=` | creates a roadmap (`categoryTitle=` names a new category) |
 | `PUT /api/roadmaps/<id>?category=` | replaces a roadmap created in the interface, and moves it if the category changes |

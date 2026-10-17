@@ -75,6 +75,10 @@ Each topic moves through to do, working, review and finished, on the **map** or 
 
 A roadmap can come with hands-on projects from beginner to advanced, each linked to the topics it practices. The **Projects** view shows which ones are within reach, and each project has requirements to check off and a place for the link to your repository.
 
+### Take notes
+
+Every topic and project has a Markdown notes box, saved on the server and offline: the command that worked, the question, the decision. Search finds what you wrote, and a roadmap's notes come out together as Markdown.
+
 ### Create, watching the result
 
 **New roadmap** opens an editor with the form on one side and the real roadmap on the other, drawing itself as you type. You can build phases, topics, sub-topics up to two levels deep, optional topics, colors, logo and category. A line at the bottom tells you what is wrong as you go.
