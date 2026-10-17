@@ -2065,6 +2065,21 @@ function wireDetailResize() {
   grip.addEventListener('pointerup', stop);
   grip.addEventListener('pointercancel', stop);
   grip.addEventListener('dblclick', () => { root.style.removeProperty('--detail-w'); store.set(DETAIL_KEY, ''); done(); });
+  /* fold the panel away on a wide screen (the button next to the settings): the map gets the room, and a topic
+     you pick opens its details over the content, as on smaller screens */
+  const toggle = $('detailToggle');
+  const paintToggle = () => {
+    const folded = root.dataset.detail === 'collapsed', label = (folded ? S.L.detailShow : S.L.detailHide) ?? '';
+    toggle.setAttribute('aria-pressed', String(folded)); toggle.title = label; toggle.setAttribute('aria-label', label);
+  };
+  toggle.addEventListener('click', () => {
+    const fold = root.dataset.detail !== 'collapsed';
+    if (fold) root.dataset.detail = 'collapsed'; else delete root.dataset.detail;
+    store.set('roadkit:v1:detail', fold ? 'collapsed' : 'open');
+    setDrawer(false); paintToggle(); metricsChanged();
+  });
+  addEventListener('labelschange', paintToggle);
+  paintToggle();
   grip.addEventListener('keydown', e => {
     const d = { ArrowLeft: 24, ArrowRight: -24 }[e.key];
     if (!d) return;
@@ -2774,7 +2789,7 @@ function renderStats() {
   const head = `<div class="td-head"><div><div class="td-date">${esc(L.statsHeat)}</div><h1 id="statsH">${esc(L.statsTitle)}</h1></div>${back}</div>`;
   const used = stats.list.map(x => ({ ...x, act: data.roadmaps?.[x.rm.id] })).filter(x => x.act && ((x.act.total?.moves || 0) + (x.act.total?.focus || 0)) > 0)
     .sort((a, b) => (b.rm.id === stats.focusRm) - (a.rm.id === stats.focusRm) || (b.act.last || 0) - (a.act.last || 0));
-  if (!used.length && !Object.keys(days).length) { $('stats').innerHTML = head + `<p class="td-empty">${esc(L.statsEmpty)}</p>`; return; }
+  if (!used.length && !Object.keys(days).length) { $('stats').innerHTML = head + `<p class="td-empty">${esc(sync.api === false ? L.statsNoServer : L.statsEmpty)}</p>`; return; }
   const s = streaks(days), last30 = daysBack(30), focus30 = sumDays(days, last30, 'focus');
   const doneAll = used.reduce((n, x) => n + (x.act.total?.done || 0), 0);
   const card = (label, value, sub = '') => `<div class="st-card"><span class="st-label">${esc(label)}</span><b class="st-value">${esc(value)}</b>${sub ? `<span class="st-note">${esc(sub)}</span>` : ''}</div>`;
@@ -3675,13 +3690,24 @@ function warmOffline() {
 
 /* The demo on GitHub Pages (manifest.json says "demo": true): no server behind it, so the progress stays in this
    browser. A bar says so, with a link to install it for real. */
+const DEMO_HIDE = 'roadkit:v1:demo-hide';
 function startDemo() {
-  const bar = document.createElement('div');
-  bar.className = 'snap-bar demo-bar';
-  const paint = () => { bar.innerHTML = `<span>${esc(S.L.demoBanner)}</span><a href="../#install">${esc(S.L.demoInstall)}</a>`; };
+  if ((Number(store.get(DEMO_HIDE)) || 0) > Date.now()) return;   // hidden for a while
+  const notes = ['dn-side', 'dn-foot'].map(cls => Object.assign(document.createElement('div'), { className: `demo-note ${cls}` }));
+  const paint = () => notes.forEach(n => {
+    n.innerHTML = `<div class="dn-head"><b>${esc(S.L.demoTitle)}</b><button type="button" class="dn-x" data-demo-hide title="${esc(S.L.demoHide)}" aria-label="${esc(S.L.demoHide)}">×</button></div>` +
+      `<p>${esc(S.L.demoBanner)}</p><a href="../#install">${esc(S.L.demoInstall)}</a>`;
+  });
   paint();
   addEventListener('labelschange', paint);
-  document.body.prepend(bar);
+  document.querySelector('aside .aside-foot').before(notes[0]);   // a card in the sidebar, not a bar over the app
+  document.querySelector('.footer-note').prepend(notes[1]);       // on phones, where the sidebar is a header
+  document.addEventListener('click', e => {
+    if (!e.target.closest('[data-demo-hide]')) return;
+    store.set(DEMO_HIDE, String(Date.now() + 30 * dayMs));
+    notes.forEach(n => n.remove());
+    toast(S.L.demoHidden);
+  });
 }
 
 /* A shared page: a banner says when the progress is from, and the app opens on the view that was exported. */

@@ -22,7 +22,8 @@ sys.path.insert(0, str(ROOT / "tools"))
 import roadkit  # noqa: E402
 
 ICONS = ["icon.svg", "favicon.svg", "icon-192.png", "apple-touch-icon.png"]
-MEDIA = ["visao-geral.gif", "mapa-claro.png", "mapa-escuro.png", "kanban.png"]
+MEDIA = ["visao-geral.gif", "mapa-claro.png", "mapa-escuro.png", "kanban.png", "hoje.png", "projetos.png",
+         "estatisticas.png", "estatisticas-escuro.png", "notas.png", "temas.png", "celular.png"]
 
 
 def version(arg):

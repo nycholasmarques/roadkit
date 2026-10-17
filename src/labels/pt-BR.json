@@ -405,6 +405,12 @@
   "statOver": "passou do estimado",
   "statsEmpty": "As estatísticas aparecem conforme você marca tópicos. O registro de atividade começou na versão 1.7.",
   "paletteWords_stats": "estatísticas gráfico ritmo previsão sequência mapa de calor histórico",
-  "demoBanner": "Demonstração: o progresso fica só neste navegador.",
-  "demoInstall": "Instale o Roadkit para guardar de verdade →"
+  "demoBanner": "O seu progresso fica só neste navegador. Criar e editar roadmaps, as estatísticas e a sincronização entre aparelhos precisam do Roadkit instalado.",
+  "demoInstall": "Como instalar →",
+  "detailHide": "Esconder o painel de detalhes",
+  "detailShow": "Mostrar o painel de detalhes",
+  "demoTitle": "Demonstração",
+  "demoHide": "Esconder por 30 dias",
+  "demoHidden": "Aviso escondido por 30 dias.",
+  "statsNoServer": "As estatísticas vêm do registro de atividade, que fica no servidor do Roadkit. Na demonstração, ou com o app aberto sem servidor, elas não aparecem."
 }

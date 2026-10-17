@@ -148,9 +148,12 @@ Os GIFs e as capturas em `docs/media/` são gerados por um script que abre a int
 
 ```bash
 npm i playwright
-ROADKIT_DATA=$(mktemp -d) python3 tools/roadkit.py serve --port 8791 &
-node tools/demos/record.cjs http://127.0.0.1:8791            # todos
-node tools/demos/record.cjs http://127.0.0.1:8791 criar      # só um (hero, criar, ia, fotos)
+export ROADKIT_DATA=$(mktemp -d)
+python3 tools/roadkit.py serve --port 8791 &
+node tools/demos/record.cjs http://127.0.0.1:8791                  # todos
+node tools/demos/record.cjs http://127.0.0.1:8791 hoje,projetos    # só alguns
 ```
 
-Rode contra um servidor descartável como acima, e não contra o seu: o script marca progresso e cria roadmaps de teste.
+As cenas são `hero`, `criar`, `ia`, `hoje`, `projetos`, `notas`, `busca` (os GIFs) e `fotos`, `stats`, `foco`, `temas`, `celular` (as capturas). Toda cena começa do mesmo estado: progresso em três roadmaps de exemplo, um projeto em andamento, notas, duas revisões vencidas e meses de histórico de atividade. O histórico é escrito direto na pasta de dados, por isso o servidor e o script usam o mesmo `ROADKIT_DATA`. Os quadros vêm do próprio Chromium (o screencast do DevTools) e o ffmpeg monta os GIFs, que ficam leves porque só guardam o que muda.
+
+Rode contra um servidor descartável como acima, e não contra o seu: o script reescreve o progresso, as notas e a atividade.
