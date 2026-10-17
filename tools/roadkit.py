@@ -663,10 +663,24 @@ def compact_activity(act, today):
                 month[k] = month.get(k, 0) + n
 
 
-def record_activity(rid, old, new, at, tz):
+def event_times(events, floor, ceiling):
+    """The client's optional list of when each topic changed ([{"id": "http", "t": ms}, ...]): changes made offline
+    arrive together, and this keeps each one on its own day. Only plausible times count: not in the future and
+    not before the progress the server already had."""
+    out = {}
+    for e in events[:2000] if isinstance(events, list) else []:
+        if isinstance(e, dict) and isinstance(e.get("id"), str) and len(e["id"]) <= 110 and isinstance(e.get("t"), (int, float)) \
+                and not isinstance(e["t"], bool) and floor <= e["t"] <= ceiling:
+            out[e["id"]] = max(int(e["t"]), out.get(e["id"], 0))
+    return out
+
+
+def record_activity(rid, old, new, at, tz, events=None, floor=0):
     """Adds what changed between two saved progresses to the roadmap's activity, on the day it happened."""
-    at = min(int(at), int(datetime.now(timezone.utc).timestamp() * 1000) + 300_000)   # a clock ahead does not write the future
+    ceiling = int(datetime.now(timezone.utc).timestamp() * 1000) + 300_000
+    at = min(int(at), ceiling)   # a clock ahead does not write the future
     day = local_day(at, tz)
+    when = event_times(events, floor, ceiling)
     moves = []   # (key, before, after) for topics and projects
     for k in set(old.get("nodes", {})) | set(new.get("nodes", {})):
         a, b = old.get("nodes", {}).get(k), new.get("nodes", {}).get(k)
@@ -691,6 +705,7 @@ def record_activity(rid, old, new, at, tz):
         return
     act = read_activity(rid)
     totals = act["days"].setdefault(day, {})
+    add = lambda d, k: act["days"].setdefault(d, {}).__setitem__(k, act["days"][d].get(k, 0) + 1)
     emptied = not any(new.get(p) for p in ("nodes", "tasks", "projects"))
     if emptied:   # "reset marks": one move, and nothing counts as started or finished any more
         totals["moves"] = totals.get("moves", 0) + 1
@@ -698,15 +713,18 @@ def record_activity(rid, old, new, at, tz):
             t.pop("started", None)
             t.pop("finished", None)
     else:
-        totals["moves"] = totals.get("moves", 0) + len(moves) + minor
+        if minor:
+            totals["moves"] = totals.get("moves", 0) + minor
         for k, a, b in moves:
-            t = act["topics"].setdefault(k, {})
-            t["touched"] = at
+            t, ms = act["topics"].setdefault(k, {}), when.get(k, at)
+            d = local_day(ms, tz)
+            add(d, "moves")
+            t["touched"] = max(ms, t.get("touched", 0)) if isinstance(t.get("touched"), (int, float)) else ms
             if b in ("working", "review", "finished"):
-                t.setdefault("started", day)
+                t.setdefault("started", d)
             if b == "finished":
-                t["finished"] = day
-                totals["done"] = totals.get("done", 0) + 1
+                t["finished"] = d
+                add(d, "done")
             elif b in (None, "todo"):
                 t.pop("started", None)
                 t.pop("finished", None)
@@ -714,6 +732,8 @@ def record_activity(rid, old, new, at, tz):
                 t.pop("finished", None)
         for k in touched:
             act["topics"].setdefault(k, {})["touched"] = at
+    if not totals:
+        act["days"].pop(day, None)
     compact_activity(act, day)
     write_json(ACTIVITY_DIR / f"{rid}.json", act)
 
@@ -954,7 +974,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             write_json(f, out)
             if valid_state(current):   # a first upload (progress made before syncing) is not today's activity
                 try:
-                    record_activity(rid, current["state"], out["state"], incoming["updatedAt"], incoming.get("tz"))
+                    record_activity(rid, current["state"], out["state"], incoming["updatedAt"], incoming.get("tz"),
+                                    incoming.get("events"), current["updatedAt"])
                 except (OSError, ValueError) as e:   # the progress is saved; the activity failing must not undo that
                     print(f"activity: {rid}: {e}", file=sys.stderr)
         return 200, out
@@ -1024,7 +1045,14 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                             into[k] = into.get(k, 0) + t[k]
             topics = {k: {x: t[x] for x in ("touched", "started", "finished") if x in t} for k, t in act["topics"].items()}
             last = max((t.get("touched", 0) for t in topics.values() if isinstance(t.get("touched"), (int, float))), default=0)
-            roadmaps[f.stem] = {"last": last, "topics": topics}
+            total = {}
+            for t in [*act["days"].values(), *act["months"].values()]:
+                for k in DAY_TOTALS:
+                    if isinstance(t.get(k), (int, float)):
+                        total[k] = total.get(k, 0) + t[k]
+            first = min([*act["days"], *(f"{m}-01" for m in act["months"])], default="")
+            roadmaps[f.stem] = {"last": last, "first": first, "total": total, "topics": topics,
+                                "days": {d: t for d, t in act["days"].items() if d >= cutoff}}
         return 200, {"days": totals, "roadmaps": roadmaps}
 
     def activity_focus(self, rid, query):

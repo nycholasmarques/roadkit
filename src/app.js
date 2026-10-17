@@ -455,6 +455,7 @@ const toggleDone = n => setNodeStatus(n, isDone(n) ? 'todo' : 'finished');
 
 function changed() {
   S.ts = Date.now();
+  trackEvents();
   saveState();
   reviewTrack();
   refresh(); renderBoard(); renderProjects(); renderDetail();
@@ -530,6 +531,7 @@ function adopt(rm, remote) {
   saveState();
   S.readyBase = readyNow();   // changes made on another device are not announced here
   S.doneBase = new Set(rm.core.filter(isDone).map(n => n.id));   // nor enter the review queue
+  S.marks = marksOf(S.state); store.del(EVENTS_KEY(rm.id));   // the server's copy won: our pending moves are gone
   refresh(); renderBoard(); renderProjects(); renderDetail();
 }
 
@@ -541,15 +543,31 @@ function schedulePush() {
 
 function queue(fn) { return (sync.chain = sync.chain.then(fn, fn)); }
 
+/* When each topic or project moved, kept until the server has it: changes made offline go up together, and
+   these times put each one on the day it happened in the activity. */
+const EVENTS_KEY = id => `roadkit:v1:events:${id}`;
+const marksOf = st => ({ ...st.nodes, ...Object.fromEntries(Object.entries(st.projects || {}).map(([k, v]) => [`project:${k}`, v.status || 'todo'])) });
+function trackEvents() {
+  if (!S.rm || S.preview || S.isLocal || S.readOnly) return;
+  const now = marksOf(S.state), before = S.marks || now;
+  S.marks = now;
+  const moved = [...new Set([...Object.keys(now), ...Object.keys(before)])].filter(k => now[k] !== before[k]);
+  if (!moved.length) return;
+  const list = readJson(EVENTS_KEY(S.rm.id), []);
+  moved.forEach(id => list.push({ id, t: S.ts }));
+  store.set(EVENTS_KEY(S.rm.id), JSON.stringify(list.slice(-1000)));
+}
+
 const push = (keepalive = false) => queue(async () => {
   const rm = S.rm;
   if (!syncEnabled()) return;
   if (!S.ts) { S.ts = Date.now(); saveState(); }   // progress saved before sync existed: give it a date
   try {
     // tz: the server counts the change on your day, not on its own clock's
-    const r = await api('PUT', rm, { updatedAt: S.ts, state: S.state, tz: -new Date(S.ts).getTimezoneOffset() }, keepalive);
+    const events = readJson(EVENTS_KEY(rm.id), []), sent = Math.max(0, ...events.map(e => e.t));
+    const r = await api('PUT', rm, { updatedAt: S.ts, state: S.state, tz: -new Date(S.ts).getTimezoneOffset(), ...(events.length ? { events } : {}) }, keepalive);
     if (r.status === 409) { adopt(rm, await r.json()); setSyncStatus('on'); }
-    else if (r.ok) setSyncStatus('on');
+    else if (r.ok) { store.set(EVENTS_KEY(rm.id), JSON.stringify(readJson(EVENTS_KEY(rm.id), []).filter(e => e.t > sent))); setSyncStatus('on'); }
     else if (r.status === 401) setSyncStatus('auth');
     else if ([404, 405, 501].includes(r.status)) { sync.api = false; setSyncStatus('local'); }
     else setSyncStatus('offline');
@@ -2312,7 +2330,7 @@ function paletteActions() {
     list.push(a('notes', L.notesAll, openNotes));
     if (!S.readOnly) list.push(a('export', L.exportProgress, openExport), a('import', L.importProgress, () => $('importFile').click()));
   }
-  if (!S.readOnly) list.push(a('today', L.todayTitle, openToday, 'H'), a('new', L.newRoadmap, () => openEditor()), a('manage', L.manageRoadmaps, openManage));
+  if (!S.readOnly) list.push(a('today', L.todayTitle, openToday, 'H'), a('stats', L.statsTitle, () => openStats()), a('new', L.newRoadmap, () => openEditor()), a('manage', L.manageRoadmaps, openManage));
   list.push(a('theme', L.toggleMode, toggleMode, 'T'), a('settings', L.settings, () => setSettingsOpen(true)), a('keys', L.shortcuts, openShortcuts, '?'));
   return list;
 }
@@ -2490,10 +2508,10 @@ function savedState(entry, rm) {
   return { st: cleanState(rm, useRemote ? remote : local), ts: (useRemote ? remote.updatedAt : lts) || 0 };
 }
 
-async function loadToday() {
+async function loadToday(days = 30) {
   const activity = async () => {
     try {
-      const r = await apiFetch('GET', 'api/activity?days=30');
+      const r = await apiFetch('GET', `api/activity?days=${days}`);
       today.activity = r.ok && (r.headers.get('Content-Type') || '').includes('json') ? await r.json() : null;
     } catch { today.activity = null; }
   };
@@ -2536,7 +2554,7 @@ function todayModel(list) {
     const { st } = savedState(e, rm);
     for (const n of rm.core) {
       const it = rv.data.items[reviewKey(rm.id, n.id)];
-      if (it && it.due <= todayDay() && stNode(st, n) === 'finished') reviews.push({ rm, n, it });
+      if (it && it.due <= todayDay() && stNode(st, n) !== 'todo') reviews.push({ rm, n, it });   // the same ones the Today button counts
     }
   }
   reviews.sort((a, b) => (a.it.due < b.it.due ? -1 : a.it.due > b.it.due ? 1 : 0));
@@ -2612,6 +2630,7 @@ function renderToday() {
 
 async function openToday() {
   if (S.editing || S.readOnly || !S.manifest) return;
+  closeStats();
   today.open = true; today.all = false;
   document.body.classList.add('today-on');
   $('todayBtn').classList.add('active'); $('todayBtn').setAttribute('aria-pressed', 'true');
@@ -2626,6 +2645,7 @@ async function openToday() {
 }
 
 function closeToday() {
+  closeStats();   // every place that leaves Today for the roadmap leaves the statistics too
   if (!today.open) return;
   today.open = false;
   document.body.classList.remove('today-on');
@@ -2650,6 +2670,160 @@ function wireToday() {
   });
   $('homeSel').value = homeSetting();
   $('homeSel').addEventListener('change', e => store.set(HOME_KEY, e.target.value));
+}
+
+/* ---------- statistics: a heatmap of the last 12 months, streaks, and each roadmap's pace ----------
+   Everything comes from the activity record (GET /api/activity?days=365): totals per day, and per roadmap its
+   days, all-time totals and when each topic started and finished. */
+const stats = { open: false, list: [], data: null, focusRm: '' };
+const dayVal = t => (t ? (t.moves || 0) + Math.round((t.focus || 0) / 25) : 0);
+const daysBack = n => { const end = fromDay(todayDay()), out = []; for (let i = n - 1; i >= 0; i--) out.push(toDay(end - i * dayMs)); return out; };
+const sumDays = (days, list, k) => list.reduce((s, d) => s + (days[d]?.[k] || 0), 0);
+const daysBetween = (a, b) => Math.round((fromDay(b) - fromDay(a)) / dayMs);
+
+/* The current streak (today not started yet still counts yesterday's) and the best one in the last year. */
+function streaks(days) {
+  const active = d => dayVal(days[d]) > 0;
+  let cur = 0, d = todayDay();
+  if (!active(d)) d = addDays(d, -1);
+  while (active(d)) { cur++; d = addDays(d, -1); }
+  let best = 0, run = 0;
+  for (const x of daysBack(366)) { run = active(x) ? run + 1 : 0; best = Math.max(best, run); }
+  return { cur, best };
+}
+
+function dayTip(d, t) {
+  const L = S.L, parts = [];
+  if (t?.moves) parts.push(fmt(L.statTipMoves, { n: t.moves }));
+  if (t?.done) parts.push(fmt(L.statTipDone, { n: t.done }));
+  if (t?.focus) parts.push(fmt(L.statTipFocus, { time: fmtMinutes(t.focus) }));
+  return `${fmtDay(d)}: ${parts.join(', ') || L.statTipNone}`;
+}
+
+/* 53 weeks by 7 days, Sunday on top, as in most calendars; the intensity follows the quartiles of your own days. */
+function heatmap(days) {
+  const L = S.L, lang = document.documentElement.lang || undefined, cell = 12, step = 15, left = 30, top = 18;
+  const end = fromDay(todayDay()), start = end - (52 * 7 + new Date(end).getUTCDay()) * dayMs;
+  const cells = [];
+  for (let t = start; t <= end; t += dayMs) cells.push([toDay(t), t]);
+  const vals = cells.map(([d]) => dayVal(days[d])).filter(Boolean).sort((a, b) => a - b);
+  const q = p => vals[Math.min(vals.length - 1, Math.floor(p * vals.length))] || 0, cuts = [q(0.25), q(0.5), q(0.75)];
+  const level = v => (!v ? 0 : v <= cuts[0] ? 1 : v <= cuts[1] ? 2 : v <= cuts[2] ? 3 : 4);
+  let rects = '', labels = '', lastMonth = -1, lastCol = -9;
+  cells.forEach(([d, t], i) => {
+    const col = Math.floor(i / 7), row = i % 7, x = left + col * step, y = top + row * step;
+    rects += `<rect class="hm-${level(dayVal(days[d]))}" x="${x}" y="${y}" width="${cell}" height="${cell}" rx="2.5" data-day="${d}"><title>${esc(dayTip(d, days[d]))}</title></rect>`;
+    const m = new Date(t).getUTCMonth();
+    if (row === 0 && m !== lastMonth) {
+      if (col - lastCol >= 3 && col < 52) { labels += `<text x="${x}" y="11">${esc(new Date(t).toLocaleDateString(lang, { month: 'short', timeZone: 'UTC' }).replace('.', ''))}</text>`; lastCol = col; }
+      lastMonth = m;
+    }
+  });
+  [1, 3, 5].forEach(r => { labels += `<text x="0" y="${top + r * step + 10}">${esc(new Date(Date.UTC(2024, 0, 7 + r)).toLocaleDateString(lang, { weekday: 'short', timeZone: 'UTC' }).replace('.', ''))}</text>`; });
+  const w = left + 53 * step, h = top + 7 * step;
+  return `<div class="hm-wrap"><svg class="hm" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" role="img" aria-label="${esc(L.statsHeat)}">${labels}${rects}</svg></div>` +
+    `<div class="hm-foot"><p class="hm-info" id="hmInfo" aria-live="polite">${esc(dayTip(todayDay(), days[todayDay()]))}</p>` +
+    `<span class="hm-legend">${esc(L.statLess)}${[0, 1, 2, 3, 4].map(l => `<i class="hm-${l}"></i>`).join('')}${esc(L.statMore)}</span></div>`;
+}
+
+/* Finished topics per week, for the last 12 weeks (the last bar ends today). */
+function weekBars(days) {
+  const L = S.L, weeks = [];
+  for (let w = 11; w >= 0; w--) { const endD = addDays(todayDay(), -7 * w); weeks.push({ end: endD, n: sumDays(days, daysBack(7).map(d => addDays(d, -7 * w)), 'done') }); }
+  const max = Math.max(1, ...weeks.map(x => x.n)), bw = 16, gap = 5, h = 46;
+  return `<svg class="wk" viewBox="0 0 ${weeks.length * (bw + gap)} ${h}" width="${weeks.length * (bw + gap)}" height="${h}" role="img" aria-label="${esc(L.statsWeeks)}">` +
+    weeks.map((x, i) => { const bh = x.n ? Math.max(3, Math.round(x.n / max * (h - 4))) : 2; return `<rect class="${x.n ? 'wk-on' : 'wk-off'}" x="${i * (bw + gap)}" y="${h - bh}" width="${bw}" height="${bh}" rx="3"><title>${esc(fmt(L.statWeekTip, { date: fmtDay(x.end), n: x.n }))}</title></rect>`; }).join('') + `</svg>`;
+}
+
+/* "3 semanas" or "2 weeks" is a duration; "Semana 3" (a place in the path) is not. */
+function durationDays(text) {
+  const m = fold(text).match(/(\d+)\s*(semanas?|weeks?|dias?|days?|mes(?:es)?|months?)\b/);
+  if (!m) return 0;
+  const n = Number(m[1]);
+  return /^sem|^week/.test(m[2]) ? n * 7 : /^mes|^month/.test(m[2]) ? n * 30 : n;
+}
+
+function rmStatsBlock({ e, rm }, act) {
+  const L = S.L, { st } = savedState(e, rm), days = act.days || {};
+  const done = rm.core.filter(n => stNode(st, n) === 'finished').length, total = rm.core.length, pct = Math.round(done / total * 100);
+  const done28 = sumDays(days, daysBack(28), 'done');
+  let forecast;
+  if (done >= total) forecast = L.statForecastDone;
+  else if (!act.first || daysBetween(act.first, todayDay()) < 14) forecast = L.statForecastSoon;
+  else if (!done28) forecast = L.statForecastStill;
+  else forecast = fmt(L.statForecast, { date: fmtDay(addDays(todayDay(), Math.ceil((total - done) / (done28 / 28)))) });
+  const recent = Object.entries(act.topics || {}).filter(([, t]) => t.finished && t.started).sort((a, b) => (a[1].finished < b[1].finished ? 1 : -1))
+    .map(([k, t]) => ({ item: k.startsWith('project:') ? rm.projById[k.slice(8)] : rm.byId[k], t })).filter(x => x.item).slice(0, 4);
+  const recentHtml = recent.map(({ item, t }) => {
+    const took = daysBetween(t.started, t.finished) + 1, est = durationDays(item.time || '');
+    return `<li><span class="st-rt">${esc(item.title)}</span><span class="st-rm">${esc(took === 1 ? L.statTookOne : fmt(L.statTook, { n: took }))}` +
+      (est ? ` · ${esc(fmt(L.statEst, { est: item.time }))} · <b class="${took <= est ? 'ok' : 'over'}">${esc(took <= est ? L.statOnTime : L.statOver)}</b>` : '') + `</span></li>`;
+  }).join('');
+  return `<section class="st-rm-block" id="st-${esc(rm.id)}"><div class="st-rm-head"><span class="td-ico" aria-hidden="true">${esc(rm.meta.icon || '▦')}</span>` +
+    `<button type="button" class="td-link st-rm-title" data-open-rm="${esc(rm.id)}">${esc(rm.meta.title)}</button><b class="st-chip">${done}/${total}</b></div>` +
+    `<span class="rm-bar${done >= total ? ' full' : ''}"><i style="width:${pct}%"></i></span>` +
+    `<div class="st-rm-body"><div><p class="st-sub">${esc(L.statsWeeks)}</p>${weekBars(days)}</div>` +
+    `<div class="st-rm-text"><p class="st-forecast">${esc(forecast)}</p><p class="st-meta">${[act.first && fmt(L.statStarted, { date: fmtDay(act.first) }), act.last && fmt(L.statLast, { when: daysAgo(act.last) })].filter(Boolean).map(esc).join(' · ')}</p></div></div>` +
+    (recentHtml ? `<p class="st-sub">${esc(L.statRecent)}</p><ul class="st-recent">${recentHtml}</ul>` : '') + `</section>`;
+}
+
+function renderStats() {
+  if (!stats.open) return;
+  const L = S.L, data = stats.data || { days: {}, roadmaps: {} }, days = data.days || {};
+  const back = S.rm && !S.preview ? `<button type="button" class="secondary td-back" data-stats-close><span aria-hidden="true">←</span> ${esc(S.rm.meta.title)}<kbd class="kbd-hint" aria-hidden="true">Esc</kbd></button>` : '';
+  const head = `<div class="td-head"><div><div class="td-date">${esc(L.statsHeat)}</div><h1 id="statsH">${esc(L.statsTitle)}</h1></div>${back}</div>`;
+  const used = stats.list.map(x => ({ ...x, act: data.roadmaps?.[x.rm.id] })).filter(x => x.act && ((x.act.total?.moves || 0) + (x.act.total?.focus || 0)) > 0)
+    .sort((a, b) => (b.rm.id === stats.focusRm) - (a.rm.id === stats.focusRm) || (b.act.last || 0) - (a.act.last || 0));
+  if (!used.length && !Object.keys(days).length) { $('stats').innerHTML = head + `<p class="td-empty">${esc(L.statsEmpty)}</p>`; return; }
+  const s = streaks(days), last30 = daysBack(30), focus30 = sumDays(days, last30, 'focus');
+  const doneAll = used.reduce((n, x) => n + (x.act.total?.done || 0), 0);
+  const card = (label, value, sub = '') => `<div class="st-card"><span class="st-label">${esc(label)}</span><b class="st-value">${esc(value)}</b>${sub ? `<span class="st-note">${esc(sub)}</span>` : ''}</div>`;
+  const cards = `<div class="st-cards">${card(L.statStreak, s.cur, fmt(L.statBest, { n: s.best }))}${card(L.statDone30, sumDays(days, last30, 'done'))}${card(L.statDoneAll, doneAll)}` +
+    (focus30 || used.some(x => x.act.total?.focus) ? card(L.statFocus30, fmtMinutes(focus30)) : '') + `</div>`;
+  $('stats').innerHTML = head + cards + `<section class="td-sec">${heatmap(days)}</section>` +
+    `<section class="td-sec"><h2>${esc(L.statsRoadmaps)} <b>${used.length}</b></h2><div class="st-rms">${used.map(x => rmStatsBlock(x, x.act)).join('')}</div></section>`;
+  const wrap = $('stats').querySelector('.hm-wrap');
+  if (wrap) wrap.scrollLeft = wrap.scrollWidth;   // on a narrow screen, start at today
+  if (stats.focusRm) $(`st-${stats.focusRm}`)?.scrollIntoView({ block: 'start' });
+}
+
+async function openStats(rmId = '') {
+  if (S.editing || S.readOnly || !S.manifest) return;
+  closeToday();
+  stats.open = true; stats.focusRm = rmId;
+  document.body.classList.add('stats-on');
+  document.querySelectorAll('[data-act=stats]').forEach(b => b.classList.add('active'));
+  setDrawer(false); setPicker(false);
+  window.scrollTo({ top: 0 });
+  if (!stats.data) $('stats').innerHTML = `<p class="td-empty td-loading">…</p>`; else renderStats();
+  const list = await loadToday(365);
+  if (!stats.open) return;
+  stats.list = list; stats.data = today.activity;
+  renderStats();
+  stats.focusRm = '';
+}
+
+function closeStats() {
+  if (!stats.open) return;
+  stats.open = false;
+  document.body.classList.remove('stats-on');
+  document.querySelectorAll('[data-act=stats]').forEach(b => b.classList.remove('active'));
+  requestAnimationFrame(() => { syncToolbarHeight(); if (S.rm && S.svg && S.view === 'map') layout(); });
+}
+
+function wireStats() {
+  $('stats').addEventListener('click', e => {
+    if (e.target.closest('[data-stats-close]')) return closeStats();
+    const open = e.target.closest('[data-open-rm]');
+    if (open) { closeStats(); const en = entryById(open.dataset.openRm); if (en && S.rm?.id !== en.id) openEntry(en); return; }
+    const r = e.target.closest('rect[data-day]');
+    if (r) $('hmInfo').textContent = r.querySelector('title')?.textContent || '';
+  });
+  $('stats').addEventListener('mouseover', e => { const r = e.target.closest?.('rect[data-day]'); if (r) $('hmInfo').textContent = r.querySelector('title')?.textContent || ''; });
+  $('statsLink').addEventListener('click', () => openStats(S.rm?.id || ''));
+  addEventListener('keydown', e => {
+    if (e.key === 'Escape' && stats.open && !document.querySelector('dialog[open]') && $('rmPop').hidden && $('settings').hidden) closeStats();
+  });
 }
 
 /* ---------- spaced review (off by default) ----------
@@ -3066,6 +3240,7 @@ async function setRoadmap(rm, { local = false, keep = false, preview = false } =
   }
   S.readyBase = readyNow();
   S.doneBase = new Set(rm.core.filter(isDone).map(n => n.id));
+  S.marks = marksOf(S.state);
   if (!keep) loadFocusTotals(rm);
   paintReview();
   $('viewProjects').hidden = !rm.projects.length;
@@ -3382,7 +3557,7 @@ function wire() {
   document.addEventListener('click', e => {
     const act = e.target.closest('[data-act]');
     if (act) {
-      if (!S.readOnly || act.dataset.act === 'notes') ({ export: openExport, import: () => $('importFile').click(), open: () => $('openFile').click(), reset: resetProgress, new: () => openEditor(), manage: openManage, notes: openNotes })[act.dataset.act]?.();
+      if (!S.readOnly || act.dataset.act === 'notes') ({ export: openExport, import: () => $('importFile').click(), open: () => $('openFile').click(), reset: resetProgress, new: () => openEditor(), manage: openManage, notes: openNotes, stats: () => openStats() })[act.dataset.act]?.();
       setSettingsOpen(false);
     } else if (!$('settings').hidden && !e.target.closest('#settings, #settingsBtn')) setSettingsOpen(false);
   });
@@ -3395,7 +3570,7 @@ function wire() {
     store.set(LANG_KEY, e.target.value);
     if (S.rm) await setRoadmap(S.rm, { local: S.isLocal, keep: true, preview: S.preview });
     else { S.L = { ...S.defaults, ...await loadLabels(uiLang(null)) }; applyI18n(); }
-    renderToday(); paintFocus();
+    renderToday(); renderStats(); paintFocus();
     buildLangSel(); renderManage();
     if (!$('rmPop').hidden) renderPicker();
     if (S.editing) { buildCategorySelect(); $('editTitle').textContent = ed.id ? S.L.edTitleEdit : S.L.edTitleNew; if (ed.mode === 'form') renderForm(); if (!S.rm) await showPreviewHint(); }
@@ -3444,6 +3619,7 @@ function wire() {
   wireDetailResize();
   wireSidebar();
   wireToday();
+  wireStats();
   wireReviewFocus();
 }
 
