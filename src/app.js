@@ -3673,6 +3673,17 @@ function warmOffline() {
   navigator.serviceWorker.ready.then(reg => reg.active?.postMessage({ type: 'warm', urls })).catch(() => {});
 }
 
+/* The demo on GitHub Pages (manifest.json says "demo": true): no server behind it, so the progress stays in this
+   browser. A bar says so, with a link to install it for real. */
+function startDemo() {
+  const bar = document.createElement('div');
+  bar.className = 'snap-bar demo-bar';
+  const paint = () => { bar.innerHTML = `<span>${esc(S.L.demoBanner)}</span><a href="../#install">${esc(S.L.demoInstall)}</a>`; };
+  paint();
+  addEventListener('labelschange', paint);
+  document.body.prepend(bar);
+}
+
 /* A shared page: a banner says when the progress is from, and the app opens on the view that was exported. */
 function startSnapshot() {
   document.body.classList.add('read-only');
@@ -3702,6 +3713,7 @@ async function init() {
   applyI18n();
   buildSwitch();
   wirePwa();
+  if (S.manifest.demo === true) startDemo();
   const asked = new URLSearchParams(location.search).get('r'), last = store.get(KEY.last), visible = visibleRoadmaps();
   const entry = entryById(asked) || visible.find(r => r.id === last) || visible[0];
   loadRemoteStates().then(updatePickerBtn);

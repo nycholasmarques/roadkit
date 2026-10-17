@@ -69,6 +69,27 @@ jobs:
           print("ok")
           PY
 
+      - name: The GitHub Pages site builds, with the demo
+        run: |
+          node --check site/site.js
+          node --check site/i18n.js
+          python3 tools/build_site.py /tmp/site --version 0.0.0
+          python3 - <<'PY'
+          import json, re, pathlib, sys
+          site = pathlib.Path("/tmp/site")
+          html = (site / "index.html").read_text("utf-8")
+          bad = [u for u in re.findall(r'(?<![\w-])(?:src|href|srcset)="([^"#:]+)"', html) if not (site / u.split("?")[0]).exists() and not u.endswith("/")]
+          assert not bad, f"missing files: {bad}"
+          assert "v0.0.0" in html and "__ROADKIT_VERSION__" not in html
+          m = json.loads((site / "app/manifest.json").read_text("utf-8"))
+          assert m["demo"] is True and m["roadmaps"] and all(r["group"].startswith("examples/") for r in m["roadmaps"]), m["groups"]
+          assert all((site / "app" / r["file"]).exists() for r in m["roadmaps"])
+          assert (site / "app/sw.js").exists() and "__ROADKIT_VERSION__" not in (site / "app/sw.js").read_text("utf-8")
+          en, pt = (re.findall(r"(?:^|[{,])\s*(\w+): '", block, re.M) for block in re.split(r"'pt-BR': \{", (pathlib.Path("site/i18n.js")).read_text("utf-8")))
+          assert set(en) == set(pt), set(en) ^ set(pt)
+          print("site ok")
+          PY
+
       - name: JavaScript and Python parse
         run: |
           node --check src/app.js

@@ -55,7 +55,11 @@ jobs:
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
             git tag -a "$TAG" -m "Roadkit ${TAG#v}"
-            git push origin "refs/tags/$TAG"
+            if ! git push origin "refs/tags/$TAG"; then
+              # GitHub refuses a tag from the workflow's own token when that commit changed a file in .github/workflows
+              echo "::error::Could not create $TAG from here. Push it yourself: git tag -a $TAG <commit> -m \"Roadkit ${TAG#v}\" && git push origin refs/tags/$TAG (that starts this workflow too)"
+              exit 1
+            fi
           fi
 
       - name: The tag points at a commit that passed CI
@@ -127,3 +131,15 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+
+  # the site and the demo follow the released version (pre-releases leave the site alone)
+  pages:
+    needs: release
+    if: needs.release.outputs.prerelease != 'true'
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    uses: ./.github/workflows/pages.yml
+    with:
+      ref: ${{ github.event_name == 'workflow_dispatch' && format('v{0}', inputs.version) || github.ref_name }}

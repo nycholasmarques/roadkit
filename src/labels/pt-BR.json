@@ -404,5 +404,7 @@
   "statOnTime": "dentro do estimado",
   "statOver": "passou do estimado",
   "statsEmpty": "As estatísticas aparecem conforme você marca tópicos. O registro de atividade começou na versão 1.7.",
-  "paletteWords_stats": "estatísticas gráfico ritmo previsão sequência mapa de calor histórico"
+  "paletteWords_stats": "estatísticas gráfico ritmo previsão sequência mapa de calor histórico",
+  "demoBanner": "Demonstração: o progresso fica só neste navegador.",
+  "demoInstall": "Instale o Roadkit para guardar de verdade →"
 }

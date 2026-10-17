@@ -14,6 +14,8 @@ What counts as "the contract" is the roadmap JSON format (see [`SCHEMA.md`](SCHE
 
 ## The path of a release
 
+> If the release changed a file in `.github/workflows/`, GitHub does not let the workflow's own token create the tag from **Run workflow**, and the step fails with a message saying so. In that case, create the tag yourself: `git tag -a v1.2.3 <commit> -m "Roadkit 1.2.3" && git push origin refs/tags/v1.2.3`. Pushing the tag starts the same release.
+
 Release notes write themselves: the workflow collects the commits since the previous release, groups them by type and builds the text. You do not need to change any file to publish. So the shortest path is:
 
 1. Wait for CI on `main` to go green.
@@ -47,6 +49,21 @@ python3 .github/scripts/release_notes.py v1.1.0 nycholasmarques/roadkit
 ```
 
 (It needs a local `v1.1.0` tag to compare against. For a test, create the tag, run it and delete it.)
+
+## The GitHub Pages site
+
+The site (https://nycholasmarques.github.io/roadkit/) has two parts: the landing page, in `site/`, and the demo at `/app/`, which is Roadkit itself served as static files, with the examples. With no server behind it, the app runs in local mode: progress is kept in the browser only, and a bar at the top says so and links to the install section.
+
+- `tools/build_site.py` builds it with the standard library only. It copies the page, icons and images, writes a `manifest.json` with only the examples (and `"demo": true`), puts the service worker next to the app and prints the version in the footer.
+- The `pages.yml` workflow publishes it. `release.yml` calls it at the end of every release (pre-releases excepted), so the site always shows the published version, never `main` halfway through a feature. To rebuild the site without a release, use **Actions → Pages → Run workflow**.
+- The repository needs **Settings → Pages → Source: GitHub Actions**, once.
+- CI builds the site on every PR and checks the links, the demo manifest and the texts in both languages.
+
+To look at the site before publishing:
+
+```bash
+python3 tools/build_site.py _site && python3 -m http.server 8790 --directory _site
+```
 
 ## CI
 
