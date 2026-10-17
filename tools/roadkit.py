@@ -19,6 +19,7 @@ import re
 import sys
 import tempfile
 import threading
+from datetime import date
 from pathlib import Path
 from urllib.parse import parse_qs, unquote, urlsplit
 
@@ -42,10 +43,22 @@ MAX_NOTE_CHARS = 20_000
 SLUG = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 HEX = re.compile(r"^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$")
 TOP_KEYS = {"$schema", "schemaVersion", "id", "meta", "theme", "labels", "phases", "nodes", "projects"}
-META_KEYS = {"title", "eyebrow", "subtitle", "description", "icon", "language", "brand", "tagline", "sidebarNote", "footer", "defaultView"}
+META_KEYS = {"title", "eyebrow", "subtitle", "description", "icon", "language", "brand", "tagline", "sidebarNote", "footer", "defaultView", "startDate"}
 THEME_KEYS = {"accent", "brandAccent"}
-PHASE_KEYS = {"id", "title", "summary", "period", "color", "milestone"}
-NODE_KEYS = {"id", "title", "phase", "time", "summary", "topics", "challenge", "success", "links", "optional", "anchor", "parent", "status", "tasks"}
+PHASE_KEYS = {"id", "title", "summary", "period", "color", "milestone", "due"}
+NODE_KEYS = {"id", "title", "phase", "time", "summary", "topics", "challenge", "success", "links", "optional", "anchor", "parent", "status", "tasks", "due"}
+DAY = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+
+
+def valid_day(v):
+    """A calendar day written as YYYY-MM-DD."""
+    if not isinstance(v, str) or not DAY.match(v):
+        return False
+    try:
+        date.fromisoformat(v)
+        return True
+    except ValueError:
+        return False
 MAX_DEPTH = 2  # sub-topics go at most this many levels below a main topic
 STATUSES = ("todo", "working", "review", "finished")
 TASK_KEYS = {"id", "title", "note", "status"}
@@ -156,6 +169,8 @@ def validate(data, known_labels):
         warns.append(f"meta.language '{meta['language']}' has no src/labels/ pack; falling back to pt-BR")
     if "defaultView" in meta and meta["defaultView"] not in ("map", "kanban"):
         errs.append("meta.defaultView must be map or kanban")
+    if "startDate" in meta and not valid_day(meta["startDate"]):
+        errs.append("meta.startDate must be a date like 2026-01-31")
     theme = data.get("theme", {})
     for k, v in (theme.items() if isinstance(theme, dict) else []):
         if k not in THEME_KEYS:
@@ -167,7 +182,7 @@ def validate(data, known_labels):
             warns.append(f"unknown label '{k}' (see src/labels/pt-BR.json)")
 
     phases = data.get("phases") or []
-    phase_ids = []
+    phase_ids, last_due = [], ""
     if not isinstance(phases, list):
         errs.append("'phases' must be a list")
         phases = []
@@ -190,6 +205,13 @@ def validate(data, known_labels):
             errs.append(f"{w}: 'title' is required")
         if "color" in p and not HEX.match(str(p["color"])):
             errs.append(f"{w}: 'color' must be hex like '#3a68d1'")
+        if "due" in p:
+            if not valid_day(p["due"]):
+                errs.append(f"{w}: 'due' must be a date like 2026-01-31")
+            else:
+                if last_due and p["due"] < last_due:
+                    warns.append(f"{w}: due {p['due']} is before the previous phase's ({last_due})")
+                last_due = p["due"]
 
     nodes = data.get("nodes")
     if not isinstance(nodes, list) or not nodes:
@@ -231,6 +253,8 @@ def validate(data, known_labels):
             if key in n and not isinstance(n[key], str):
                 errs.append(f"{w}: '{key}' must be a string")
         validate_links(n.get("links", []), w, errs)
+        if "due" in n and not valid_day(n["due"]):
+            errs.append(f"{w}: 'due' must be a date like 2026-01-31")
         if "status" in n and n["status"] not in STATUSES:
             errs.append(f"{w}: status must be one of {list(STATUSES)}")
         tasks = n.get("tasks", [])

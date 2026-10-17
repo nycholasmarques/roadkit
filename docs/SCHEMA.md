@@ -31,6 +31,7 @@ Fonte formal: [`schema/roadmap.schema.json`](../schema/roadmap.schema.json). Reg
 | `sidebarNote` | nota no rodapé da barra lateral; `\n` quebra linha |
 | `footer` | rodapé da página |
 | `defaultView` | tela aberta primeiro: `map` (padrão) ou `kanban`. A escolha de quem usa fica salva por roadmap |
+| `startDate` | dia em que o roadmap começa (`AAAA-MM-DD`). Com ele, os `period` das fases e os `time` dos tópicos viram datas. Quem usa pode definir o próprio começo na interface, que vale mais |
 
 ## `theme`
 
@@ -52,6 +53,7 @@ Sem `phases`, o mapa é uma lista simples e a navegação por fase some.
 | `period` | "Semanas 1 a 3", "Q1"… (livre) |
 | `color` | hex; se omitido usa uma paleta |
 | `milestone` | marco exibido depois do último tópico principal da fase; fica verde quando a fase inteira está concluída. |
+| `due` | data alvo da fase (`AAAA-MM-DD`), mostrada na bandeira e no calendário; vale mais que a calculada pelo `period`. O `check` avisa se uma fase vence antes da anterior |
 
 A ordem do array define a ordem das fases.
 
@@ -73,6 +75,7 @@ A ordem do array define a ordem das fases.
 | `anchor` | nome antigo de `parent`, usado só por opcionais. Ainda funciona |
 | `status` | coluna inicial no kanban: `todo`, `working`, `review` ou `finished`. Se omitido, sai das tarefas (ou `todo`) |
 | `tasks` | lista de tarefas do tópico, exibidas como um kanban pequeno dentro do card (veja abaixo) |
+| `due` | data alvo do tópico (`AAAA-MM-DD`); vale mais que a calculada pelo `time` |
 
 Todos os campos além de `id` e `title` são opcionais; seções vazias não aparecem.
 

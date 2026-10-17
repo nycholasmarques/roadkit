@@ -30,7 +30,8 @@
         "tagline": { "type": "string", "description": "Sidebar text under the logo. \\n = line break." },
         "sidebarNote": { "type": "string", "description": "Sidebar bottom note. \\n = line break." },
         "footer": { "type": "string" },
-        "defaultView": { "enum": ["map", "kanban"], "description": "View opened first. Default map." }
+        "defaultView": { "enum": ["map", "kanban"], "description": "View opened first. Default map." },
+        "startDate": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$", "description": "Day the roadmap starts (YYYY-MM-DD). With it, phase periods and topic times become due dates. Users can set their own start in the app." }
       }
     },
     "theme": {
@@ -59,7 +60,8 @@
           "summary": { "type": "string" },
           "period": { "type": "string", "description": "e.g. 'Weeks 1 to 3'." },
           "color": { "type": "string", "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$" },
-          "milestone": { "type": "string", "description": "Checkpoint shown after the phase's last core node; turns green when the phase is complete." }
+          "milestone": { "type": "string", "description": "Checkpoint shown after the phase's last core node; turns green when the phase is complete." },
+          "due": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$", "description": "Target day for the phase (YYYY-MM-DD). Wins over the date computed from the period." }
         }
       }
     },
@@ -107,7 +109,8 @@
           },
           "parent": { "type": "string", "description": "Id of the topic this one is a sub-topic of (up to 2 levels below a main topic). A topic with required sub-topics is finished when they all are." },
           "optional": { "type": "boolean", "description": "Side branch; does not count toward progress or toward its parent. Needs a parent." },
-          "anchor": { "type": "string", "description": "Older name for `parent`, used by optional nodes. Prefer `parent`." }
+          "anchor": { "type": "string", "description": "Older name for `parent`, used by optional nodes. Prefer `parent`." },
+          "due": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$", "description": "Target day for the topic (YYYY-MM-DD). Wins over the date computed from `time`." }
         }
       }
     },

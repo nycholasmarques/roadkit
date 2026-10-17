@@ -81,6 +81,10 @@ Cada tópico e projeto tem um bloco de notas em Markdown, salvo no servidor e of
 
 `Ctrl+K` busca qualquer tópico, projeto ou ação em todos os roadmaps, e atalhos de uma letra mudam a visualização, o tópico e o estado sem tirar a mão do teclado.
 
+### Compartilhar
+
+Exporte o roadmap em Markdown, como um calendário `.ics` com as datas de cada fase, ou como uma página `.html` única que abre em qualquer navegador sem servidor, para mostrar o seu progresso a alguém.
+
 ### Criar, vendo o resultado
 
 **Novo roadmap** abre um editor com o formulário de um lado e o roadmap de verdade do outro, que se desenha enquanto você escreve. Dá para montar fases, tópicos, subtópicos até dois níveis, opcionais, cores, logo e categoria. Uma linha embaixo avisa o que está errado na hora.
