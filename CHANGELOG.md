@@ -4,6 +4,11 @@ Todas as mudanças relevantes ficam aqui, da mais nova para a mais antiga. O for
 
 Cada release no GitHub também lista automaticamente os commits desde a versão anterior; este arquivo é onde ficam os destaques escritos à mão. Para publicar uma versão, veja [`docs/publicando-versoes.md`](docs/publicando-versoes.md).
 
+## [1.2.1] - 2026-10-16
+
+### Segurança
+- O servidor deixou de entregar arquivos da pasta de dados e do código quando o endereço vinha codificado (por exemplo `/%64ata/<id>.json`). Antes, isso permitia ler o progresso salvo sem passar pela API e, portanto, sem o token. Afeta as versões 1.0.0 a 1.2.0; atualize se você abre o Roadkit para outros aparelhos.
+
 ## [1.2.0] - 2026-10-16
 
 ### Projetos
@@ -55,6 +60,7 @@ A primeira versão estável. O formato do JSON dos roadmaps e a API do servidor 
 - Imagem Docker com volume para os dados e a pasta `roadmaps/` somente leitura.
 - Documentação em `docs/` e GIFs gerados por um script.
 
+[1.2.1]: https://github.com/nycholasmarques/roadkit/releases/tag/v1.2.1
 [1.2.0]: https://github.com/nycholasmarques/roadkit/releases/tag/v1.2.0
 [1.1.0]: https://github.com/nycholasmarques/roadkit/releases/tag/v1.1.0
 [1.0.0]: https://github.com/nycholasmarques/roadkit/releases/tag/v1.0.0
