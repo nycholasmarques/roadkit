@@ -5,7 +5,7 @@ docs
 README*.md
 LICENSE
 Dockerfile
-compose.yaml
+compose*.yaml
 **/__pycache__
 data
 tools/demos

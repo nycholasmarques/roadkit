@@ -57,6 +57,18 @@ Alguns limites, para ficar claro o que isso é e o que não é:
 - Sem HTTPS, o token trafega em texto puro na sua rede. Na rede de casa o risco é pequeno, mas é bom saber.
 - Escrita só é aceita de páginas servidas pelo próprio servidor: requisições que vêm de outro site são recusadas. Isso protege você de uma página qualquer tentar mexer no seu progresso enquanto o Roadkit está aberto.
 
+## Ver uma branch antes de ela chegar na main
+
+Quem deixa uma instância sempre ligada na 8765 (construída a partir da `main` ou de uma release) não vê as features que ainda estão numa branch. O [`compose.preview.yaml`](../compose.preview.yaml) sobe uma segunda instância na **8766**, com o código da branch que estiver aberta e com os exemplos, para testar sem mexer na outra:
+
+```bash
+git switch feat/minha-feature
+docker compose -f compose.preview.yaml up -d --build     # http://localhost:8766
+docker compose -f compose.preview.yaml down -v           # para e apaga o progresso de teste
+```
+
+Ela tem nome, imagem, contêiner e volume próprios, então o progresso marcado ali não se mistura com o da instância de verdade. Trocou de branch? Rode o mesmo `up -d --build` de novo. Outra porta: `PREVIEW_PORT=8767`.
+
 ## Sem Docker
 
 ```bash

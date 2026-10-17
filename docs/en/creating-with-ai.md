@@ -11,7 +11,7 @@ It works with any AI (ChatGPT, Claude, Gemini, a local model), because Roadkit d
 </p>
 
 1. Open **New roadmap** and click **Create with AI**.
-2. Say what you want to learn or do, and pick the language and the size. The more context you give (what you already know, how much time you have), the better the result.
+2. Say what you want to learn or do, and pick the language and the size. The more context you give (what you already know, how much time you have), the better the result. The **Include hands-on projects** box (checked by default) also asks for 2 to 4 projects per level, linked to the topics.
 3. Click **Copy prompt**, paste it into your AI and wait for the answer.
 4. Paste the answer into the third box and click **Use in the editor**.
 

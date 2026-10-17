@@ -1,0 +1,27 @@
+# Preview: runs the code of the branch you have checked out, with the examples, on port 8766.
+# It lives next to an always-on instance on 8765 (its own name, image, container and volume),
+# so you can try a feature before it reaches main. After switching branches, run it again with --build.
+#
+#   docker compose -f compose.preview.yaml up -d --build     # http://localhost:8766
+#   docker compose -f compose.preview.yaml down -v           # stop it and drop its test progress
+name: roadkit-preview
+
+services:
+  roadmap:
+    build: .
+    image: roadkit:preview
+    container_name: roadkit-preview
+    init: true
+    ports:
+      - "127.0.0.1:${PREVIEW_PORT:-8766}:8765"
+    volumes:
+      # throwaway progress, kept apart from the real instance
+      - preview-data:/app/data
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    mem_limit: 128m
+
+volumes:
+  preview-data:

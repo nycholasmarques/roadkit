@@ -31,7 +31,7 @@ Em telas largas o mapa é desenhado num espaço fixo e escalado para caber. Em t
 
 ## Onde o progresso é guardado
 
-O progresso é um objeto pequeno: o estado de cada tópico e de cada tarefa (`todo`, `working`, `review` ou `finished`). Ele existe em dois lugares ao mesmo tempo.
+O progresso é um objeto pequeno: o estado de cada tópico e de cada tarefa (`todo`, `working`, `review` ou `finished`) e, quando o roadmap tem projetos, o estado de cada projeto com os requisitos marcados e o link do seu repositório. Ele existe em dois lugares ao mesmo tempo.
 
 **No servidor**, num arquivo por roadmap: `data/<id>.json`. É a fonte de verdade, e é por isso que o progresso vale em qualquer aparelho que abra a mesma instância.
 
@@ -66,7 +66,7 @@ Tudo o que a interface pede ao servidor está abaixo. Pode ser útil para script
 |---|---|
 | `GET /manifest.json` | a lista de roadmaps, com seções, contagens e ocultos |
 | `GET /api/state/<id>` | o progresso salvo de um roadmap (`204` se não houver) |
-| `PUT /api/state/<id>` | grava o progresso, ou devolve `409` com o que o servidor tem se for mais novo |
+| `PUT /api/state/<id>` | grava o progresso, ou devolve `409` com o que o servidor tem se for mais novo. As partes do progresso que o cliente não mandar ficam como estavam, então uma versão antiga, que só conhece tópicos e tarefas, não apaga os projetos |
 | `GET /api/states` | o resumo de todos, para os selos de andamento |
 | `POST /api/validate` | valida um JSON de roadmap sem gravar |
 | `POST /api/roadmaps?category=` | cria um roadmap (`categoryTitle=` dá o nome de uma categoria nova) |

@@ -119,5 +119,229 @@
       "id": "partitions", "phase": "performance", "optional": true, "anchor": "indexes", "title": "Partitioning",
       "summary": "Split very large tables to keep queries fast."
     }
+  ],
+  "projects": [
+    {
+      "id": "library-queries",
+      "title": "Library catalog queries",
+      "level": "beginner",
+      "summary": "Answer real questions about a small library dataset using only queries.",
+      "uses": [
+        "environment",
+        "select",
+        "aggregation"
+      ],
+      "requirements": [
+        {
+          "id": "load-data",
+          "title": "Load a sample library dataset (books, authors, loans)"
+        },
+        {
+          "id": "questions",
+          "title": "Write down 6 questions you want the data to answer"
+        },
+        {
+          "id": "queries",
+          "title": "Answer each question with one query"
+        },
+        {
+          "id": "comments",
+          "title": "Keep the queries in a .sql file, each with a comment"
+        }
+      ],
+      "deliverable": "A repository with the .sql file and a README listing the questions.",
+      "success": "Someone can run your file and get the same answers you wrote in the README.",
+      "stretch": [
+        "Add a question that needs a JOIN",
+        "Export one result as CSV"
+      ],
+      "time": "2 to 3 days"
+    },
+    {
+      "id": "expense-report",
+      "title": "Monthly expense report",
+      "level": "beginner",
+      "summary": "Turn a table of expenses into a monthly report by category.",
+      "uses": [
+        "select",
+        "aggregation",
+        "joins"
+      ],
+      "requirements": [
+        {
+          "id": "schema",
+          "title": "Expenses and categories in two tables"
+        },
+        {
+          "id": "monthly",
+          "title": "Total per category per month"
+        },
+        {
+          "id": "top",
+          "title": "The 5 biggest expenses of each month"
+        },
+        {
+          "id": "empty",
+          "title": "Categories with no expense in a month (LEFT JOIN)"
+        }
+      ],
+      "deliverable": "A .sql file that builds the tables, loads sample data and prints the report.",
+      "success": "The totals match a quick check done by hand in a spreadsheet.",
+      "stretch": [
+        "Compare each month with the previous one"
+      ],
+      "time": "3 to 5 days"
+    },
+    {
+      "id": "store-schema",
+      "title": "Online store database",
+      "level": "intermediate",
+      "summary": "Design and fill the database of a small online store.",
+      "uses": [
+        "ddl",
+        "normalization",
+        "dml"
+      ],
+      "requirements": [
+        {
+          "id": "tables",
+          "title": "Customers, products, orders and order items with foreign keys"
+        },
+        {
+          "id": "constraints",
+          "title": "Constraints that block negative stock and prices"
+        },
+        {
+          "id": "seed",
+          "title": "A seed script with realistic sample data"
+        },
+        {
+          "id": "order-tx",
+          "title": "Placing an order in one transaction that also lowers the stock"
+        },
+        {
+          "id": "diagram",
+          "title": "An entity diagram in the README"
+        }
+      ],
+      "deliverable": "A repository with the schema, the seed script and the diagram.",
+      "success": "Running the scripts on an empty database gives a consistent store, and a failed order changes nothing.",
+      "stretch": [
+        "Soft delete for products",
+        "A view with each customer's lifetime value"
+      ],
+      "time": "1 to 2 weeks"
+    },
+    {
+      "id": "habit-tracker",
+      "title": "Habit tracker backend",
+      "level": "intermediate",
+      "summary": "The database behind an app that tracks daily habits.",
+      "uses": [
+        "ddl",
+        "dml",
+        "joins",
+        "aggregation"
+      ],
+      "requirements": [
+        {
+          "id": "model",
+          "title": "Users, habits and daily check-ins"
+        },
+        {
+          "id": "checkin",
+          "title": "A check-in can happen only once per habit per day"
+        },
+        {
+          "id": "weekly",
+          "title": "A weekly report of completion per habit"
+        },
+        {
+          "id": "cleanup",
+          "title": "Deleting a habit removes its check-ins"
+        }
+      ],
+      "deliverable": "A .sql file with the schema, sample data and the report queries.",
+      "success": "The weekly report is right for a week you fill by hand.",
+      "stretch": [
+        "Current streak per habit with window functions"
+      ],
+      "time": "1 week"
+    },
+    {
+      "id": "slow-query-clinic",
+      "title": "Slow query clinic",
+      "level": "advanced",
+      "summary": "Find slow queries on a big table and make them fast, with evidence.",
+      "uses": [
+        "indexes",
+        "explain",
+        "windows"
+      ],
+      "requirements": [
+        {
+          "id": "big-data",
+          "title": "Generate at least one million rows"
+        },
+        {
+          "id": "find",
+          "title": "Pick 3 slow queries and time them"
+        },
+        {
+          "id": "plans",
+          "title": "Save EXPLAIN ANALYZE before and after each fix"
+        },
+        {
+          "id": "fix",
+          "title": "Fix each one with an index or a rewrite"
+        },
+        {
+          "id": "writeup",
+          "title": "Explain in the README why each fix works"
+        }
+      ],
+      "deliverable": "A repository with the data generator, the queries, the plans and the write-up.",
+      "success": "Each query is at least 10 times faster, and the plans show why.",
+      "stretch": [
+        "Show an index that makes writes slower"
+      ],
+      "time": "1 to 2 weeks"
+    },
+    {
+      "id": "sales-analytics",
+      "title": "Sales analytics queries",
+      "level": "advanced",
+      "summary": "The queries behind a sales dashboard, written with window functions.",
+      "uses": [
+        "windows",
+        "aggregation",
+        "joins",
+        "indexes"
+      ],
+      "requirements": [
+        {
+          "id": "running",
+          "title": "Running total of sales per day"
+        },
+        {
+          "id": "rank",
+          "title": "Top 3 products of each month"
+        },
+        {
+          "id": "growth",
+          "title": "Month over month growth per category"
+        },
+        {
+          "id": "cohorts",
+          "title": "Customer cohorts by month of first purchase"
+        }
+      ],
+      "deliverable": "A .sql file with one query per dashboard panel and sample output in the README.",
+      "success": "Each panel's numbers match a check done another way.",
+      "stretch": [
+        "Draw the dashboard with any open source tool"
+      ],
+      "time": "1 to 2 weeks"
+    }
   ]
 }

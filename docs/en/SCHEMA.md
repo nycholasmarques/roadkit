@@ -11,7 +11,8 @@ Formal source: [`schema/roadmap.schema.json`](../../schema/roadmap.schema.json).
   "theme": { ... },
   "labels": { ... },
   "phases": [ ... ],                            // optional
-  "nodes": [ ... ]                              // required
+  "nodes": [ ... ],                             // required
+  "projects": [ ... ]                           // optional
 }
 ```
 
@@ -135,3 +136,47 @@ How the topic's state and its tasks' states relate:
 If a topic moves to `working`, `review` or `finished` while earlier main topics are still not done, its kanban card shows a warning (and so does the details panel). Users decide how much to tolerate in the settings. Optional topics neither trigger nor count toward the warning.
 
 What a user changes in the interface is saved in the browser, per roadmap; the JSON only sets the starting point. The order within columns follows the order in the JSON.
+
+## `projects[]` (optional)
+
+Hands-on projects that span several topics, at three levels. With `projects`, a **Projects** view shows up next to Map and Kanban; without it, nothing changes.
+
+```jsonc
+"projects": [
+  {
+    "id": "task-api",
+    "title": "Task API",
+    "level": "beginner",
+    "summary": "A REST API with task CRUD, stored in a database.",
+    "uses": ["http", "sql-basics"],
+    "requirements": [
+      { "id": "crud", "title": "Create, list, edit and delete tasks" },
+      { "id": "tests", "title": "Tests for the main routes" }
+    ],
+    "deliverable": "A repository with the code and a README on how to run it.",
+    "success": "Someone else can run and use the API following only the README.",
+    "stretch": ["Pagination", "Token authentication"],
+    "time": "1 to 2 weeks",
+    "links": [{ "title": "…", "url": "https://…" }]
+  }
+]
+```
+
+| Field | Notes |
+|---|---|
+| `id` (required) | slug, unique among projects; key of the project's progress |
+| `title` (required) | short (≤ 60 characters) |
+| `level` (required) | `beginner`, `intermediate` or `advanced`: the column in the Projects view |
+| `summary` | one sentence on the card and in the panel |
+| `uses` | ids of `nodes` this project practices. When all of them are done, the project is **ready to start** |
+| `requirements` | what the project must do, as a checklist; `id` unique within the project |
+| `deliverable` | what to hand in (yellow box in the panel) |
+| `success` | how to know it is done |
+| `stretch` | extra challenges (a list of strings) the user can check off; they do not count toward finishing the project |
+| `time` | free text ("1 to 2 weeks") |
+| `links` | `[{ "title": "…", "url": "https://…" }]` |
+
+- Projects do not count toward the roadmap's progress bar, which still measures main topics. The Projects view has its own count.
+- Each project's progress (state, checked requirements and extra challenges, and the link to your repository) is stored with the rest of the progress, under `state.projects`. Extra challenges are keyed by their text, so rewording one unchecks it.
+- `check` reports `uses` pointing to a missing id, an invalid `level` and duplicate ids, and warns when a project has neither `uses` nor `requirements`, or when there are more than 20 projects (or more than 8 in one level).
+- The view's labels (`viewProjects`, `level_beginner`, `requirements`, `deliverable`, `stretch`...) can be overridden through `labels`, like any other.

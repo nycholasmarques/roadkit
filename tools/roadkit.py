@@ -37,7 +37,7 @@ MAX_STATE_BYTES = 1_000_000
 
 SLUG = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 HEX = re.compile(r"^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$")
-TOP_KEYS = {"$schema", "schemaVersion", "id", "meta", "theme", "labels", "phases", "nodes"}
+TOP_KEYS = {"$schema", "schemaVersion", "id", "meta", "theme", "labels", "phases", "nodes", "projects"}
 META_KEYS = {"title", "eyebrow", "subtitle", "description", "icon", "language", "brand", "tagline", "sidebarNote", "footer", "defaultView"}
 THEME_KEYS = {"accent", "brandAccent"}
 PHASE_KEYS = {"id", "title", "summary", "period", "color", "milestone"}
@@ -45,6 +45,10 @@ NODE_KEYS = {"id", "title", "phase", "time", "summary", "topics", "challenge", "
 MAX_DEPTH = 2  # sub-topics go at most this many levels below a main topic
 STATUSES = ("todo", "working", "review", "finished")
 TASK_KEYS = {"id", "title", "note", "status"}
+PROJECT_KEYS = {"id", "title", "level", "summary", "uses", "requirements", "deliverable", "success", "stretch", "time", "links"}
+LEVELS = ("beginner", "intermediate", "advanced")
+REQ_KEYS = {"id", "title"}
+MAX_REPO_URL = 300
 
 
 def pretty(name):
@@ -222,13 +226,7 @@ def validate(data, known_labels):
         for key in ("time", "summary", "challenge", "success"):
             if key in n and not isinstance(n[key], str):
                 errs.append(f"{w}: '{key}' must be a string")
-        links = n.get("links", [])
-        if not isinstance(links, list):
-            errs.append(f"{w}: 'links' must be a list")
-        else:
-            for j, l in enumerate(links):
-                if not (isinstance(l, dict) and l.get("title") and re.match(r"^https?://", str(l.get("url", "")))):
-                    errs.append(f"{w}: links[{j}] needs 'title' and an http(s) 'url'")
+        validate_links(n.get("links", []), w, errs)
         if "status" in n and n["status"] not in STATUSES:
             errs.append(f"{w}: status must be one of {list(STATUSES)}")
         tasks = n.get("tasks", [])
@@ -303,7 +301,98 @@ def validate(data, known_labels):
             warns.append(f"phase '{pid}' has no non-optional nodes and will not be shown")
     if len(core_ids) > 40:
         warns.append(f"{len(core_ids)} non-optional nodes; consider splitting into several roadmaps")
+    validate_projects(data.get("projects"), ids, errs, warns)
     return errs, warns
+
+
+def validate_links(links, w, errs):
+    if not isinstance(links, list):
+        errs.append(f"{w}: 'links' must be a list")
+        return
+    for j, l in enumerate(links):
+        if not (isinstance(l, dict) and l.get("title") and re.match(r"^https?://", str(l.get("url", "")))):
+            errs.append(f"{w}: links[{j}] needs 'title' and an http(s) 'url'")
+
+
+def validate_projects(projects, node_ids, errs, warns):
+    """Hands-on projects: optional, each one at a level and linked to the topics it practices."""
+    if projects is None:
+        return
+    if not isinstance(projects, list):
+        errs.append("'projects' must be a list")
+        return
+    seen, per_level = set(), {lv: 0 for lv in LEVELS}
+    for i, p in enumerate(projects):
+        w = f"projects[{i}]"
+        if not isinstance(p, dict):
+            errs.append(f"{w} must be an object")
+            continue
+        pid = p.get("id")
+        w = f"projects[{i}] ({pid})"
+        if not isinstance(pid, str) or not SLUG.match(pid):
+            errs.append(f"{w}: 'id' must be a lowercase slug")
+        elif pid in seen:
+            errs.append(f"{w}: duplicate project id")
+        else:
+            seen.add(pid)
+            if pid in node_ids:
+                warns.append(f"{w}: same id as a node; it works, but a different id avoids confusion")
+        for k in p:
+            if k not in PROJECT_KEYS:
+                warns.append(f"{w}: unknown key '{k}'")
+        title = p.get("title")
+        if not title:
+            errs.append(f"{w}: 'title' is required")
+        elif len(title) > 60:
+            warns.append(f"{w}: title has {len(title)} chars; keep it short (<= 60)")
+        if p.get("level") not in LEVELS:
+            errs.append(f"{w}: 'level' must be one of {list(LEVELS)}")
+        else:
+            per_level[p["level"]] += 1
+        for key in ("summary", "deliverable", "success", "time"):
+            if key in p and not isinstance(p[key], str):
+                errs.append(f"{w}: '{key}' must be a string")
+        stretch = p.get("stretch", [])
+        if not isinstance(stretch, list) or not all(isinstance(x, str) for x in stretch):
+            errs.append(f"{w}: 'stretch' must be a list of strings")
+        uses = p.get("uses", [])
+        if not isinstance(uses, list) or not all(isinstance(x, str) for x in uses):
+            errs.append(f"{w}: 'uses' must be a list of node ids")
+            uses = []
+        for nid in uses:
+            if nid not in node_ids:
+                errs.append(f"{w}: uses '{nid}', which is not a node")
+            elif node_ids[nid].get("optional"):
+                warns.append(f"{w}: uses the optional topic '{nid}'; it will count as a prerequisite anyway")
+        reqs = p.get("requirements", [])
+        if not isinstance(reqs, list):
+            errs.append(f"{w}: 'requirements' must be a list")
+            reqs = []
+        req_ids = set()
+        for j, r in enumerate(reqs):
+            rw = f"{w}: requirements[{j}]"
+            if not isinstance(r, dict):
+                errs.append(f"{rw} must be an object")
+                continue
+            for k in r:
+                if k not in REQ_KEYS:
+                    warns.append(f"{rw}: unknown key '{k}'")
+            if not r.get("title"):
+                errs.append(f"{rw}: 'title' is required")
+            if not isinstance(r.get("id"), str) or not SLUG.match(r["id"]):
+                errs.append(f"{rw}: 'id' must be a lowercase slug")
+            elif r["id"] in req_ids:
+                errs.append(f"{rw}: duplicate requirement id '{r['id']}'")
+            else:
+                req_ids.add(r["id"])
+        if not uses and not reqs:
+            warns.append(f"{w}: no 'uses' and no 'requirements'; it looks unfinished")
+        validate_links(p.get("links", []), w, errs)
+    if len(projects) > 20:
+        warns.append(f"{len(projects)} projects; a list this long is hard to choose from")
+    for lv, count in per_level.items():
+        if count > 8:
+            warns.append(f"{count} {lv} projects; 8 per level is plenty")
 
 
 def rel(path):
@@ -393,6 +482,7 @@ def manifest_text(user):
             "subtopics": sum(1 for n in nodes if parent_of(n) and not n.get("optional")),
             "coreIds": [n.get("id") for n in core],
             "doneByDefault": [n.get("id") for n in core if finished_by_default(n, kids)],
+            **({"projects": len(d["projects"])} if isinstance(d.get("projects"), list) and d["projects"] else {}),
             **({"editable": True} if editable else {}),
             **({"hidden": True} if rid in hidden else {}),
         })
@@ -447,8 +537,24 @@ def cmd_check(args):
     return 1 if failed else 0
 
 
+def valid_project_state(v):
+    """{"status": one of STATUSES, "repo": "https://...", "req": {requirement id: bool}, "stretch": {challenge id: bool}},
+    every field optional."""
+    if not isinstance(v, dict) or set(v) - {"status", "repo", "req", "stretch"}:
+        return False
+    if "status" in v and v["status"] not in STATUSES:
+        return False
+    repo = v.get("repo", "")
+    if not isinstance(repo, str) or len(repo) > MAX_REPO_URL or (repo and not re.match(r"^https?://", repo)):
+        return False
+    flags = [v.get("req", {}), v.get("stretch", {})]
+    return all(isinstance(m, dict) and all(isinstance(k, str) and isinstance(b, bool) for k, b in m.items()) for m in flags)
+
+
 def valid_state(obj):
-    """Progress payload: {"updatedAt": ms, "state": {"nodes": {id: status}, "tasks": {key: status}}}."""
+    """Progress payload: {"updatedAt": ms, "state": {"nodes": {id: status}, "tasks": {key: status},
+    "projects": {id: {...}}}}. Other keys in "state" are accepted as objects and kept, so a newer client
+    can store more without an older server (or client) dropping it."""
     if not isinstance(obj, dict) or not isinstance(obj.get("updatedAt"), (int, float)):
         return False
     st = obj.get("state")
@@ -458,7 +564,10 @@ def valid_state(obj):
         m = st.get(part, {})
         if not isinstance(m, dict) or any(not isinstance(k, str) or v not in STATUSES for k, v in m.items()):
             return False
-    return True
+    projects = st.get("projects", {})
+    if not isinstance(projects, dict) or not all(isinstance(k, str) and valid_project_state(v) for k, v in projects.items()):
+        return False
+    return all(isinstance(v, dict) for v in st.values())
 
 
 class ApiError(Exception):
@@ -619,8 +728,10 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 current = None
             if valid_state(current) and current["updatedAt"] > incoming["updatedAt"]:
                 return 409, current  # the server already has newer progress; the client adopts it
+            # keys the client did not send (an older client knows only nodes and tasks) stay as they were
+            kept = current["state"] if valid_state(current) else {}
             out = {"updatedAt": incoming["updatedAt"], "state": {
-                "nodes": incoming["state"].get("nodes", {}), "tasks": incoming["state"].get("tasks", {})}}
+                **kept, "nodes": {}, "tasks": {}, **incoming["state"]}}
             write_json(f, out)
         return 200, out
 

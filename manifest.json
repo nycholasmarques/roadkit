@@ -45,7 +45,8 @@
       "doneByDefault": [
         "gitops",
         "cluster"
-      ]
+      ],
+      "projects": 6
     },
     {
       "id": "primeira-meia-maratona",
@@ -165,7 +166,8 @@
         "explain",
         "janelas"
       ],
-      "doneByDefault": []
+      "doneByDefault": [],
+      "projects": 6
     },
     {
       "id": "gitops-with-argocd",
@@ -197,7 +199,8 @@
       "doneByDefault": [
         "gitops",
         "cluster"
-      ]
+      ],
+      "projects": 6
     },
     {
       "id": "first-half-marathon",
@@ -317,7 +320,8 @@
         "explain",
         "windows"
       ],
-      "doneByDefault": []
+      "doneByDefault": [],
+      "projects": 6
     }
   ]
 }

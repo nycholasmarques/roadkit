@@ -205,5 +205,225 @@
       "challenge": "Uma lista curta do que falta para o Argo CD ser a única porta de entrada de produção.",
       "success": "Você sabe o que acontece com os deploys se o Argo CD ficar indisponível."
     }
+  ],
+  "projects": [
+    {
+      "id": "ola-gitops",
+      "title": "Seu app, sincronizado pelo Git",
+      "level": "beginner",
+      "summary": "Coloque um app pequeno num repositório Git e deixe o Argo CD fazer o deploy.",
+      "uses": [
+        "cluster",
+        "instalar",
+        "aplicacao"
+      ],
+      "requirements": [
+        {
+          "id": "manifestos",
+          "title": "Um repositório com os manifestos de um app web pequeno"
+        },
+        {
+          "id": "application",
+          "title": "Um Application apontando para esse repositório"
+        },
+        {
+          "id": "mudanca",
+          "title": "Mudar o número de réplicas com um commit e ver sincronizar"
+        },
+        {
+          "id": "readme",
+          "title": "Um README explicando como reproduzir"
+        }
+      ],
+      "deliverable": "Um repositório público com os manifestos, o Application e o README.",
+      "success": "Alguém com um cluster local segue o README e vê o app rodando.",
+      "stretch": [
+        "Expor o app com um Ingress"
+      ],
+      "time": "2 a 3 dias"
+    },
+    {
+      "id": "autocura",
+      "title": "Demonstração de autocura",
+      "level": "beginner",
+      "summary": "Mostre que o cluster volta ao que está no Git, mesmo depois de mudanças manuais.",
+      "uses": [
+        "sync",
+        "aplicacao"
+      ],
+      "requirements": [
+        {
+          "id": "automatico",
+          "title": "Ligar o sync automático com prune e self-heal"
+        },
+        {
+          "id": "quebrar",
+          "title": "Apagar um Deployment e editar um Service na mão"
+        },
+        {
+          "id": "registrar",
+          "title": "Gravar ou capturar a tela do Argo CD corrigindo os dois"
+        },
+        {
+          "id": "explicar",
+          "title": "Explicar no README o que cada opção fez"
+        }
+      ],
+      "deliverable": "Um texto curto com as capturas ou uma gravação.",
+      "success": "Toda mudança manual volta para a versão do Git sem ninguém mexer.",
+      "stretch": [
+        "Usar uma janela de sync para bloquear syncs à noite"
+      ],
+      "time": "1 a 2 dias"
+    },
+    {
+      "id": "tres-ambientes",
+      "title": "Um app, três ambientes",
+      "level": "intermediate",
+      "summary": "Rode o mesmo app em dev, staging e prod, promovido por pull request.",
+      "uses": [
+        "empacotar",
+        "helm-values",
+        "sync",
+        "waves"
+      ],
+      "requirements": [
+        {
+          "id": "ambientes",
+          "title": "dev, staging e prod com overlays do Kustomize ou values do Helm"
+        },
+        {
+          "id": "diferencas",
+          "title": "Réplicas, recursos e configuração diferentes por ambiente"
+        },
+        {
+          "id": "migracao",
+          "title": "Uma migração de banco como hook PreSync"
+        },
+        {
+          "id": "promocao",
+          "title": "Promover uma versão é um pull request que muda um arquivo"
+        }
+      ],
+      "deliverable": "Um repositório com os três ambientes e um README do fluxo de promoção.",
+      "success": "Uma versão nova só chega em prod por pull requests aprovados, e a migração roda antes do app.",
+      "stretch": [
+        "Um teste rápido como hook PostSync"
+      ],
+      "time": "1 a 2 semanas"
+    },
+    {
+      "id": "plataforma-times",
+      "title": "Uma pequena plataforma para times",
+      "level": "intermediate",
+      "summary": "Deixe vários times fazerem deploy dos seus apps com segurança a partir de um repositório.",
+      "uses": [
+        "applicationset",
+        "rbac"
+      ],
+      "requirements": [
+        {
+          "id": "gerador",
+          "title": "Um ApplicationSet que cria um app por pasta"
+        },
+        {
+          "id": "projetos",
+          "title": "Um AppProject por time, limitado aos seus namespaces"
+        },
+        {
+          "id": "papeis",
+          "title": "Papéis para cada time sincronizar só os próprios apps"
+        },
+        {
+          "id": "entrada",
+          "title": "Adicionar um time é criar uma pasta e um pull request"
+        }
+      ],
+      "deliverable": "Um repositório com o ApplicationSet, os projetos e um guia de entrada.",
+      "success": "Um time não consegue fazer deploy fora dos seus namespaces, e um time novo entra com um merge.",
+      "stretch": [
+        "Gerar apps para vários clusters"
+      ],
+      "time": "1 a 2 semanas"
+    },
+    {
+      "id": "pipeline-completo",
+      "title": "Do commit ao canário",
+      "level": "advanced",
+      "summary": "Um fluxo de entrega completo: o CI constrói, o Git registra, o Argo CD entrega com canário.",
+      "uses": [
+        "integracao",
+        "segredos",
+        "rollouts"
+      ],
+      "requirements": [
+        {
+          "id": "ci",
+          "title": "O CI constrói a imagem e atualiza a tag no repositório de configuração"
+        },
+        {
+          "id": "segredos",
+          "title": "Segredos guardados criptografados no Git (Sealed Secrets ou SOPS)"
+        },
+        {
+          "id": "canario",
+          "title": "Uma entrega canário com Argo Rollouts"
+        },
+        {
+          "id": "rollback",
+          "title": "Rollback automático quando uma análise falha"
+        },
+        {
+          "id": "diagrama",
+          "title": "Um diagrama do fluxo inteiro no README"
+        }
+      ],
+      "deliverable": "Dois repositórios (app e configuração) e uma gravação de um canário com falha voltando atrás.",
+      "success": "Uma versão ruim é barrada e desfeita sem ninguém intervir.",
+      "stretch": [
+        "Notificações de cada etapa num canal de chat"
+      ],
+      "time": "2 a 3 semanas"
+    },
+    {
+      "id": "pronto-para-producao",
+      "title": "Revisão de prontidão para produção",
+      "level": "advanced",
+      "summary": "Passe uma instalação do Argo CD por um checklist de produção e prove cada item.",
+      "uses": [
+        "producao",
+        "rbac",
+        "segredos",
+        "applicationset"
+      ],
+      "requirements": [
+        {
+          "id": "ha",
+          "title": "Argo CD em modo de alta disponibilidade"
+        },
+        {
+          "id": "monitoramento",
+          "title": "Métricas e alertas do próprio Argo CD"
+        },
+        {
+          "id": "backup",
+          "title": "Um backup da configuração do Argo CD, restaurado num cluster novo"
+        },
+        {
+          "id": "acesso",
+          "title": "SSO ou usuários locais com o mínimo de permissão"
+        },
+        {
+          "id": "runbook",
+          "title": "Um runbook para quando o Argo CD cair"
+        }
+      ],
+      "deliverable": "O checklist com evidências de cada item, e o runbook.",
+      "success": "Você restaura tudo num cluster vazio seguindo só o runbook.",
+      "stretch": [
+        "Um game day com alguém quebrando coisas de propósito"
+      ],
+      "time": "2 a 3 semanas"
+    }
   ]
 }

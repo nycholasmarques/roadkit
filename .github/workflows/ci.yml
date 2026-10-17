@@ -51,6 +51,24 @@ jobs:
           sys.exit(1 if bad else 0)
           PY
 
+      - name: The validator catches broken projects
+        run: |
+          python3 - <<'PY'
+          import json, sys
+          sys.path.insert(0, "tools")
+          import roadkit
+          rm = json.load(open("examples/en/minimal.json", encoding="utf-8"))
+          rm["projects"] = [
+              {"id": "a", "title": "A", "level": "expert", "uses": ["nope"]},
+              {"id": "a", "title": "B", "level": "beginner", "requirements": [{"id": "r", "title": "x"}, {"id": "r", "title": "y"}]},
+          ]
+          errs, _ = roadkit.validate(rm, roadkit.label_keys())
+          text = "\n".join(errs)
+          for needle in ("'level' must be one of", "uses 'nope'", "duplicate project id", "duplicate requirement id"):
+              assert needle in text, f"missing error: {needle}\n{text}"
+          print("ok")
+          PY
+
       - name: JavaScript and Python parse
         run: |
           node --check src/app.js
@@ -75,6 +93,12 @@ jobs:
           curl -sf http://127.0.0.1:8765/user/ci/ci-smoke.json | python3 -c "import json,sys; assert json.load(sys.stdin)['id']=='ci-smoke'"
           curl -sf -X PUT -H "$H" -d '{"updatedAt": 1, "state": {"nodes": {"first": "finished"}, "tasks": {}}}' http://127.0.0.1:8765/api/state/ci-smoke
           curl -sf http://127.0.0.1:8765/api/state/ci-smoke | grep -q finished
+
+          # project progress is stored, and a client that only knows nodes and tasks does not erase it
+          curl -sf -X PUT -H "$H" -d '{"updatedAt": 2, "state": {"nodes": {"first": "finished"}, "tasks": {}, "projects": {"p1": {"status": "working", "repo": "https://example.com/r", "req": {"a": true}, "stretch": {"s": true}}}}}' http://127.0.0.1:8765/api/state/ci-smoke
+          curl -sf -X PUT -H "$H" -d '{"updatedAt": 3, "state": {"nodes": {}, "tasks": {}}}' http://127.0.0.1:8765/api/state/ci-smoke
+          curl -sf http://127.0.0.1:8765/api/state/ci-smoke | python3 -c "import json,sys; s=json.load(sys.stdin)['state']; assert s['projects']['p1']['status']=='working' and s['projects']['p1']['stretch']=={'s': True} and s['nodes']=={}, s"
+          test "$(curl -s -o /dev/null -w '%{http_code}' -X PUT -H "$H" -d '{"updatedAt": 4, "state": {"projects": {"p1": {"repo": "javascript:alert(1)"}}}}' http://127.0.0.1:8765/api/state/ci-smoke)" = 400
           curl -sf -X DELETE "http://127.0.0.1:8765/api/roadmaps/ci-smoke?progress=1"
           test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8765/api/state/ci-smoke)" = 204
           # writes from another origin are refused
