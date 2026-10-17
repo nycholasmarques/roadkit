@@ -3,7 +3,7 @@
 Studying takes weeks, not a day. The statistics screen shows that time: when you studied, at what pace each roadmap is moving and when it ends if you keep going like this.
 
 <p align="center">
-  <img src="../media/estatisticas.png" alt="The statistics screen: numbers, the heatmap of the year and each roadmap pace" width="100%">
+  <img src="../media/en/estatisticas.png" alt="The statistics screen: numbers, the heatmap of the year and each roadmap pace" width="100%">
 </p>
 
 ## What the screen shows
@@ -17,7 +17,7 @@ Studying takes weeks, not a day. The statistics screen shows that time: when you
 The tone is a record, not a scorecard: losing a streak shows no warning at all. Statistics count from version 1.7, when the activity record started.
 
 <p align="center">
-  <img src="../media/estatisticas-escuro.png" alt="The same screen in the dark theme" width="88%">
+  <img src="../media/en/estatisticas-escuro.png" alt="The same screen in the dark theme" width="88%">
 </p>
 
 ## Where the numbers come from

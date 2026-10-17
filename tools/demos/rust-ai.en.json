@@ -1,0 +1,67 @@
+{
+  "schemaVersion": 1,
+  "id": "rust-from-scratch",
+  "meta": {
+    "title": "Rust from scratch",
+    "eyebrow": "Six weeks, five hours a week",
+    "subtitle": "From the first cargo new to a published command line tool",
+    "description": "A path from zero to Rust, ending with a CLI of your own.",
+    "icon": "🦀",
+    "language": "en"
+  },
+  "phases": [
+    { "id": "basics", "title": "The language basics", "period": "Weeks 1 and 2", "summary": "Syntax, types and the ownership model." },
+    { "id": "practice", "title": "Writing real Rust", "period": "Weeks 3 and 4", "summary": "Errors, traits and tests." },
+    { "id": "ship", "title": "Ship the CLI", "period": "Weeks 5 and 6", "summary": "Build, test and publish." }
+  ],
+  "nodes": [
+    {
+      "id": "setup", "phase": "basics", "title": "Setup and first project", "time": "Week 1",
+      "summary": "Install the toolchain and learn what cargo does for you.",
+      "topics": ["rustup", "cargo", "rustfmt", "clippy"],
+      "challenge": "Create a project, run cargo run and leave cargo clippy with no warnings.",
+      "success": "You know what each cargo command does."
+    },
+    {
+      "id": "ownership", "phase": "basics", "title": "Ownership and borrowing", "time": "Week 2",
+      "summary": "What sets Rust apart: who owns each value and for how long.",
+      "topics": ["ownership", "borrowing", "lifetimes"],
+      "challenge": "Rewrite a small program fixing every compiler error without using clone.",
+      "success": "You can explain why the compiler refused each piece."
+    },
+    { "id": "moves", "parent": "ownership", "title": "Moves and copies", "summary": "What happens when a value changes owner." },
+    { "id": "references", "parent": "ownership", "title": "References and lifetimes", "summary": "Lending without giving the value away." },
+    { "id": "lifetime-elision", "parent": "references", "title": "Lifetime elision", "summary": "When the compiler works it out on its own." },
+    { "id": "unsafe", "parent": "ownership", "optional": true, "title": "A look at unsafe", "summary": "Just to know it exists and when it shows up." },
+    {
+      "id": "errors", "phase": "practice", "title": "Error handling", "time": "Week 3",
+      "summary": "Result, Option and the ? operator.",
+      "topics": ["Result", "Option", "? operator", "custom errors"],
+      "challenge": "Read a config file and return useful error messages for every possible failure.",
+      "success": "No unwrap is left in your code."
+    },
+    {
+      "id": "traits", "phase": "practice", "title": "Traits and generics", "time": "Week 4",
+      "summary": "Shared behavior without inheritance.",
+      "topics": ["traits", "generics", "dyn Trait"],
+      "challenge": "Define a trait for output formats and implement two of them.",
+      "success": "You pick between generics and dyn for a reason."
+    },
+    {
+      "id": "cli", "phase": "ship", "title": "The CLI", "time": "Week 5",
+      "summary": "Put it all together in a tool you would use.",
+      "topics": ["clap", "serde", "integration tests"],
+      "tasks": [
+        { "id": "arguments", "title": "Read arguments with clap" },
+        { "id": "format", "title": "Text and JSON output" },
+        { "id": "tests", "title": "Integration tests" }
+      ],
+      "challenge": "A CLI that reads a file, transforms it and writes the result, with tests."
+    },
+    {
+      "id": "publish", "phase": "ship", "title": "Publish", "time": "Week 6",
+      "summary": "Document, version and publish on crates.io.",
+      "success": "Someone installs your tool with cargo install."
+    }
+  ]
+}

@@ -1,7 +1,7 @@
 # Using the interface
 
 <p align="center">
-  <img src="../media/visao-geral.gif" alt="Finishing a topic, moving a card on the kanban, switching to the dark theme and opening the Today screen" width="100%">
+  <img src="../media/en/visao-geral.gif" alt="Finishing a topic, moving a card on the kanban, switching to the dark theme and opening the Today screen" width="100%">
 </p>
 
 ## What is on the screen
@@ -24,7 +24,7 @@ The bigger features have a guide of their own, with GIFs:
 ## The map
 
 <p align="center">
-  <img src="../media/mapa-claro.png" alt="The Argo CD roadmap on the map, with a topic panel open" width="88%">
+  <img src="../media/en/mapa-claro.png" alt="The Argo CD roadmap on the map, with a topic panel open" width="88%">
 </p>
 
 The map draws the main topics in order, top to bottom, grouped by phase. Sub-topics and optional explorations sit to the right of their topic, connected by a line. When a topic and the next one are both done, the line between them turns green.
@@ -38,7 +38,7 @@ Click a topic to open the details panel: the summary, what to study, the hands-o
 The **Kanban** button swaps the map for a board with four columns: to do, working, review and finished. Each topic is a card. Drag it from one column to another with the mouse, or use the arrows on the card (handy with a keyboard and on a phone).
 
 <p align="center">
-  <img src="../media/kanban.png" alt="The kanban board with the topics of the Argo CD roadmap" width="88%">
+  <img src="../media/en/kanban.png" alt="The kanban board with the topics of the Argo CD roadmap" width="88%">
 </p>
 
 A topic's state is the same in both views. Moving a card on the kanban changes its color on the map, and the other way around.
@@ -64,7 +64,7 @@ At the bottom of the picker is **Manage roadmaps**, the full list. From there yo
 ## Search and keyboard shortcuts
 
 <p align="center">
-  <img src="../media/busca.gif" alt="Searching "kstmz" and finding Kustomize, opening the Today screen and the shortcut list" width="100%">
+  <img src="../media/en/busca.gif" alt="Searching "kstmz" and finding Kustomize, opening the Today screen and the shortcut list" width="100%">
 </p>
 
 `Ctrl+K` (`⌘K` on a Mac), or the magnifier at the top, opens a search that goes anywhere: topics and projects of **every** roadmap, the roadmaps themselves and the actions (new roadmap, export, notes, switch view, toggle mode, settings). It ignores accents and case and accepts skipped letters, like "kstmz" for Kustomize. Results from the open roadmap come first, each topic with its roadmap, phase and state. `↑` `↓` pick, `Enter` opens and `Esc` closes. With an empty box, the items you opened last show up.
@@ -91,7 +91,7 @@ The button in the top right corner opens the settings: mode (light, dark or auto
 The mode says whether the screen is light or dark, and the theme picks the colors for each. There are three light themes and four dark ones:
 
 <p align="center">
-  <img src="../media/temas.png" alt="The same roadmap in the seven themes" width="100%">
+  <img src="../media/en/temas.png" alt="The same roadmap in the seven themes" width="100%">
 </p>
 
 | Theme | Mode | What it is for |
@@ -123,7 +123,7 @@ To try it without installing anything, there is a [demo](https://nycholasmarques
 ## On a phone
 
 <p align="center">
-  <img src="../media/celular.png" alt="The map, the Today screen, projects and statistics on a phone" width="100%">
+  <img src="../media/en/celular.png" alt="The map, the Today screen, projects and statistics on a phone" width="100%">
 </p>
 
 On narrow screens the map becomes a single-column timeline with the phases as shortcuts at the top, and the details panel opens on top like a drawer. While you drag a card, the kanban shows a fixed strip with the four columns, so you can drop the card without scrolling the page.

@@ -3,7 +3,7 @@
 Three features made for opening Roadkit every day. The **Today screen** gathers what to do across every roadmap; **spaced review** brings back what you finished, before you forget it; and **focus sessions** measure the real time each topic takes. The Today screen is always there; the other two are optional and start turned off.
 
 <p align="center">
-  <img src="../media/hoje.gif" alt="Opening the Today screen, answering a review and jumping to a topic in progress" width="100%">
+  <img src="../media/en/hoje.gif" alt="Opening the Today screen, answering a review and jumping to a topic in progress" width="100%">
 </p>
 
 ## The Today screen
@@ -29,7 +29,7 @@ In short, a topic you always remember goes through five reviews over about eight
 ## Focus sessions
 
 <p align="center">
-  <img src="../media/foco.png" alt="The focus timer in the corner of the screen, with the topic focus time in the panel" width="88%">
+  <img src="../media/en/foco.png" alt="The focus timer in the corner of the screen, with the topic focus time in the panel" width="88%">
 </p>
 
 Off by default. With **Settings → Focus sessions** on, the panel of every topic and project gets a **Focus** button. It opens a timer in the corner of the screen: pick 25 or 50 minutes, or open-ended (a stopwatch), and start. If the topic was still "to do", the timer offers to move it to "in progress".

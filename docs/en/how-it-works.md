@@ -152,8 +152,9 @@ export ROADKIT_DATA=$(mktemp -d)
 python3 tools/roadkit.py serve --port 8791 &
 node tools/demos/record.cjs http://127.0.0.1:8791                  # all of them
 node tools/demos/record.cjs http://127.0.0.1:8791 hoje,projetos    # just some
+RECORD_LANG=en node tools/demos/record.cjs http://127.0.0.1:8791  # the English set, in docs/media/en/
 ```
 
-The scenes are `hero`, `criar`, `ia`, `hoje`, `projetos`, `notas`, `busca` (the GIFs) and `fotos`, `stats`, `foco`, `temas`, `celular` (the screenshots). Every scene starts from the same state: progress in three example roadmaps, a project under way, notes, two reviews due and months of activity history. The history is written straight into the data folder, which is why the server and the script share the same `ROADKIT_DATA`. Frames come from Chromium itself (the DevTools screencast) and ffmpeg builds the GIFs, which stay light because they only keep what changes.
+The scenes are `hero`, `criar`, `ia`, `hoje`, `projetos`, `notas`, `busca` (the GIFs) and `fotos`, `stats`, `foco`, `temas`, `celular` (the screenshots). There are two sets: Portuguese (`docs/media/`, used by README.pt-BR and the Portuguese docs) and English (`docs/media/en/`, used by the README, the English docs and the English website), each with the interface and the example roadmaps in its own language. Every scene starts from the same state: progress in three example roadmaps, a project under way, notes, two reviews due and months of activity history. The history is written straight into the data folder, which is why the server and the script share the same `ROADKIT_DATA`. Frames come from Chromium itself (the DevTools screencast) and ffmpeg builds the GIFs, which stay light because they only keep what changes.
 
 Run it against a throwaway server like the one above, not against yours: the script rewrites the progress, notes and activity.

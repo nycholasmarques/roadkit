@@ -10,6 +10,13 @@
   if (!T[lang]) lang = 'en';
   let examples = [];
 
+  /* every screenshot exists in both languages: media/en/x.png for English, media/x.png for Portuguese */
+  const media = name => (lang === 'en' ? 'media/en/' : 'media/') + name;
+  const swapMedia = () => {
+    document.querySelectorAll('img[src*="media/"]').forEach(img => { const n = img.getAttribute('src').split('/').pop(); if (img.getAttribute('src') !== media(n)) img.src = media(n); });
+    document.querySelectorAll('a[href*="media/"]').forEach(a => { a.href = media(a.getAttribute('href').split('/').pop()); });
+  };
+
   function applyLang() {
     const L = T[lang];
     document.documentElement.lang = lang;
@@ -20,6 +27,7 @@
     $('langBtn').textContent = L.langBtn;
     $('langBtn').setAttribute('aria-label', L.langName);
     $('heroImg').alt = L.heroAlt;
+    swapMedia(); paintTheme();
     renderExamples();
   }
 
@@ -39,9 +47,9 @@
   const dark = () => document.documentElement.dataset.theme === 'dark' || (!document.documentElement.dataset.theme && matchMedia('(prefers-color-scheme: dark)').matches);
   const paintTheme = () => {
     // the hero screenshot follows the page, not only the system
-    const src = dark() ? 'media/mapa-escuro.png' : 'media/mapa-claro.png';
+    const src = media(dark() ? 'mapa-escuro.png' : 'mapa-claro.png');
     if (!$('heroImg').src.endsWith(src)) $('heroImg').src = src;
-    const st = dark() ? 'media/estatisticas-escuro.png' : 'media/estatisticas.png';
+    const st = media(dark() ? 'estatisticas-escuro.png' : 'estatisticas.png');
     if ($('statsImg') && !$('statsImg').src.endsWith(st)) { $('statsImg').src = st; $('statsImg').parentElement.href = st; }
     document.querySelector('.hero-shot source')?.remove();
   };

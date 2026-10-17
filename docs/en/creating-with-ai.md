@@ -7,7 +7,7 @@ The idea is simple: a roadmap is a JSON file, and writing JSON is something an A
 It works with any AI (ChatGPT, Claude, Gemini, a local model), because Roadkit does not talk to any of them. It only builds the text you take there and brings the answer back. It asks for no API key and sends nothing anywhere.
 
 <p align="center">
-  <img src="../media/criar-com-ia.gif" alt="Describing the goal, copying the prompt and bringing the AI's answer into the editor" width="100%">
+  <img src="../media/en/criar-com-ia.gif" alt="Describing the goal, copying the prompt and bringing the AI's answer into the editor" width="100%">
 </p>
 
 1. Open **New roadmap** and click **Create with AI**.

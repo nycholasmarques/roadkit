@@ -17,8 +17,8 @@
 
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/media/mapa-escuro.png">
-    <img src="docs/media/mapa-claro.png" alt="The GitOps with Argo CD roadmap open in Roadkit" width="100%">
+    <source media="(prefers-color-scheme: dark)" srcset="docs/media/en/mapa-escuro.png">
+    <img src="docs/media/en/mapa-claro.png" alt="The GitOps with Argo CD roadmap open in Roadkit" width="100%">
   </picture>
 </p>
 
@@ -70,7 +70,7 @@ Progress and the roadmaps created in the interface live in a volume, so they sur
 Each topic moves through to do, working, review and finished, on the **map** or on the **kanban**, and both show the same state. Topics have tasks and sub-topics; finishing the one above finishes what is below it. Progress is saved on the server, so what you check off on your laptop shows up on your phone.
 
 <p align="center">
-  <img src="docs/media/visao-geral.gif" alt="Finishing a topic, moving a card on the kanban, switching to the dark theme and opening the Today screen" width="100%">
+  <img src="docs/media/en/visao-geral.gif" alt="Finishing a topic, moving a card on the kanban, switching to the dark theme and opening the Today screen" width="100%">
 </p>
 
 ### Start your day
@@ -78,7 +78,7 @@ Each topic moves through to do, working, review and finished, on the **map** or 
 The **Today** screen gathers every roadmap: what is in progress, the most recently touched first, and the next topic of each roadmap you are using. It can be the first thing Roadkit opens. Optional extras live there too: **spaced review** brings finished topics back before you forget them, and a **focus timer** records the real time each topic takes. [More](docs/en/daily-use.md).
 
 <p align="center">
-  <img src="docs/media/hoje.png" alt="The Today screen: what is in progress, reviews due and the next topic of each roadmap" width="100%">
+  <img src="docs/media/en/hoje.png" alt="The Today screen: what is in progress, reviews due and the next topic of each roadmap" width="100%">
 </p>
 
 ### See your pace
@@ -86,7 +86,7 @@ The **Today** screen gathers every roadmap: what is in progress, the most recent
 **Statistics** shows a heatmap of your last 12 months, your day streak and, for each roadmap, the weekly pace and when it should end at that pace. [More](docs/en/statistics.md).
 
 <p align="center">
-  <img src="docs/media/estatisticas.png" alt="The statistics screen: day streak, a heatmap of the year and each roadmap pace and forecast" width="100%">
+  <img src="docs/media/en/estatisticas.png" alt="The statistics screen: day streak, a heatmap of the year and each roadmap pace and forecast" width="100%">
 </p>
 
 ### Build projects
@@ -94,7 +94,7 @@ The **Today** screen gathers every roadmap: what is in progress, the most recent
 A roadmap can come with hands-on projects from beginner to advanced, each linked to the topics it practices. The **Projects** view shows which ones are within reach, and each project has requirements to check off, 🔥 extra challenges and a place for the link to your repository. [More](docs/en/projects.md).
 
 <p align="center">
-  <img src="docs/media/projetos.gif" alt="Opening the Projects view, checking requirements and an extra challenge, and finishing the project" width="100%">
+  <img src="docs/media/en/projetos.gif" alt="Opening the Projects view, checking requirements and an extra challenge, and finishing the project" width="100%">
 </p>
 
 ### Take notes
@@ -102,7 +102,7 @@ A roadmap can come with hands-on projects from beginner to advanced, each linked
 Every topic and project has a Markdown notes box, saved on the server and offline: the command that worked, the question, the decision. Search finds what you wrote, and a roadmap's notes come out together as Markdown. [More](docs/en/notes-and-export.md).
 
 <p align="center">
-  <img src="docs/media/notas.gif" alt="Writing a Markdown note, viewing it formatted, ticking a box and opening the roadmap notes" width="100%">
+  <img src="docs/media/en/notas.gif" alt="Writing a Markdown note, viewing it formatted, ticking a box and opening the roadmap notes" width="100%">
 </p>
 
 ### Get there fast
@@ -110,7 +110,7 @@ Every topic and project has a Markdown notes box, saved on the server and offlin
 `Ctrl+K` finds any topic, project or action across every roadmap, and single-letter shortcuts change the view, the topic and its state without leaving the keyboard. Every button with a shortcut shows its key.
 
 <p align="center">
-  <img src="docs/media/busca.gif" alt="Searching "kstmz" and finding Kustomize, opening the Today screen and the list of shortcuts" width="100%">
+  <img src="docs/media/en/busca.gif" alt="Searching "kstmz" and finding Kustomize, opening the Today screen and the list of shortcuts" width="100%">
 </p>
 
 ### Share
@@ -122,7 +122,7 @@ Export the roadmap as Markdown, or as a single `.html` page that opens in any br
 Roadkit is an installable app: it opens in its own window, with an icon, and after the first visit it works with no internet, with every roadmap at hand. What you check off offline goes up when the connection returns. On a phone, the map becomes a timeline and every screen fits.
 
 <p align="center">
-  <img src="docs/media/celular.png" alt="The map, the Today screen, projects and statistics on a phone" width="100%">
+  <img src="docs/media/en/celular.png" alt="The map, the Today screen, projects and statistics on a phone" width="100%">
 </p>
 
 ### Create, watching the result
@@ -130,7 +130,7 @@ Roadkit is an installable app: it opens in its own window, with an icon, and aft
 **New roadmap** opens an editor with the form on one side and the real roadmap on the other, drawing itself as you type. You can build phases, topics, sub-topics up to two levels deep, optional topics, colors, logo and category. A line at the bottom tells you what is wrong as you go.
 
 <p align="center">
-  <img src="docs/media/criar-roadmap.gif" alt="Building a roadmap in the editor, with the preview next to it" width="100%">
+  <img src="docs/media/en/criar-roadmap.gif" alt="Building a roadmap in the editor, with the preview next to it" width="100%">
 </p>
 
 ### Create with an AI
@@ -138,7 +138,7 @@ Roadkit is an installable app: it opens in its own window, with an icon, and aft
 The **Create with AI** button builds a prompt from what you want to learn. You take it to whichever AI you like, paste the answer back, and the roadmap opens in the editor for you to adjust. No API key needed. If you use a coding agent (Claude Code, Codex...), there is also a [skill](.agents/skills/roadkit/SKILL.md) that guides that conversation.
 
 <p align="center">
-  <img src="docs/media/criar-com-ia.gif" alt="Describing a goal, copying the prompt and bringing the AI's answer into the editor" width="100%">
+  <img src="docs/media/en/criar-com-ia.gif" alt="Describing a goal, copying the prompt and bringing the AI's answer into the editor" width="100%">
 </p>
 
 ### Organize
@@ -146,7 +146,7 @@ The **Create with AI** button builds a prompt from what you want to learn. You t
 Each subfolder of `roadmaps/` becomes a section in the picker, and the picker shows how far along each roadmap is. You can hide, duplicate, export with progress as a `.zip` and import it back. The sidebars resize or collapse, and there are seven themes, three light and four dark, that follow your system's light or dark mode if you want.
 
 <p align="center">
-  <img src="docs/media/temas.png" alt="The same roadmap in the seven themes: Light, Mist, Paper, Night, Graphite, Plum and Black" width="100%">
+  <img src="docs/media/en/temas.png" alt="The same roadmap in the seven themes: Light, Mist, Paper, Night, Graphite, Plum and Black" width="100%">
 </p>
 
 ## Your roadmaps
