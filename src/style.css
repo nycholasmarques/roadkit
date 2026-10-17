@@ -295,6 +295,10 @@ body.dragging:after{content:"JSON";position:fixed;inset:0;z-index:50;display:gri
 .read-only [data-act=new],.read-only [data-act=import],.read-only [data-act=export],.read-only [data-act=reset],.read-only [data-act=open],.read-only .rm-foot,
 .read-only .statusbar,.read-only .complete-action,.read-only .small-note,.read-only .node-check,.read-only .mv-row,.read-only .grip,.read-only .kc-warn{display:none!important}
 .read-only .kcard,.read-only .tcard{cursor:default;padding-left:12px}.read-only .md li.task label{pointer-events:none}
+/* a new version is ready (service worker) */
+.update-bar{position:fixed;left:50%;bottom:20px;z-index:130;transform:translateX(-50%);display:flex;align-items:center;gap:12px;max-width:calc(100vw - 24px);padding:10px 10px 10px 16px;border:1px solid var(--line);border-radius:12px;background:var(--paper);color:var(--ink);font-size:calc(12.5px*var(--fs));font-weight:700;box-shadow:0 14px 40px var(--drawer-shadow)}
+.update-bar .primary{padding:8px 12px}.update-bar .dlg-x{width:28px;height:28px;font-size:18px}
+#installRow[hidden]{display:none}#installBtn{justify-self:start}
 /* command palette */
 .cmdk{width:min(640px,94vw);max-height:min(560px,80vh);margin:12vh auto auto;padding:0;border:1px solid var(--line);border-radius:14px;background:var(--paper);color:var(--ink);box-shadow:0 30px 80px var(--drawer-shadow);overflow:hidden}
 .cmdk[open]{display:flex;flex-direction:column}.cmdk::backdrop{background:rgba(8,12,20,.5);backdrop-filter:blur(2px)}

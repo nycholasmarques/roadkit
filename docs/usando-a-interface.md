@@ -45,6 +45,16 @@ Clicar num projeto abre o painel dele, com o mesmo jeito do painel de um tópico
 
 No painel de um tópico, a seção **Projetos que usam este tópico** leva aos projetos ligados a ele. Os projetos não entram na barra de progresso do topo: ela continua medindo os tópicos principais, e a tela de projetos tem a própria contagem.
 
+## Instalar e usar sem internet
+
+O Roadkit é um app instalável (PWA). No Chrome e no Edge, o ícone de instalar aparece na barra de endereço, e **Ajustes → Instalar como app** faz o mesmo. Instalado, ele abre em janela própria, com ícone, e pode ficar na barra de tarefas ou na tela inicial do celular. No iPhone, use **Compartilhar → Adicionar à Tela de Início**.
+
+Depois de aberto uma vez, o Roadkit **abre sem internet**: a interface fica guardada no navegador, junto com uma cópia de todos os roadmaps da lista, mesmo os que você nunca abriu nesse aparelho. Sem conexão, você continua marcando progresso e escrevendo notas; a linha dos ajustes avisa que está salvando só neste aparelho, e tudo sobe para o servidor quando a conexão volta.
+
+Quando sai uma versão nova do Roadkit, uma faixa discreta no rodapé diz **Nova versão disponível · Recarregar**. Ele nunca recarrega sozinho, para não interromper o que você está escrevendo.
+
+Isso funciona em `http://localhost` e em qualquer endereço com HTTPS. Para usar de outro aparelho da rede, veja [Docker e rede](docker-e-rede.md#app-instalável-e-https).
+
 ## Busca e atalhos de teclado
 
 `Ctrl+K` (`⌘K` no Mac), ou a lupa no topo, abre uma busca que vai para qualquer lugar: tópicos e projetos de **todos** os roadmaps, os próprios roadmaps e as ações (novo roadmap, exportar, notas, trocar de visualização, alternar o modo, ajustes). A busca ignora acentos e maiúsculas e aceita letras pulando no meio, como "kstmz" para Kustomize. Os resultados do roadmap aberto vêm primeiro, cada tópico com o roadmap, a fase e o estado. `↑` `↓` escolhem, `Enter` abre e `Esc` fecha. Com a caixa vazia, aparecem os itens abertos por último.

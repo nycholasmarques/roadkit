@@ -87,6 +87,10 @@ Every topic and project has a Markdown notes box, saved on the server and offlin
 
 Export the roadmap as Markdown, or as a single `.html` page that opens in any browser with no server, to show your progress to someone.
 
+### Install it, use it offline
+
+Roadkit is an installable app: it opens in its own window, with an icon, and after the first visit it works with no internet, with every roadmap at hand. What you check off offline goes up when the connection returns.
+
 ### Create, watching the result
 
 **New roadmap** opens an editor with the form on one side and the real roadmap on the other, drawing itself as you type. You can build phases, topics, sub-topics up to two levels deep, optional topics, colors, logo and category. A line at the bottom tells you what is wrong as you go.

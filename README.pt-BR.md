@@ -85,6 +85,10 @@ Cada tópico e projeto tem um bloco de notas em Markdown, salvo no servidor e of
 
 Exporte o roadmap em Markdown ou como uma página `.html` única que abre em qualquer navegador sem servidor, para mostrar o seu progresso a alguém.
 
+### Instalar e usar offline
+
+O Roadkit é um app instalável: abre em janela própria, com ícone, e depois da primeira vez funciona sem internet, com todos os roadmaps à mão. O que você marcar offline sobe quando a conexão voltar.
+
 ### Criar, vendo o resultado
 
 **Novo roadmap** abre um editor com o formulário de um lado e o roadmap de verdade do outro, que se desenha enquanto você escreve. Dá para montar fases, tópicos, subtópicos até dois níveis, opcionais, cores, logo e categoria. Uma linha embaixo avisa o que está errado na hora.

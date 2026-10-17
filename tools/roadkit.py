@@ -10,6 +10,7 @@ Set ROADKIT_TOKEN to require a bearer token for the progress API.
 """
 import argparse
 import functools
+import hashlib
 import http.server
 import hmac
 import json
@@ -653,11 +654,28 @@ def private_path(path):
     return bool(parts) and (parts[0].startswith(".git") or parts[0] in ("tools", "data"))
 
 
+SW_SOURCE = ROOT / "src" / "sw.js"
+
+
+def app_version():
+    """A short hash of the interface files. The service worker carries it, so any change to the app (a
+    release, or an edit while developing) makes browsers install the new interface once and drop the old."""
+    h = hashlib.sha256()
+    for f in sorted([ROOT / "index.html", *(p for p in (ROOT / "src").rglob("*") if p.is_file())]):
+        h.update(f.relative_to(ROOT).as_posix().encode())
+        h.update(f.read_bytes())
+    return h.hexdigest()[:12]
+
+
 class Handler(http.server.SimpleHTTPRequestHandler):
+    extensions_map = {**http.server.SimpleHTTPRequestHandler.extensions_map, ".webmanifest": "application/manifest+json", ".svg": "image/svg+xml"}
+
     def do_GET(self):
         path = self.path.split("?")[0]
         if path.startswith("/api/"):
             return self.api("GET", path)
+        if path == "/sw.js":
+            return self.serve_worker()
         if path.startswith("/user/"):                 # roadmaps created in the UI live in the data folder
             return self.serve_user_file(path)
         if private_path(path):
@@ -669,6 +687,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
     def do_HEAD(self):
         if private_path(self.path.split("?")[0]):
             return self.send_error(404)
+        if self.path.split("?")[0] == "/sw.js":
+            return self.serve_worker()
         super().do_HEAD()
 
     def do_PUT(self):
@@ -695,6 +715,17 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
+
+    def serve_worker(self):
+        """The service worker lives in src/ but is served from the root, so it can control the whole app."""
+        body = SW_SOURCE.read_text("utf-8").replace("__ROADKIT_VERSION__", app_version()).encode("utf-8")
+        self.send_response(200)
+        self.send_header("Content-Type", "text/javascript; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Service-Worker-Allowed", "/")
+        self.end_headers()
+        if self.command != "HEAD":
+            self.wfile.write(body)
 
     def serve_user_file(self, path):
         name = unquote(path[len("/user/"):])

@@ -58,6 +58,16 @@ Quem decide a seção de um roadmap é a pasta. No editor, o campo Categoria esc
 
 Os ocultos são só uma lista de ids em `data/_hidden.json`. Ocultar não apaga nem mexe no arquivo.
 
+## Offline e instalável
+
+O `src/sw.js` é um service worker pequeno, sem bibliotecas, servido em `/sw.js` com a versão do app (um hash dos arquivos da interface). Ele trata três tipos de pedido de jeitos diferentes:
+
+- **Interface** (a página e `src/*`): instalada inteira de uma vez, numa cache com o nome da versão, e servida dela. Uma versão nova instala a sua cache, espera você aceitar o "Recarregar" e apaga a antiga.
+- **Roadmaps, `manifest.json` e textos da interface**: primeiro a rede, a última cópia como reserva. Ao abrir, o app pede ao worker que guarde uma cópia de todos os roadmaps da lista.
+- **API** (`/api/*`): nunca passa pelo worker. O progresso e as notas já têm a própria cópia offline no navegador.
+
+O `src/manifest.webmanifest` e os ícones em `src/icons/` (gerados por `tools/icons.py`, só com a biblioteca padrão) completam o que o navegador pede para oferecer a instalação.
+
 ## Onde as notas são guardadas
 
 As notas ficam fora do arquivo de progresso, em `data/notes/<id>.json`, porque o progresso é regravado a cada clique e um texto grande deixaria cada gravação pesada. O arquivo tem a hora da última alteração e um mapa de notas: `roadmap` para a nota geral, `node:<id>` para um tópico e `project:<id>` para um projeto. A sincronização é a mesma do progresso: o navegador guarda uma cópia, a versão mais nova vence, e nada se perde se o servidor cair.

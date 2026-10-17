@@ -113,6 +113,17 @@ jobs:
           curl -sf -X DELETE "http://127.0.0.1:8765/api/roadmaps/ci-smoke?progress=1"
           test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8765/api/state/ci-smoke)" = 204
           test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8765/api/notes/ci-smoke)" = 204
+          # the app can be installed and opened offline: the worker is served from the root with its version,
+          # the manifest has the right type and its icons exist, and the worker never answers /api/ itself
+          curl -sf -D /tmp/sw.h http://127.0.0.1:8765/sw.js -o /tmp/sw.js
+          grep -qi '^service-worker-allowed: /' /tmp/sw.h
+          grep -qi '^content-type: text/javascript' /tmp/sw.h
+          ! grep -q '__ROADKIT_VERSION__' /tmp/sw.js
+          grep -q "path.startsWith('api/')" /tmp/sw.js
+          node --check /tmp/sw.js
+          curl -sf -D /tmp/wm.h http://127.0.0.1:8765/src/manifest.webmanifest | python3 -c "import json,sys; m=json.load(sys.stdin); assert m['display']=='standalone' and m['icons'], m"
+          grep -qi '^content-type: application/manifest+json' /tmp/wm.h
+          for i in icon.svg icon-192.png icon-512.png maskable-512.png apple-touch-icon.png; do curl -sf -o /dev/null "http://127.0.0.1:8765/src/icons/$i"; done
           # writes from another origin are refused
           test "$(curl -s -o /dev/null -w '%{http_code}' -X PUT -H "$H" -H 'Origin: http://evil.example' -d '{}' http://127.0.0.1:8765/api/state/x)" = 403
           # the data folder and the server code are never served as files, however the path is spelled

@@ -57,6 +57,28 @@ Alguns limites, para ficar claro o que isso é e o que não é:
 - Sem HTTPS, o token trafega em texto puro na sua rede. Na rede de casa o risco é pequeno, mas é bom saber.
 - Escrita só é aceita de páginas servidas pelo próprio servidor: requisições que vêm de outro site são recusadas. Isso protege você de uma página qualquer tentar mexer no seu progresso enquanto o Roadkit está aberto.
 
+## App instalável e HTTPS
+
+Instalar o Roadkit como app e abri-lo sem internet usa um *service worker*, e os navegadores só permitem isso em `localhost` ou em HTTPS. Na própria máquina (`http://localhost:8765`) funciona direto. Para o celular ou outro computador da casa, coloque um HTTPS na frente:
+
+- **Tailscale**: com o `tailscale serve`, o Roadkit ganha um endereço `https://<máquina>.<sua-rede>.ts.net` com certificado válido, acessível de qualquer aparelho seu, inclusive fora de casa:
+
+  ```bash
+  tailscale serve --bg 8765
+  ```
+
+- **Caddy**: um proxy reverso que cuida do certificado sozinho. Com um domínio apontando para a máquina, o `Caddyfile` tem uma linha:
+
+  ```
+  roadkit.seudominio.com {
+    reverse_proxy 127.0.0.1:8765
+  }
+  ```
+
+Pelo IP da rede em `http://` (`http://192.168.0.10:8765`), o Roadkit funciona normalmente, mas sem instalar e sem abrir offline.
+
+O service worker é servido pelo próprio servidor em `/sw.js`, com uma versão calculada a partir dos arquivos da interface. Assim, um `docker compose up -d --build` com uma versão nova faz os navegadores oferecerem "Nova versão disponível" na próxima vez que abrirem o Roadkit.
+
 ## Ver uma branch antes de ela chegar na main
 
 Quem deixa uma instância sempre ligada na 8765 (construída a partir da `main` ou de uma release) não vê as features que ainda estão numa branch. O [`compose.preview.yaml`](../compose.preview.yaml) sobe uma segunda instância na **8766**, com o código da branch que estiver aberta e com os exemplos, para testar sem mexer na outra:
