@@ -456,6 +456,7 @@ const toggleDone = n => setNodeStatus(n, isDone(n) ? 'todo' : 'finished');
 function changed() {
   S.ts = Date.now();
   saveState();
+  reviewTrack();
   refresh(); renderBoard(); renderProjects(); renderDetail();
   notifyReady();
   schedulePush();
@@ -528,6 +529,7 @@ function adopt(rm, remote) {
   S.ts = remote.updatedAt;
   saveState();
   S.readyBase = readyNow();   // changes made on another device are not announced here
+  S.doneBase = new Set(rm.core.filter(isDone).map(n => n.id));   // nor enter the review queue
   refresh(); renderBoard(); renderProjects(); renderDetail();
 }
 
@@ -1921,6 +1923,7 @@ function drawDetail() {
     `<div class="panel-kicker">${esc(kicker)}${due ? ` <span class="due${late ? ' late' : ''}">· ${esc(fmt(late ? L.dueLate : L.dueBy, { date: fmtDay(due) }))}</span>` : ''}</div><h2>${esc(n.title)}</h2>` +
     `<div class="statusbar" role="group" aria-label="${esc(L.status)}">${STATUSES.map(s => `<button type="button" data-status="${s}" class="s-${s}${s === st ? ' on' : ''}" aria-pressed="${s === st}">${esc(L[STATUS_LABEL[s]])}</button>`).join('')}</div>` +
     (miss ? skipNote(miss) : '') +
+    reviewLine(n) + focusRow(n.id) +
     (n.summary ? `<p>${esc(n.summary)}</p>` : '') +
     subs +
     (n.topics.length ? `<h3>${esc(L.topics)}</h3><div>${n.topics.map(t => `<span class="topic">${esc(t)}</span>`).join('')}</div>` : '') +
@@ -1943,6 +1946,7 @@ function renderProjectDetail(p) {
   box.innerHTML =
     `<div class="panel-kicker">${pips(p.level)} ${esc([L[`level_${p.level}`], p.time].filter(Boolean).join(' | '))}</div><h2>${esc(p.title)}</h2>` +
     `<div class="statusbar" role="group" aria-label="${esc(L.status)}">${STATUSES.map(s => `<button type="button" data-pstatus="${s}" class="s-${s}${s === st ? ' on' : ''}" aria-pressed="${s === st}">${esc(L[STATUS_LABEL[s]])}</button>`).join('')}</div>` +
+    focusRow(`project:${p.id}`) +
     (p.summary ? `<p>${esc(p.summary)}</p>` : '') +
     (p.uses.length
       ? `<h3>${esc(L.projectUses)} <span class="h3-count">${p.uses.length - miss.length}/${p.uses.length}</span></h3>` +
@@ -2526,7 +2530,17 @@ function todayModel(list) {
     const pick = next.find(x => x.e.id === store.get(KEY.last)) || next[0];
     if (pick) { upNext = [pick]; starter = true; }
   }
-  return { cont, upNext, starter, empty: !list.length };
+  const reviews = [];
+  if (rv.data.on) for (const { e, rm } of list) {
+    if (!reviewOn(rm.id)) continue;
+    const { st } = savedState(e, rm);
+    for (const n of rm.core) {
+      const it = rv.data.items[reviewKey(rm.id, n.id)];
+      if (it && it.due <= todayDay() && stNode(st, n) === 'finished') reviews.push({ rm, n, it });
+    }
+  }
+  reviews.sort((a, b) => (a.it.due < b.it.due ? -1 : a.it.due > b.it.due ? 1 : 0));
+  return { cont, upNext, starter, reviews, empty: !list.length };
 }
 
 /* "today", "yesterday", "3 days ago", by calendar day. */
@@ -2562,6 +2576,15 @@ function nextItem(x) {
     `<span class="rm-bar"><i style="width:${pct}%"></i></span></button>`;
 }
 
+function reviewItem(x) {
+  const L = S.L, today = todayDay();
+  return `<div class="td-item td-rev"><span class="td-rm"><span class="td-ico" aria-hidden="true">${esc(x.rm.meta.icon || '▦')}</span><span>${esc(x.rm.meta.title)}</span></span>` +
+    `<button type="button" class="td-title td-link" data-go="topic" data-rm="${esc(x.rm.id)}" data-id="${esc(x.n.id)}"><span class="td-num">${x.n.num}</span>${esc(x.n.title)}</button>` +
+    `<span class="td-meta"><span>${esc(fmt(L.reviewStep, { n: x.it.step + 1, total: REVIEW_STEPS.length }))}</span><span>${esc(x.it.due === today ? L.reviewDueToday : fmt(L.reviewDueSince, { date: fmtDay(x.it.due) }))}</span></span>` +
+    `<span class="td-acts"><button type="button" class="primary" data-rev="ok" data-rm="${esc(x.rm.id)}" data-id="${esc(x.n.id)}" data-title="${esc(x.n.title)}">${esc(L.reviewRemember)}</button>` +
+    `<button type="button" class="secondary" data-rev="again" data-rm="${esc(x.rm.id)}" data-id="${esc(x.n.id)}" title="${esc(L.reviewAgainHint)}">${esc(L.reviewAgain)}</button></span></div>`;
+}
+
 const TODAY_MAX = 8;
 function renderToday() {
   if (!today.open) return;
@@ -2569,7 +2592,7 @@ function renderToday() {
   const date = new Date().toLocaleDateString(document.documentElement.lang || undefined, { weekday: 'long', day: 'numeric', month: 'long' });
   const back = S.rm && !S.preview ? `<button type="button" class="secondary td-back" data-today-close><span aria-hidden="true">←</span> ${esc(S.rm.meta.title)}<kbd class="kbd-hint" aria-hidden="true">Esc</kbd></button>` : '';
   const head = `<div class="td-head"><div><div class="td-date">${esc(date)}</div><h1 id="todayH">${esc(L.todayTitle)}</h1>` +
-    (m.cont.length ? `<p class="td-sum">${esc(fmt(L.todaySummary, { n: m.cont.length }))}</p>` : '') + `</div>${back}</div>`;
+    ((m.cont.length || m.reviews.length) ? `<p class="td-sum">${esc([m.cont.length && fmt(L.todaySummary, { n: m.cont.length }), m.reviews.length && fmt(L.todaySummaryReview, { n: m.reviews.length })].filter(Boolean).join(' · '))}</p>` : '') + `</div>${back}</div>`;
   if (m.empty) {
     $('today').innerHTML = head + `<p class="td-empty">${esc(L.rmNone)}</p>`;
     return;
@@ -2582,7 +2605,9 @@ function renderToday() {
   const next = `<section class="td-sec"><h2>${esc(m.starter ? L.todayStart : L.todayNext)}${m.upNext.length && !m.starter ? ` <b>${m.upNext.length}</b>` : ''}</h2>` +
     `<p class="td-hint">${esc(m.starter ? L.todayStartHint : L.todayNextHint)}</p>` +
     (m.upNext.length ? `<div class="td-grid">${m.upNext.map(nextItem).join('')}</div>` : `<p class="td-empty">${esc(L.todayNextEmpty)}</p>`) + `</section>`;
-  $('today').innerHTML = head + cont + next;
+  const review = m.reviews.length ? `<section class="td-sec"><h2>${esc(L.todayReview)} <b>${m.reviews.length}</b></h2><p class="td-hint">${esc(L.todayReviewHint)}</p>` +
+    `<div class="td-list">${m.reviews.map(reviewItem).join('')}</div></section>` : '';
+  $('today').innerHTML = head + cont + review + next;
 }
 
 async function openToday() {
@@ -2613,6 +2638,8 @@ const toggleToday = () => (today.open ? closeToday() : openToday());
 function wireToday() {
   $('todayBtn').addEventListener('click', toggleToday);
   $('today').addEventListener('click', e => {
+    const rev = e.target.closest('[data-rev]');
+    if (rev) { if (rev.dataset.rev === 'ok') reviewRemember(rev.dataset.rm, rev.dataset.id, rev.dataset.title); else reviewAgain(rev.dataset.rm, rev.dataset.id); return; }
     const go = e.target.closest('[data-go]');
     if (go) { closeToday(); (go.dataset.go === 'project' ? goProject : goTopic)(go.dataset.rm, go.dataset.id); return; }
     if (e.target.closest('[data-today-close]')) closeToday();
@@ -2623,6 +2650,381 @@ function wireToday() {
   });
   $('homeSel').value = homeSetting();
   $('homeSel').addEventListener('change', e => store.set(HOME_KEY, e.target.value));
+}
+
+/* ---------- spaced review (off by default) ----------
+   A main topic you finish comes back for review 3 days later. "I still remember" pushes the next one further
+   (3, 7, 21, 60, then 150 days, and then it leaves the queue); "I need to review" starts over and reopens it.
+   One file for every roadmap (data/review.json), synced like the notes: the newest copy wins. */
+const REVIEW_STEPS = [3, 7, 21, 60, 150];
+const REVIEW_LS = 'roadkit:v1:review';
+const rv = { data: { updatedAt: 0, on: false, skip: [], items: {} }, timer: 0 };
+const reviewKey = (rmId, nid) => `${rmId}:${nid}`;
+const reviewOn = rmId => rv.data.on && !rv.data.skip.includes(rmId);
+const addDays = (day, n) => toDay(fromDay(day) + n * dayMs);
+const cleanReview = v => ({
+  updatedAt: Number(v?.updatedAt) || 0, on: v?.on === true, skip: arr(v?.skip).filter(x => typeof x === 'string'),
+  items: Object.fromEntries(Object.entries(v?.items && typeof v.items === 'object' ? v.items : {}).filter(([, it]) => okDay(it?.due) && Number.isInteger(it?.step))),
+});
+
+function loadReviewLocal() {
+  try { rv.data = cleanReview(JSON.parse(store.get(REVIEW_LS) || 'null')); } catch { /* corrupt entry */ }
+}
+
+function editReview(fn) {
+  if (S.readOnly) return;
+  fn(rv.data);
+  rv.data.updatedAt = Date.now();
+  store.set(REVIEW_LS, JSON.stringify(rv.data));
+  clearTimeout(rv.timer);
+  rv.timer = setTimeout(() => { rv.timer = 0; pushReview(); }, 500);
+  paintReview();
+}
+
+function adoptReview(remote) {
+  rv.data = cleanReview(remote);
+  store.set(REVIEW_LS, JSON.stringify(rv.data));
+  paintReview();
+  renderToday();
+}
+
+const reviewApi = (method, body, keepalive = false) => apiFetch(method, 'api/review', body, keepalive);
+const pushReview = (keepalive = false) => queue(async () => {
+  if (S.readOnly || sync.api === false || !rv.data.updatedAt) return;
+  try {
+    const r = await reviewApi('PUT', rv.data, keepalive);
+    if (r.status === 409) adoptReview(await r.json());
+  } catch { /* offline: it goes up with the next change or pull */ }
+});
+const pullReview = () => queue(async () => {
+  if (S.readOnly || sync.api === false || rv.timer) return;
+  try {
+    const r = await reviewApi('GET');
+    if (r.status === 204) { if (rv.data.updatedAt) pushReview(); return; }
+    if (!r.ok || !(r.headers.get('Content-Type') || '').includes('json')) return;
+    const remote = await r.json();
+    if (remote.updatedAt > rv.data.updatedAt) adoptReview(remote);
+    else if (remote.updatedAt < rv.data.updatedAt) pushReview();
+  } catch { /* offline */ }
+});
+
+/* Called after every change in the open roadmap: a main topic that just got finished enters the queue, one moved
+   back to "to do" leaves it. Finishing never re-adds a topic that is already there (after "I need to review"). */
+function reviewTrack() {
+  const rm = S.rm;
+  if (!rm || S.preview || S.isLocal || S.readOnly) return;
+  const now = new Set(rm.core.filter(isDone).map(n => n.id)), before = S.doneBase || now;
+  S.doneBase = now;
+  if (!reviewOn(rm.id)) return;
+  const added = [...now].filter(id => !before.has(id) && !rv.data.items[reviewKey(rm.id, id)]);
+  const dropped = rm.core.filter(n => nodeStatus(n) === 'todo' && rv.data.items[reviewKey(rm.id, n.id)]);
+  if (!added.length && !dropped.length) return;
+  editReview(d => {
+    added.forEach(id => { d.items[reviewKey(rm.id, id)] = { due: addDays(todayDay(), REVIEW_STEPS[0]), step: 0 }; });
+    dropped.forEach(n => delete d.items[reviewKey(rm.id, n.id)]);
+  });
+}
+
+function reviewRemember(rmId, nid, title) {
+  let next = '';
+  editReview(d => {
+    const k = reviewKey(rmId, nid), it = d.items[k];
+    if (!it) return;
+    const step = it.step + 1;
+    if (step >= REVIEW_STEPS.length) delete d.items[k];
+    else { next = addDays(todayDay(), REVIEW_STEPS[step]); d.items[k] = { due: next, step }; }
+  });
+  toast(next ? fmt(S.L.reviewNextToast, { date: fmtDay(next) }) : fmt(S.L.reviewDoneToast, { title }));
+  renderToday();
+}
+
+async function reviewAgain(rmId, nid) {
+  editReview(d => { d.items[reviewKey(rmId, nid)] = { due: addDays(todayDay(), REVIEW_STEPS[0]), step: 0 }; });
+  closeToday();
+  await goTopic(rmId, nid);
+  const n = S.rm?.id === rmId ? S.rm.byId[nid] : null;
+  if (n && isDone(n)) setNodeStatus(n, 'review');
+}
+
+/* Reviews due today or earlier, in visible roadmaps with review on. */
+const dueReviews = () => Object.entries(rv.data.items)
+  .filter(([k, it]) => it.due <= todayDay() && reviewOn(k.split(':')[0]) && visibleRoadmaps().some(e => e.id === k.split(':')[0]));
+
+function reviewLine(n) {
+  const it = reviewOn(S.rm.id) && rv.data.items[reviewKey(S.rm.id, n.id)];
+  if (!it || S.readOnly) return '';
+  const today = todayDay();
+  return `<p class="rev-note">${esc(it.due <= today ? S.L.reviewDueNow : fmt(S.L.reviewNext, { date: fmtDay(it.due) }))} · ${esc(fmt(S.L.reviewStep, { n: it.step + 1, total: REVIEW_STEPS.length }))}</p>`;
+}
+
+function paintReview() {
+  if (!S.manifest) return;
+  const sel = $('reviewSel'), on = rv.data.on, here = S.rm && !S.isLocal && !S.preview;
+  sel.value = on ? 'on' : 'off';
+  $('reviewThisRow').hidden = !on || !here;
+  if (here) $('reviewThis').checked = !rv.data.skip.includes(S.rm.id);
+  const n = on && !S.readOnly ? dueReviews().length : 0;
+  $('todayN').hidden = !n;
+  $('todayN').textContent = n;
+  $('todayN').title = fmt(S.L.todaySummaryReview, { n });
+}
+
+/* ---------- focus sessions (off by default) ----------
+   A timer started from a topic or project. It counts from timestamps (a frozen background tab does not drift)
+   and survives a reload. A finished session of 5 minutes or more is added to the topic's activity on the server;
+   offline, it waits in a queue. */
+const FOCUS_KEY = 'roadkit:v1:focus', FOCUS_NOTIFY = 'roadkit:v1:focus-notify', FOCUS_RUN = 'roadkit:v1:focus-run', FOCUS_QUEUE = 'roadkit:v1:focus-queue';
+const FOCUS_MIN = 5, BREAK_MIN = 5;
+const focusOn = () => store.get(FOCUS_KEY) === 'on';
+const fz = { run: null, tick: 0, totals: {}, totalsFor: '' };
+const readJson = (k, dflt) => { try { const v = JSON.parse(store.get(k) || 'null'); return v ?? dflt; } catch { return dflt; } };
+
+function fmtMinutes(m) {
+  const h = Math.floor(m / 60), r = m % 60;
+  return h ? (r ? `${h} h ${r} min` : `${h} h`) : `${r} min`;
+}
+const clock = ms => { const s = Math.max(0, Math.round(ms / 1000)); return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`; };
+const runElapsed = r => (r.paused || Date.now()) - r.start - (r.pausedMs || 0);
+
+/* Totals for the open roadmap: the server's activity plus what is still waiting to go up. */
+async function loadFocusTotals(rm) {
+  fz.totals = {}; fz.totalsFor = rm.id;
+  if (!focusOn() || S.isLocal || S.preview || S.readOnly) return;
+  try {
+    const r = await apiFetch('GET', `api/activity/${encodeURIComponent(rm.id)}`);
+    if (r.ok && (r.headers.get('Content-Type') || '').includes('json') && fz.totalsFor === rm.id) {
+      for (const [k, t] of Object.entries((await r.json()).topics || {})) if (t.focus) fz.totals[k] = { focus: t.focus, sessions: t.sessions || 0 };
+    }
+  } catch { /* offline */ }
+  if (fz.totalsFor === rm.id) renderDetail();
+}
+
+function focusTotal(key) {
+  const t = { ...(fz.totals[key] || { focus: 0, sessions: 0 }) };
+  for (const q of readJson(FOCUS_QUEUE, [])) if (q.rm === S.rm?.id && q.id === key) { t.focus += q.min; t.sessions++; }
+  return t;
+}
+
+function focusRow(key) {
+  if (!focusOn() || S.readOnly || S.preview || S.isLocal) return '';
+  const t = focusTotal(key), L = S.L;
+  return `<div class="focus-row"><button type="button" class="secondary focus-btn" data-focus="${esc(key)}" title="${esc(L.focusBtnTitle)}"><span aria-hidden="true">⏱</span> ${esc(L.focusStart)}</button>` +
+    (t.sessions ? `<span class="focus-total">${esc(fmt(t.sessions === 1 ? L.focusTotalOne : L.focusTotal, { time: fmtMinutes(t.focus), n: t.sessions }))}</span>` : '') + `</div>`;
+}
+
+const saveRun = () => (fz.run ? store.set(FOCUS_RUN, JSON.stringify(fz.run)) : store.del(FOCUS_RUN));
+
+function focusSetup(key) {
+  const rm = S.rm, proj = key.startsWith('project:') ? rm.projById[key.slice(8)] : null, n = proj ? null : rm.byId[key];
+  if (!proj && !n) return;
+  if (fz.run && fz.run.phase === 'focus' && !confirm(S.L.focusReplace)) return;
+  const todo = proj ? projStatus(proj) === 'todo' : nodeStatus(n) === 'todo';
+  fz.run = { phase: 'setup', rm: rm.id, rmTitle: rm.meta.title, key, title: (proj || n).title, mins: 25, todo };
+  saveRun(); paintFocus();
+}
+
+function focusStart() {
+  const r = fz.run, box = $('focusBox');
+  if (!r) return;
+  if (r.phase === 'setup' && r.todo && box.querySelector('[data-fz-move]')?.checked && S.rm?.id === r.rm) {
+    if (r.key.startsWith('project:')) { const p = S.rm.projById[r.key.slice(8)]; if (p) setProjectStatus(p, 'working'); }
+    else { const n = S.rm.byId[r.key]; if (n) setNodeStatus(n, 'working'); }
+  }
+  Object.assign(r, { phase: 'focus', start: Date.now(), paused: 0, pausedMs: 0 });
+  delete r.todo;
+  saveRun(); paintFocus(); startTick();
+}
+
+function focusPause() {
+  const r = fz.run;
+  if (!r || (r.phase !== 'focus' && r.phase !== 'break')) return;
+  if (r.paused) { r.pausedMs += Date.now() - r.paused; r.paused = 0; } else r.paused = Date.now();
+  saveRun(); paintFocus();
+}
+
+/* Stops the session; it counts when it lasted at least 5 minutes. */
+function focusStop(completed = false) {
+  const r = fz.run;
+  if (!r) return;
+  if (r.phase === 'focus') {
+    const min = completed ? r.mins : Math.floor(runElapsed(r) / 60000);
+    if (min >= FOCUS_MIN) {
+      queueFocus({ rm: r.rm, id: r.key, min: Math.min(min, 600), t: Date.now(), tz: -new Date().getTimezoneOffset() });
+      fz.run = { ...r, phase: 'done', recorded: min };
+    } else fz.run = completed ? null : { ...r, phase: 'done', recorded: 0 };
+  } else fz.run = null;
+  saveRun(); paintFocus();
+}
+
+function focusBreak() {
+  const r = fz.run;
+  if (!r) return;
+  fz.run = { ...r, phase: 'break', mins: BREAK_MIN, start: Date.now(), paused: 0, pausedMs: 0 };
+  saveRun(); paintFocus(); startTick();
+}
+
+function queueFocus(item) {
+  const q = readJson(FOCUS_QUEUE, []);
+  q.push(item);
+  store.set(FOCUS_QUEUE, JSON.stringify(q.slice(-200)));
+  flushFocus();
+  renderDetail();
+}
+
+let flushing = false;
+async function flushFocus() {
+  if (flushing || S.readOnly || sync.api === false) return;
+  flushing = true;
+  try {
+    for (const item of readJson(FOCUS_QUEUE, [])) {
+      let r;
+      try { r = await apiFetch('POST', `api/activity/${encodeURIComponent(item.rm)}/focus`, { id: item.id, min: item.min, t: item.t, tz: item.tz }); } catch { break; }   // offline: try later
+      if (r.status === 401 || r.status >= 500) break;
+      if (r.ok && fz.totalsFor === item.rm) { const t = await r.json(); fz.totals[item.id] = { focus: t.focus, sessions: t.sessions }; }
+      store.set(FOCUS_QUEUE, JSON.stringify(readJson(FOCUS_QUEUE, []).filter(x => !(x.t === item.t && x.id === item.id && x.rm === item.rm))));
+    }
+  } finally { flushing = false; }
+  renderDetail();
+}
+
+function beep() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    [[660, 0], [880, 0.22]].forEach(([f, at]) => {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.frequency.value = f; o.connect(g); g.connect(ctx.destination);
+      g.gain.setValueAtTime(0.0001, ctx.currentTime + at);
+      g.gain.exponentialRampToValueAtTime(0.25, ctx.currentTime + at + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + at + 0.35);
+      o.start(ctx.currentTime + at); o.stop(ctx.currentTime + at + 0.4);
+    });
+    setTimeout(() => ctx.close(), 1200);
+  } catch { /* no audio */ }
+}
+
+function notifyFocus(title, body) {
+  if (store.get(FOCUS_NOTIFY) !== 'on' || !('Notification' in window) || Notification.permission !== 'granted') return;
+  const opts = { body, icon: 'src/icons/icon-192.png', tag: 'roadkit-focus' };
+  try { new Notification(title, opts); } catch { pwa.reg?.showNotification(title, opts).catch(() => {}); }   // Android only shows them through the worker
+}
+
+function startTick() {
+  clearInterval(fz.tick);
+  fz.tick = setInterval(focusTickNow, 1000);
+  focusTickNow();
+}
+
+function focusTickNow() {
+  const r = fz.run;
+  if (!r || (r.phase !== 'focus' && r.phase !== 'break')) { clearInterval(fz.tick); fz.tick = 0; paintTitle(); return; }
+  const left = r.mins ? r.mins * 60000 - runElapsed(r) : 0;
+  if (r.mins && left <= 0 && !r.paused) {
+    beep();
+    if (r.phase === 'focus') { notifyFocus(S.L.focusNotifyTitle, `${r.title} · ${fmtMinutes(r.mins)}`); focusStop(true); }
+    else { notifyFocus(S.L.focusBreakOver, r.title); fz.run = { ...r, phase: 'done', recorded: -1 }; saveRun(); paintFocus(); }
+    return;
+  }
+  const t = $('focusClock');
+  if (t) t.textContent = clock(r.mins ? left : runElapsed(r));
+  paintTitle();
+}
+
+function paintTitle() {
+  const r = fz.run, running = r && (r.phase === 'focus' || r.phase === 'break');
+  const base = S.rm?.meta.title || 'Roadkit';
+  document.title = running ? `${clock(r.mins ? r.mins * 60000 - runElapsed(r) : runElapsed(r))}${r.paused ? ' ⏸' : ''} · ${r.title}` : base;
+}
+
+function paintFocus() {
+  let box = $('focusBox');
+  const r = fz.run, L = S.L;
+  if (!r) { box?.remove(); paintTitle(); return; }
+  if (!box) {
+    box = Object.assign(document.createElement('section'), { id: 'focusBox', className: 'focus' });
+    box.setAttribute('aria-label', L.focusLabel);
+    box.addEventListener('click', onFocusClick);
+    document.body.append(box);
+  }
+  const head = `<div class="fz-head"><span class="fz-kind">${esc(r.phase === 'break' ? L.focusBreakOn : L.focusLabel)}</span>` +
+    `<button type="button" class="fz-title" data-fz="go" title="${esc(r.rmTitle)}">${esc(r.title)}</button>` +
+    (r.phase === 'setup' || r.phase === 'done' ? `<button type="button" class="dlg-x fz-x" data-fz="close" aria-label="${esc(L.focusClose)}">×</button>` : '') + `</div>`;
+  let body = '';
+  if (r.phase === 'setup') {
+    body = `<div class="seg small fz-len" role="group">${[25, 50, 0].map(m => `<button type="button" data-fz-len="${m}" aria-pressed="${r.mins === m}">${esc(m ? fmt(L.focusMin, { n: m }) : L.focusFree)}</button>`).join('')}</div>` +
+      (r.todo ? `<label class="fz-move"><input type="checkbox" data-fz-move checked> ${esc(L.focusMoveWorking)}</label>` : '') +
+      `<button type="button" class="primary fz-go" data-fz="start">${esc(L.focusGo)}</button>`;
+  } else if (r.phase === 'focus' || r.phase === 'break') {
+    body = `<div class="fz-clock${r.paused ? ' paused' : ''}" id="focusClock" aria-live="off"></div>` +
+      `<div class="fz-acts"><button type="button" class="secondary" data-fz="pause">${esc(r.paused ? L.focusResume : L.focusPause)}</button>` +
+      `<button type="button" class="secondary" data-fz="stop">${esc(L.focusStop)}</button></div>`;
+  } else {
+    const msg = r.recorded > 0 ? fmt(L.focusDone, { time: fmtMinutes(r.recorded) }) : r.recorded === 0 ? L.focusTooShort : L.focusBreakOver;
+    body = `<p class="fz-msg">${esc(msg)}</p><div class="fz-acts">` +
+      (r.recorded > 0 ? `<button type="button" class="secondary" data-fz="break">${esc(L.focusBreak)}</button>` : `<button type="button" class="secondary" data-fz="again">${esc(L.focusAgain)}</button>`) +
+      `<button type="button" class="primary" data-fz="close">${esc(L.focusClose)}</button></div>`;
+  }
+  box.dataset.phase = r.phase;
+  box.innerHTML = head + body;
+  focusTickNow();
+}
+
+function onFocusClick(e) {
+  const len = e.target.closest('[data-fz-len]');
+  if (len && fz.run) { fz.run.mins = Number(len.dataset.fzLen); saveRun(); paintFocus(); return; }
+  const act = e.target.closest('[data-fz]')?.dataset.fz;
+  const r = fz.run;
+  if (!act || !r) return;
+  if (act === 'go') { closeToday(); (r.key.startsWith('project:') ? goProject(r.rm, r.key.slice(8)) : goTopic(r.rm, r.key)); }
+  else if (act === 'start') focusStart();
+  else if (act === 'pause') focusPause();
+  else if (act === 'stop') focusStop();
+  else if (act === 'break') focusBreak();
+  else if (act === 'again') { fz.run = { phase: 'setup', rm: r.rm, rmTitle: r.rmTitle, key: r.key, title: r.title, mins: 25 }; saveRun(); paintFocus(); }
+  else if (act === 'close') { fz.run = null; saveRun(); paintFocus(); }
+}
+
+function restoreFocus() {
+  const r = readJson(FOCUS_RUN, null);
+  if (!r || typeof r !== 'object' || !r.key || !r.rm) return;
+  fz.run = r;
+  paintFocus();
+  if (r.phase === 'focus' || r.phase === 'break') startTick();
+}
+
+function wireReviewFocus() {
+  // what is finished when you turn it on stays out of the queue; what you finish from now on goes in
+  $('reviewSel').addEventListener('change', e => { editReview(d => { d.on = e.target.value === 'on'; }); renderDetail(); renderToday(); });
+  $('reviewThis').addEventListener('change', e => {
+    const id = S.rm?.id;
+    if (!id) return;
+    editReview(d => { d.skip = e.target.checked ? d.skip.filter(x => x !== id) : [...new Set([...d.skip, id])]; });
+    renderDetail();
+  });
+  $('focusSel').value = focusOn() ? 'on' : 'off';
+  $('focusNotify').checked = store.get(FOCUS_NOTIFY) === 'on';
+  $('focusNotifyRow').hidden = !focusOn();
+  $('focusSel').addEventListener('change', e => {
+    store.set(FOCUS_KEY, e.target.value);
+    $('focusNotifyRow').hidden = !focusOn();
+    if (S.rm) loadFocusTotals(S.rm);
+    renderDetail();
+  });
+  $('focusNotify').addEventListener('change', async e => {
+    if (e.target.checked && 'Notification' in window && Notification.permission !== 'granted') {
+      const p = await Notification.requestPermission().catch(() => 'denied');   // only asked here, when you turn it on
+      if (p !== 'granted') { e.target.checked = false; toast(S.L.focusNotifyDenied); }
+    }
+    store.set(FOCUS_NOTIFY, e.target.checked ? 'on' : 'off');
+  });
+  $('detailContent').addEventListener('click', e => {
+    const b = e.target.closest('[data-focus]');
+    if (b && S.rm) focusSetup(b.dataset.focus);
+  });
+  addEventListener('online', flushFocus);
+  addEventListener('storage', e => {   // another tab started, paused or stopped the timer
+    if (e.key === FOCUS_RUN) { fz.run = readJson(FOCUS_RUN, null); paintFocus(); if (fz.run) startTick(); }
+    if (e.key === REVIEW_LS) { loadReviewLocal(); paintReview(); renderToday(); }
+  });
 }
 
 /* ---------- roadmap loading ---------- */
@@ -2663,6 +3065,9 @@ async function setRoadmap(rm, { local = false, keep = false, preview = false } =
     $('search').value = '';
   }
   S.readyBase = readyNow();
+  S.doneBase = new Set(rm.core.filter(isDone).map(n => n.id));
+  if (!keep) loadFocusTotals(rm);
+  paintReview();
   $('viewProjects').hidden = !rm.projects.length;
   applyChrome(); buildSwitch(); buildMap(); renderDetail();
   const saved = store.get(KEY.view(rm.id));
@@ -2990,7 +3395,7 @@ function wire() {
     store.set(LANG_KEY, e.target.value);
     if (S.rm) await setRoadmap(S.rm, { local: S.isLocal, keep: true, preview: S.preview });
     else { S.L = { ...S.defaults, ...await loadLabels(uiLang(null)) }; applyI18n(); }
-    renderToday();
+    renderToday(); paintFocus();
     buildLangSel(); renderManage();
     if (!$('rmPop').hidden) renderPicker();
     if (S.editing) { buildCategorySelect(); $('editTitle').textContent = ed.id ? S.L.edTitleEdit : S.L.edTitleNew; if (ed.mode === 'form') renderForm(); if (!S.rm) await showPreviewHint(); }
@@ -3028,7 +3433,8 @@ function wire() {
     if (document.visibilityState === 'hidden') {
       if (sync.timer) { clearTimeout(sync.timer); sync.timer = 0; push(true); }
       if (notesSync.timer) { clearTimeout(notesSync.timer); notesSync.timer = 0; pushNotes(true); }
-    } else { pull(); pullNotes(); }
+      if (rv.timer) { clearTimeout(rv.timer); rv.timer = 0; pushReview(true); }
+    } else { pull(); pullNotes(); pullReview(); flushFocus(); paintReview(); }
   });
   addEventListener('online', () => { if (sync.status === 'offline') pull(); if (notesSync.status === 'offline') pullNotes(); });
   wireDnd();
@@ -3038,6 +3444,7 @@ function wire() {
   wireDetailResize();
   wireSidebar();
   wireToday();
+  wireReviewFocus();
 }
 
 /* ---------- installable app and offline use (service worker, src/sw.js served at /sw.js) ---------- */
@@ -3102,6 +3509,7 @@ function startSnapshot() {
 }
 
 async function init() {
+  loadReviewLocal();
   wire();
   wireExport();
   applyTheme();
@@ -3126,6 +3534,7 @@ async function init() {
     return;
   }
   await openEntry(entry);
+  if (!SNAP) { restoreFocus(); pullReview(); flushFocus(); }
   if (!SNAP && !asked && homeSetting() === 'today') openToday();
   if (SNAP) { startSnapshot(); if (SNAP.view) setView(SNAP.view, false); }
 }

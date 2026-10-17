@@ -85,6 +85,12 @@ The file has two parts:
 
 Its size depends on the number of topics and on two years of days, never on how many clicks you make: it stays under 60 KB per roadmap even after years of use, and nothing stays in memory between requests. The first upload of progress that only existed in the browser does not count as that day's activity, and "Reset checkmarks" counts as a single change.
 
+Focus sessions go into that file too: the browser sends each finished session to `POST /api/activity/<id>/focus`, and the server adds the minutes to the day (`focus`) and to the topic (`focus` and `sessions`).
+
+## Where spaced review is stored
+
+The review queue is a personal agenda, not a roadmap's progress, so it lives in a single file for all of them: `data/review.json`, with the time of its last change, whether review is on (`on`), the roadmaps taken out of it (`skip`) and one item per topic (`"<roadmap>:<topic>": {"due": "2026-11-02", "step": 1}`). Dates are days, with no time, so they do not depend on time zones. The browser decides when a topic goes in or out; the server only validates and stores it, with the same rule as the notes: the browser keeps a copy and the newest one wins.
+
 Nothing inside `data/` is served as a plain file: only through the API, which requires the token when one is set.
 
 ## The API
@@ -99,6 +105,9 @@ Everything the interface asks of the server is below. It can be useful for scrip
 | `GET /api/states` | a summary of all of them (topic, task and project states), for the progress badges and the Today screen |
 | `GET /api/activity?days=30` | the activity of every roadmap: totals per day in the period and, per roadmap, when each topic was touched |
 | `GET /api/activity/<id>` | a roadmap's activity file (`204` if there is none) |
+| `POST /api/activity/<id>/focus` | records a focus session: `{"id": "<topic or project:<id>>", "min": 1 to 600, "t": <ms>, "tz": <minutes>}` |
+| `GET /api/review` | the spaced review queue (`204` if there is none) |
+| `PUT /api/review` | saves the queue, with the same rule as the progress (`409` if the server has a newer copy) |
 | `GET /api/notes/<id>` | a roadmap's notes (`204` if there are none) |
 | `PUT /api/notes/<id>` | saves the notes, with the same rule as the progress (`409` if the server has a newer copy). Each note holds up to 20,000 characters |
 | `POST /api/validate` | validates a roadmap JSON without saving it |
