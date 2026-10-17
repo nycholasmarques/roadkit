@@ -279,7 +279,25 @@ body.dragging:after{content:"JSON";position:fixed;inset:0;z-index:50;display:gri
 .pal-sw{position:relative;width:100%;height:30px;border-radius:6px;background:var(--b);border:1px solid rgba(127,127,127,.25);overflow:hidden}
 .pal-sw::before,.pal-sw::after{content:"";position:absolute;left:18%;right:18%;height:8px;border-radius:3px}
 .pal-sw::before{top:5px;background:var(--p);border:1.5px solid var(--n)}.pal-sw::after{bottom:5px;background:var(--p);border:1.5px solid #25a36c}
-#skipSel,#langSel{display:block;width:100%;padding:9px 30px 9px 10px;border:1px solid var(--line);border-radius:9px;background:var(--paper);color:var(--ink2);font-size:calc(12px*var(--fs));font-weight:700}
+/* command palette */
+.cmdk{width:min(640px,94vw);max-height:min(560px,80vh);margin:12vh auto auto;padding:0;border:1px solid var(--line);border-radius:14px;background:var(--paper);color:var(--ink);box-shadow:0 30px 80px var(--drawer-shadow);overflow:hidden}
+.cmdk[open]{display:flex;flex-direction:column}.cmdk::backdrop{background:rgba(8,12,20,.5);backdrop-filter:blur(2px)}
+.cmdk-search{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--line);color:var(--ink3)}
+.cmdk-search input{flex:1;min-width:0;border:0;background:transparent;color:var(--ink);font-size:calc(15px*var(--fs));outline:none}
+.cmdk kbd,.keys-table kbd{display:inline-block;min-width:22px;padding:2px 6px;border:1px solid var(--line);border-bottom-width:2px;border-radius:6px;background:var(--surface);color:var(--ink3);font:600 calc(10.5px*var(--fs)) ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;text-align:center}
+.cmdk-close{flex:none;border:0;background:none;padding:0;cursor:pointer}.cmdk-close:hover kbd{color:var(--ink);border-color:var(--faint)}
+.cmdk-list{flex:1;overflow-y:auto;padding:6px}
+.cmdk-group{padding:10px 10px 4px;font-size:calc(10px*var(--fs));font-weight:800;text-transform:uppercase;letter-spacing:1.4px;color:var(--faint)}
+.cmdk-opt{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:9px;cursor:pointer}
+.cmdk-opt[aria-selected="true"]{background:var(--surface);box-shadow:inset 3px 0 0 var(--sel)}
+.cmdk-opt .kdot{flex:none}.cmdk-opt .pips{flex:none}.cmdk-opt .pips i{width:9px}.cmdk-ico{flex:none;width:18px;text-align:center;color:var(--ink3);font-weight:800}
+.cmdk-txt{flex:1;min-width:0;display:grid;gap:1px}.cmdk-t{font-weight:700;font-size:calc(13px*var(--fs));overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cmdk-s{font-size:calc(11px*var(--fs));color:var(--dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cmdk-none{margin:0;padding:22px 12px;text-align:center;color:var(--dim)}
+.cmdk-foot{margin:0;padding:8px 14px;border-top:1px solid var(--line);font-size:calc(11px*var(--fs));color:var(--faint)}
+.keys-table{width:100%;border-collapse:collapse;font-size:calc(12.5px*var(--fs))}.keys-table td{padding:7px 4px;border-bottom:1px solid var(--line-soft);color:var(--ink2)}.keys-table td:first-child{white-space:nowrap;width:1%;padding-right:16px}
+@media(max-width:800px){.cmdk{width:100vw;max-width:none;height:100dvh;max-height:none;margin:0;border:0;border-radius:0}.cmdk-foot{display:none}}
+#skipSel,#langSel,#keysSel{display:block;width:100%;padding:9px 30px 9px 10px;border:1px solid var(--line);border-radius:9px;background:var(--paper);color:var(--ink2);font-size:calc(12px*var(--fs));font-weight:700}
 .set-tools{display:none;border-top:1px solid var(--line);padding-top:12px;gap:8px;grid-template-columns:1fr 1fr}
 .kc-warn{margin-left:auto;width:24px;height:22px;border:1px solid var(--ms-border);background:var(--ms-bg);color:var(--ms-ink);border-radius:6px;display:grid;place-items:center;padding:0}.kc-warn.on{background:var(--ms-border);color:#fff}
 .sync-note{margin:0;display:flex;align-items:center;gap:7px;font-size:calc(11px*var(--fs));line-height:1.4;color:var(--ink3)}.sync-note:empty{display:none}.sync-note::before{content:"";flex:none;width:7px;height:7px;border-radius:50%;background:var(--ink3)}.sync-note[data-kind=on]::before{background:#168450}.sync-note[data-kind=offline]::before,.sync-note[data-kind=auth]::before{background:#ce6e4c}

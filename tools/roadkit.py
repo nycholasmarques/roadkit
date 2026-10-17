@@ -476,6 +476,18 @@ def manifest_text(user):
             if parent_of(n):
                 kids.setdefault(parent_of(n), []).append(n)
         core = [n for n in nodes if not n.get("optional") and not parent_of(n)]
+        # a light index for the command palette: every topic with its phase, and every project with its level
+        phase_title = {p.get("id"): p.get("title", "") for p in d.get("phases", []) if isinstance(p, dict)}
+        by_id = {n.get("id"): n for n in nodes}
+
+        def root_phase(n, seen=()):
+            p = by_id.get(parent_of(n))
+            return root_phase(p, seen + (n.get("id"),)) if p and p.get("id") not in seen else phase_title.get(n.get("phase"), "")
+
+        search = {"t": [[n.get("id"), n.get("title", ""), root_phase(n)] for n in nodes if n.get("id") and n.get("title")]}
+        projects = [p for p in d.get("projects", []) if isinstance(p, dict) and p.get("id") and p.get("title")] if isinstance(d.get("projects"), list) else []
+        if projects:
+            search["p"] = [[p["id"], p["title"], p.get("level", "")] for p in projects]
         entries.append({
             "id": rid, "file": f"user/{path.relative_to(USER_DIR).as_posix()}" if editable else seen[rid], "group": folder, "title": title,
             "description": d["meta"].get("description", ""), "icon": d["meta"].get("icon", ""),
@@ -487,6 +499,7 @@ def manifest_text(user):
             "coreIds": [n.get("id") for n in core],
             "doneByDefault": [n.get("id") for n in core if finished_by_default(n, kids)],
             **({"projects": len(d["projects"])} if isinstance(d.get("projects"), list) and d["projects"] else {}),
+            "search": search,
             **({"editable": True} if editable else {}),
             **({"hidden": True} if rid in hidden else {}),
         })

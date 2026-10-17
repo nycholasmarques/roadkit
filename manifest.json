@@ -46,7 +46,138 @@
         "gitops",
         "cluster"
       ],
-      "projects": 6
+      "projects": 6,
+      "search": {
+        "t": [
+          [
+            "gitops",
+            "GitOps em uma página",
+            "Fundamentos"
+          ],
+          [
+            "cluster",
+            "Cluster local para praticar",
+            "Fundamentos"
+          ],
+          [
+            "instalar",
+            "Instalar o Argo CD",
+            "Fundamentos"
+          ],
+          [
+            "aplicacao",
+            "Seu primeiro Application",
+            "Fundamentos"
+          ],
+          [
+            "sync",
+            "Sincronização automática",
+            "Operação"
+          ],
+          [
+            "notificacoes",
+            "Notificações de sync",
+            "Operação"
+          ],
+          [
+            "empacotar",
+            "Helm e Kustomize",
+            "Operação"
+          ],
+          [
+            "helm",
+            "Charts do Helm",
+            "Operação"
+          ],
+          [
+            "helm-values",
+            "Values por ambiente",
+            "Operação"
+          ],
+          [
+            "kustomize",
+            "Overlays do Kustomize",
+            "Operação"
+          ],
+          [
+            "jsonnet",
+            "Jsonnet",
+            "Operação"
+          ],
+          [
+            "waves",
+            "Sync waves e hooks",
+            "Operação"
+          ],
+          [
+            "applicationset",
+            "ApplicationSet",
+            "Escala"
+          ],
+          [
+            "clusters",
+            "Vários clusters",
+            "Escala"
+          ],
+          [
+            "rbac",
+            "Projects e RBAC",
+            "Escala"
+          ],
+          [
+            "segredos",
+            "Segredos em GitOps",
+            "Escala"
+          ],
+          [
+            "integracao",
+            "CI que atualiza o Git",
+            "Entrega progressiva"
+          ],
+          [
+            "rollouts",
+            "Entrega canário",
+            "Entrega progressiva"
+          ],
+          [
+            "producao",
+            "Checklist de produção",
+            "Entrega progressiva"
+          ]
+        ],
+        "p": [
+          [
+            "ola-gitops",
+            "Seu app, sincronizado pelo Git",
+            "beginner"
+          ],
+          [
+            "autocura",
+            "Demonstração de autocura",
+            "beginner"
+          ],
+          [
+            "tres-ambientes",
+            "Um app, três ambientes",
+            "intermediate"
+          ],
+          [
+            "plataforma-times",
+            "Uma pequena plataforma para times",
+            "intermediate"
+          ],
+          [
+            "pipeline-completo",
+            "Do commit ao canário",
+            "advanced"
+          ],
+          [
+            "pronto-para-producao",
+            "Revisão de prontidão para produção",
+            "advanced"
+          ]
+        ]
+      }
     },
     {
       "id": "primeira-meia-maratona",
@@ -70,7 +201,66 @@
         "polimento",
         "dia-da-prova"
       ],
-      "doneByDefault": []
+      "doneByDefault": [],
+      "search": {
+        "t": [
+          [
+            "avaliacao",
+            "Ponto de partida",
+            "Base"
+          ],
+          [
+            "rodagem",
+            "Rodagens leves",
+            "Base"
+          ],
+          [
+            "forca",
+            "Força e mobilidade",
+            "Base"
+          ],
+          [
+            "nutricao-leve",
+            "Rotina de sono e alimentação",
+            "Base"
+          ],
+          [
+            "longao",
+            "Longão progressivo",
+            "Volume"
+          ],
+          [
+            "ritmo",
+            "Treinos de ritmo",
+            "Volume"
+          ],
+          [
+            "alimentacao-prova",
+            "Alimentação durante a corrida",
+            "Volume"
+          ],
+          [
+            "ritmo-extra",
+            "Treino em subida",
+            "Volume"
+          ],
+          [
+            "polimento",
+            "Redução de carga",
+            "Prova"
+          ],
+          [
+            "dia-da-prova",
+            "Dia da prova",
+            "Prova"
+          ],
+          [
+            "recuperacao",
+            "Semana de recuperação",
+            "Prova"
+          ]
+        ]
+      }
     },
     {
       "id": "home-lab",
@@ -97,7 +287,71 @@
       ],
       "doneByDefault": [
         "hardware"
-      ]
+      ],
+      "search": {
+        "t": [
+          [
+            "hardware",
+            "Escolher o hardware",
+            "Base"
+          ],
+          [
+            "instalacao",
+            "Instalar o sistema",
+            "Base"
+          ],
+          [
+            "rede",
+            "Rede e acesso",
+            "Base"
+          ],
+          [
+            "vpn-alt",
+            "Rede separada para o lab",
+            "Base"
+          ],
+          [
+            "containers",
+            "Containers com Docker",
+            "Serviços"
+          ],
+          [
+            "proxy",
+            "Proxy reverso e certificados",
+            "Serviços"
+          ],
+          [
+            "dns-adblock",
+            "DNS com bloqueio de anúncios",
+            "Serviços"
+          ],
+          [
+            "midia",
+            "Servidor de mídia",
+            "Serviços"
+          ],
+          [
+            "backup",
+            "Backup 3-2-1",
+            "Operação"
+          ],
+          [
+            "monitoramento",
+            "Monitoramento e alertas",
+            "Operação"
+          ],
+          [
+            "documentacao",
+            "Documentar e automatizar",
+            "Operação"
+          ],
+          [
+            "ansible",
+            "Automação com Ansible",
+            "Operação"
+          ]
+        ]
+      }
     },
     {
       "id": "exemplo-minimo",
@@ -116,7 +370,31 @@
         "segundo",
         "terceiro"
       ],
-      "doneByDefault": []
+      "doneByDefault": [],
+      "search": {
+        "t": [
+          [
+            "primeiro",
+            "Primeiro tópico",
+            ""
+          ],
+          [
+            "segundo",
+            "Segundo tópico",
+            ""
+          ],
+          [
+            "terceiro",
+            "Terceiro tópico",
+            ""
+          ],
+          [
+            "extra",
+            "Extra opcional",
+            ""
+          ]
+        ]
+      }
     },
     {
       "id": "projeto-paralelo",
@@ -140,7 +418,66 @@
         "beta",
         "lancamento"
       ],
-      "doneByDefault": []
+      "doneByDefault": [],
+      "search": {
+        "t": [
+          [
+            "entrevistas",
+            "Entrevistas com clientes",
+            "Validar"
+          ],
+          [
+            "pagina",
+            "Página de captura e lista de espera",
+            "Validar"
+          ],
+          [
+            "pre-venda",
+            "Teste de pré-venda",
+            "Validar"
+          ],
+          [
+            "escopo",
+            "Escopo do MVP",
+            "Construir o MVP"
+          ],
+          [
+            "base-tecnica",
+            "Stack e esqueleto",
+            "Construir o MVP"
+          ],
+          [
+            "nucleo",
+            "Funcionalidade central",
+            "Construir o MVP"
+          ],
+          [
+            "pagamentos",
+            "Pagamentos",
+            "Construir o MVP"
+          ],
+          [
+            "onboarding",
+            "Onboarding guiado",
+            "Construir o MVP"
+          ],
+          [
+            "beta",
+            "Beta fechado",
+            "Lançar"
+          ],
+          [
+            "lancamento",
+            "Lançamento público",
+            "Lançar"
+          ],
+          [
+            "indicacoes",
+            "Ciclo de indicações",
+            "Lançar"
+          ]
+        ]
+      }
     },
     {
       "id": "estudar-sql",
@@ -167,7 +504,108 @@
         "janelas"
       ],
       "doneByDefault": [],
-      "projects": 6
+      "projects": 6,
+      "search": {
+        "t": [
+          [
+            "ambiente",
+            "Banco local e dados de exemplo",
+            "Consultar dados"
+          ],
+          [
+            "select",
+            "SELECT, filtros e ordenação",
+            "Consultar dados"
+          ],
+          [
+            "agregacao",
+            "Agregações e agrupamento",
+            "Consultar dados"
+          ],
+          [
+            "joins",
+            "JOINs",
+            "Consultar dados"
+          ],
+          [
+            "subqueries",
+            "Subconsultas e CTEs",
+            "Consultar dados"
+          ],
+          [
+            "ddl",
+            "Criar tabelas e tipos",
+            "Modelar e escrever"
+          ],
+          [
+            "normalizacao",
+            "Relacionamentos e normalização",
+            "Modelar e escrever"
+          ],
+          [
+            "dml",
+            "INSERT, UPDATE, DELETE e transações",
+            "Modelar e escrever"
+          ],
+          [
+            "views",
+            "Views e funções",
+            "Modelar e escrever"
+          ],
+          [
+            "indices",
+            "Índices",
+            "Desempenho"
+          ],
+          [
+            "explain",
+            "Planos de execução",
+            "Desempenho"
+          ],
+          [
+            "janelas",
+            "Funções de janela",
+            "Desempenho"
+          ],
+          [
+            "particoes",
+            "Particionamento",
+            "Desempenho"
+          ]
+        ],
+        "p": [
+          [
+            "consultas-biblioteca",
+            "Consultas no acervo de uma biblioteca",
+            "beginner"
+          ],
+          [
+            "relatorio-gastos",
+            "Relatório mensal de gastos",
+            "beginner"
+          ],
+          [
+            "banco-loja",
+            "Banco de dados de uma loja virtual",
+            "intermediate"
+          ],
+          [
+            "habitos",
+            "Banco de um app de hábitos",
+            "intermediate"
+          ],
+          [
+            "clinica-consultas-lentas",
+            "Clínica de consultas lentas",
+            "advanced"
+          ],
+          [
+            "analise-vendas",
+            "Consultas de análise de vendas",
+            "advanced"
+          ]
+        ]
+      }
     },
     {
       "id": "gitops-with-argocd",
@@ -200,7 +638,138 @@
         "gitops",
         "cluster"
       ],
-      "projects": 6
+      "projects": 6,
+      "search": {
+        "t": [
+          [
+            "gitops",
+            "GitOps on one page",
+            "Fundamentals"
+          ],
+          [
+            "cluster",
+            "A local practice cluster",
+            "Fundamentals"
+          ],
+          [
+            "install",
+            "Install Argo CD",
+            "Fundamentals"
+          ],
+          [
+            "application",
+            "Your first Application",
+            "Fundamentals"
+          ],
+          [
+            "sync",
+            "Automatic sync",
+            "Operations"
+          ],
+          [
+            "notifications",
+            "Sync notifications",
+            "Operations"
+          ],
+          [
+            "packaging",
+            "Helm and Kustomize",
+            "Operations"
+          ],
+          [
+            "helm",
+            "Helm charts",
+            "Operations"
+          ],
+          [
+            "helm-values",
+            "Values per environment",
+            "Operations"
+          ],
+          [
+            "kustomize",
+            "Kustomize overlays",
+            "Operations"
+          ],
+          [
+            "jsonnet",
+            "Jsonnet",
+            "Operations"
+          ],
+          [
+            "waves",
+            "Sync waves and hooks",
+            "Operations"
+          ],
+          [
+            "applicationset",
+            "ApplicationSet",
+            "Scale"
+          ],
+          [
+            "clusters",
+            "Many clusters",
+            "Scale"
+          ],
+          [
+            "rbac",
+            "Projects and RBAC",
+            "Scale"
+          ],
+          [
+            "secrets",
+            "Secrets in GitOps",
+            "Scale"
+          ],
+          [
+            "integration",
+            "CI that updates Git",
+            "Progressive delivery"
+          ],
+          [
+            "rollouts",
+            "Canary delivery",
+            "Progressive delivery"
+          ],
+          [
+            "production",
+            "Production checklist",
+            "Progressive delivery"
+          ]
+        ],
+        "p": [
+          [
+            "hello-gitops",
+            "Your app, synced from Git",
+            "beginner"
+          ],
+          [
+            "self-healing",
+            "Self-healing demo",
+            "beginner"
+          ],
+          [
+            "three-environments",
+            "One app, three environments",
+            "intermediate"
+          ],
+          [
+            "team-platform",
+            "A small platform for teams",
+            "intermediate"
+          ],
+          [
+            "full-pipeline",
+            "From commit to canary",
+            "advanced"
+          ],
+          [
+            "production-ready",
+            "Production readiness review",
+            "advanced"
+          ]
+        ]
+      }
     },
     {
       "id": "first-half-marathon",
@@ -224,7 +793,66 @@
         "taper",
         "race-day"
       ],
-      "doneByDefault": []
+      "doneByDefault": [],
+      "search": {
+        "t": [
+          [
+            "assessment",
+            "Starting point",
+            "Base"
+          ],
+          [
+            "easy-runs",
+            "Easy runs",
+            "Base"
+          ],
+          [
+            "strength",
+            "Strength and mobility",
+            "Base"
+          ],
+          [
+            "sleep-food",
+            "Sleep and eating routine",
+            "Base"
+          ],
+          [
+            "long-run",
+            "Progressive long run",
+            "Volume"
+          ],
+          [
+            "tempo",
+            "Tempo runs",
+            "Volume"
+          ],
+          [
+            "race-fuel",
+            "Eating during the run",
+            "Volume"
+          ],
+          [
+            "hills",
+            "Hill workout",
+            "Volume"
+          ],
+          [
+            "taper",
+            "Cutting the load",
+            "Race"
+          ],
+          [
+            "race-day",
+            "Race day",
+            "Race"
+          ],
+          [
+            "recovery",
+            "Recovery week",
+            "Race"
+          ]
+        ]
+      }
     },
     {
       "id": "build-a-home-lab",
@@ -251,7 +879,71 @@
       ],
       "doneByDefault": [
         "hardware"
-      ]
+      ],
+      "search": {
+        "t": [
+          [
+            "hardware",
+            "Pick the hardware",
+            "Base"
+          ],
+          [
+            "install",
+            "Install the system",
+            "Base"
+          ],
+          [
+            "network",
+            "Network and access",
+            "Base"
+          ],
+          [
+            "vlan",
+            "Separate network for the lab",
+            "Base"
+          ],
+          [
+            "containers",
+            "Containers with Docker",
+            "Services"
+          ],
+          [
+            "proxy",
+            "Reverse proxy and certificates",
+            "Services"
+          ],
+          [
+            "dns-adblock",
+            "DNS with ad blocking",
+            "Services"
+          ],
+          [
+            "media",
+            "Media server",
+            "Services"
+          ],
+          [
+            "backup",
+            "3-2-1 backup",
+            "Operations"
+          ],
+          [
+            "monitoring",
+            "Monitoring and alerts",
+            "Operations"
+          ],
+          [
+            "documentation",
+            "Document and automate",
+            "Operations"
+          ],
+          [
+            "ansible",
+            "Automation with Ansible",
+            "Operations"
+          ]
+        ]
+      }
     },
     {
       "id": "minimal-example",
@@ -270,7 +962,31 @@
         "second",
         "third"
       ],
-      "doneByDefault": []
+      "doneByDefault": [],
+      "search": {
+        "t": [
+          [
+            "first",
+            "First topic",
+            ""
+          ],
+          [
+            "second",
+            "Second topic",
+            ""
+          ],
+          [
+            "third",
+            "Third topic",
+            ""
+          ],
+          [
+            "extra",
+            "Optional extra",
+            ""
+          ]
+        ]
+      }
     },
     {
       "id": "side-project-saas",
@@ -294,7 +1010,66 @@
         "beta",
         "public-launch"
       ],
-      "doneByDefault": []
+      "doneByDefault": [],
+      "search": {
+        "t": [
+          [
+            "interviews",
+            "Customer interviews",
+            "Validate"
+          ],
+          [
+            "landing",
+            "Landing page and waitlist",
+            "Validate"
+          ],
+          [
+            "pricing-test",
+            "Pre-sell test",
+            "Validate"
+          ],
+          [
+            "scope",
+            "MVP scope",
+            "Build the MVP"
+          ],
+          [
+            "stack",
+            "Stack and skeleton",
+            "Build the MVP"
+          ],
+          [
+            "core-loop",
+            "Core feature",
+            "Build the MVP"
+          ],
+          [
+            "billing",
+            "Payments",
+            "Build the MVP"
+          ],
+          [
+            "onboarding",
+            "Guided onboarding",
+            "Build the MVP"
+          ],
+          [
+            "beta",
+            "Private beta",
+            "Launch"
+          ],
+          [
+            "public-launch",
+            "Public launch",
+            "Launch"
+          ],
+          [
+            "referrals",
+            "Referral loop",
+            "Launch"
+          ]
+        ]
+      }
     },
     {
       "id": "learn-sql",
@@ -321,7 +1096,108 @@
         "windows"
       ],
       "doneByDefault": [],
-      "projects": 6
+      "projects": 6,
+      "search": {
+        "t": [
+          [
+            "environment",
+            "Local database and sample data",
+            "Query data"
+          ],
+          [
+            "select",
+            "SELECT, filters and sorting",
+            "Query data"
+          ],
+          [
+            "aggregation",
+            "Aggregates and grouping",
+            "Query data"
+          ],
+          [
+            "joins",
+            "JOINs",
+            "Query data"
+          ],
+          [
+            "subqueries",
+            "Subqueries and CTEs",
+            "Query data"
+          ],
+          [
+            "ddl",
+            "Create tables and types",
+            "Model and write"
+          ],
+          [
+            "normalization",
+            "Relationships and normalization",
+            "Model and write"
+          ],
+          [
+            "dml",
+            "INSERT, UPDATE, DELETE and transactions",
+            "Model and write"
+          ],
+          [
+            "views",
+            "Views and functions",
+            "Model and write"
+          ],
+          [
+            "indexes",
+            "Indexes",
+            "Performance"
+          ],
+          [
+            "explain",
+            "Execution plans",
+            "Performance"
+          ],
+          [
+            "windows",
+            "Window functions",
+            "Performance"
+          ],
+          [
+            "partitions",
+            "Partitioning",
+            "Performance"
+          ]
+        ],
+        "p": [
+          [
+            "library-queries",
+            "Library catalog queries",
+            "beginner"
+          ],
+          [
+            "expense-report",
+            "Monthly expense report",
+            "beginner"
+          ],
+          [
+            "store-schema",
+            "Online store database",
+            "intermediate"
+          ],
+          [
+            "habit-tracker",
+            "Habit tracker backend",
+            "intermediate"
+          ],
+          [
+            "slow-query-clinic",
+            "Slow query clinic",
+            "advanced"
+          ],
+          [
+            "sales-analytics",
+            "Sales analytics queries",
+            "advanced"
+          ]
+        ]
+      }
     }
   ]
 }

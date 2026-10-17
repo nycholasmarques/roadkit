@@ -79,6 +79,10 @@ A roadmap can come with hands-on projects from beginner to advanced, each linked
 
 Every topic and project has a Markdown notes box, saved on the server and offline: the command that worked, the question, the decision. Search finds what you wrote, and a roadmap's notes come out together as Markdown.
 
+### Get there fast
+
+`Ctrl+K` finds any topic, project or action across every roadmap, and single-letter shortcuts change the view, the topic and its state without leaving the keyboard.
+
 ### Create, watching the result
 
 **New roadmap** opens an editor with the form on one side and the real roadmap on the other, drawing itself as you type. You can build phases, topics, sub-topics up to two levels deep, optional topics, colors, logo and category. A line at the bottom tells you what is wrong as you go.

@@ -45,6 +45,24 @@ Clicar num projeto abre o painel dele, com o mesmo jeito do painel de um tópico
 
 No painel de um tópico, a seção **Projetos que usam este tópico** leva aos projetos ligados a ele. Os projetos não entram na barra de progresso do topo: ela continua medindo os tópicos principais, e a tela de projetos tem a própria contagem.
 
+## Busca e atalhos de teclado
+
+`Ctrl+K` (`⌘K` no Mac), ou a lupa no topo, abre uma busca que vai para qualquer lugar: tópicos e projetos de **todos** os roadmaps, os próprios roadmaps e as ações (novo roadmap, exportar, notas, trocar de visualização, alternar o modo, ajustes). A busca ignora acentos e maiúsculas e aceita letras pulando no meio, como "kstmz" para Kustomize. Os resultados do roadmap aberto vêm primeiro, cada tópico com o roadmap, a fase e o estado. `↑` `↓` escolhem, `Enter` abre e `Esc` fecha. Com a caixa vazia, aparecem os itens abertos por último.
+
+Fora de campos de texto, algumas teclas de uma letra funcionam direto:
+
+| Tecla | O que faz |
+|---|---|
+| `/` | vai para a busca do topo |
+| `M` · `K` · `P` | Mapa, Kanban, Projetos |
+| `N` | próximo tópico a fazer |
+| `J` · `L` | tópico anterior / seguinte, na ordem do caminho |
+| `1` · `2` · `3` · `4` | a fazer, em andamento, em revisão, concluído, no tópico ou projeto aberto |
+| `T` | alterna entre modo claro e escuro |
+| `?` | mostra a lista de atalhos |
+
+Em **Ajustes → Atalhos de teclado** dá para desligar as teclas de uma letra (para quem usa leitor de tela ou extensões que já usam essas teclas); `Ctrl+K` e `Esc` continuam. No celular, a busca abre pela lupa e ocupa a tela inteira.
+
 ## Notas
 
 Cada tópico e cada projeto tem um bloco **Minhas notas** no painel. É seu, não faz parte do roadmap: o comando que funcionou, o link que faltava, a dúvida que ficou, a decisão que você tomou no projeto.

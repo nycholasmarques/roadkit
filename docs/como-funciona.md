@@ -17,7 +17,7 @@ Só usa a biblioteca padrão do Python. Não tem banco de dados, não tem etapa 
 
 ## O que acontece ao abrir um roadmap
 
-1. O navegador pede o `manifest.json`. O servidor percorre `roadmaps/` (e a pasta de dados), lê o título, o ícone, a contagem de tópicos e outras coisas de cada JSON, e responde com a lista, já organizada em seções por pasta.
+1. O navegador pede o `manifest.json`. O servidor percorre `roadmaps/` (e a pasta de dados), lê o título, o ícone, a contagem de tópicos e outras coisas de cada JSON, e responde com a lista, já organizada em seções por pasta. Cada roadmap leva também um índice leve dos seus tópicos e projetos (id, título e fase ou nível), que é o que a busca do `Ctrl+K` usa para achar coisas em todos os roadmaps sem baixar cada JSON.
 2. Você escolhe um roadmap (ou a URL traz `?r=<id>`) e o navegador baixa aquele JSON.
 3. O JSON passa por uma leitura tolerante (`normalize`, em `src/app.js`): ids repetidos são ignorados, fases desconhecidas viram a primeira, ciclos de pais são cortados. A ideia é abrir mesmo um arquivo imperfeito e dizer o que estranhou no console. Quem cobra rigor é o `check`.
 4. Uma segunda coisa acontece em paralelo: o navegador pergunta ao servidor pelo progresso salvo daquele roadmap e o aplica.

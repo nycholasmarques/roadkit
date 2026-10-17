@@ -45,6 +45,24 @@ Clicking a project opens its panel, which works like a topic's:
 
 In a topic's panel, the **Projects that use this topic** section leads to the projects linked to it. Projects do not count toward the progress bar at the top: it still measures main topics, and the Projects view has its own count.
 
+## Search and keyboard shortcuts
+
+`Ctrl+K` (`⌘K` on a Mac), or the magnifier at the top, opens a search that goes anywhere: topics and projects of **every** roadmap, the roadmaps themselves and the actions (new roadmap, export, notes, switch view, toggle mode, settings). It ignores accents and case and accepts skipped letters, like "kstmz" for Kustomize. Results from the open roadmap come first, each topic with its roadmap, phase and state. `↑` `↓` pick, `Enter` opens and `Esc` closes. With an empty box, the items you opened last show up.
+
+Outside text fields, a few single-letter keys work right away:
+
+| Key | What it does |
+|---|---|
+| `/` | jumps to the search box |
+| `M` · `K` · `P` | Map, Kanban, Projects |
+| `N` | next topic to do |
+| `J` · `L` | previous / next topic, in path order |
+| `1` · `2` · `3` · `4` | to do, working, review, finished, on the open topic or project |
+| `T` | toggles light and dark mode |
+| `?` | shows the list of shortcuts |
+
+**Settings → Keyboard shortcuts** turns the single-letter keys off (for screen reader users or extensions that already use those keys); `Ctrl+K` and `Esc` keep working. On a phone, search opens from the magnifier and takes the whole screen.
+
 ## Notes
 
 Every topic and every project has a **My notes** box in its panel. It is yours, not part of the roadmap: the command that worked, the missing link, the open question, the decision you made in the project.

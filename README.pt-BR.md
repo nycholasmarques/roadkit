@@ -77,6 +77,10 @@ Um roadmap pode trazer projetos práticos do iniciante ao avançado, cada um lig
 
 Cada tópico e projeto tem um bloco de notas em Markdown, salvo no servidor e offline: o comando que funcionou, a dúvida, a decisão. A busca encontra o que você anotou, e as notas de um roadmap saem juntas em Markdown.
 
+### Ir direto ao ponto
+
+`Ctrl+K` busca qualquer tópico, projeto ou ação em todos os roadmaps, e atalhos de uma letra mudam a visualização, o tópico e o estado sem tirar a mão do teclado.
+
 ### Criar, vendo o resultado
 
 **Novo roadmap** abre um editor com o formulário de um lado e o roadmap de verdade do outro, que se desenha enquanto você escreve. Dá para montar fases, tópicos, subtópicos até dois níveis, opcionais, cores, logo e categoria. Uma linha embaixo avisa o que está errado na hora.

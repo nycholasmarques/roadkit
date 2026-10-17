@@ -783,16 +783,18 @@ const groupTitle = g => ({ roadmaps: S.L.groupMine, 'examples/pt-BR': S.L['group
 const entryById = id => S.manifest?.roadmaps.find(r => r.id === id);
 const visibleRoadmaps = () => S.manifest.roadmaps.filter(r => !r.hidden);
 
-/* How far along a roadmap is: the open one uses live state, the others the server's copy or this browser's. */
+/* The saved topic statuses of a roadmap: the open one uses live state, the others the server's copy or this browser's. */
+function savedNodes(entry) {
+  if (S.rm?.id === entry.id) return S.state.nodes;
+  const remote = S.remote?.[entry.id];
+  let local = null;
+  try { local = JSON.parse(store.get(KEY.state(entry.id)) || 'null'); } catch { /* ignore */ }
+  return (remote && remote.updatedAt >= (Number(store.get(KEY.ts(entry.id))) || 0) ? remote.nodes : local?.nodes) ?? remote?.nodes ?? {};
+}
+
+/* How far along a roadmap is. */
 function progressOf(entry) {
-  let nodes;
-  if (S.rm?.id === entry.id) nodes = S.state.nodes;
-  else {
-    const remote = S.remote?.[entry.id];
-    let local = null;
-    try { local = JSON.parse(store.get(KEY.state(entry.id)) || 'null'); } catch { /* ignore */ }
-    nodes = (remote && remote.updatedAt >= (Number(store.get(KEY.ts(entry.id))) || 0) ? remote.nodes : local?.nodes) ?? remote?.nodes ?? {};
-  }
+  const nodes = savedNodes(entry);
   const dflt = new Set(entry.doneByDefault || []);
   const total = entry.topics || 0;
   const done = (entry.coreIds || []).filter(id => (nodes[id] ?? (dflt.has(id) ? 'finished' : 'todo')) === 'finished').length;
@@ -2192,6 +2194,204 @@ function wireDnd() {
   $('detailContent').addEventListener('input', e => { if (e.target.id === 'projRepo') $('projRepoErr').hidden = true; });
 }
 
+/* ---------- command palette (Ctrl+K) and keyboard shortcuts ---------- */
+const RECENT_KEY = 'roadkit:v1:recent', KEYS_KEY = 'roadkit:v1:keys';
+const pal = { items: [], shown: [], active: 0, back: null };
+const keysOn = () => store.get(KEYS_KEY) !== 'off';
+const fold = s => str(s).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+
+/* How well a query matches a text, 0 for no match. A substring wins (more when it starts a word, more when it is
+   near the start); otherwise the letters in order inside a short stretch ("kbnt" finds "Kubernetes"), so letters
+   scattered across a long title do not count. */
+function fuzzy(q, text) {
+  if (!q) return 1;
+  const t = fold(text), i = t.indexOf(q);
+  if (i >= 0) return 1000 + (i === 0 || /[^a-z0-9]/.test(t[i - 1]) ? 500 : 0) - i - t.length / 10;
+  let best = 0;
+  for (let start = t.indexOf(q[0]); start >= 0; start = t.indexOf(q[0], start + 1)) {   // try every place the first letter appears
+    let pos = start;
+    for (const ch of q.slice(1)) { pos = t.indexOf(ch, pos + 1); if (pos < 0) break; }
+    if (pos < 0) break;
+    const span = pos - start + 1;
+    if (span <= q.length * 2 + 3) best = Math.max(best, 400 - (span - q.length) * 10 - start - t.length / 10);
+  }
+  return Math.max(0, best);
+}
+
+async function goTopic(rmId, nodeId) {
+  if (S.rm?.id !== rmId) { const e = entryById(rmId); if (!e) return; await openEntry(e); }
+  if (!S.rm?.byId[nodeId]) return;
+  if (S.view === 'projects') setView('map');
+  select(nodeId, true);
+}
+
+async function goProject(rmId, projId) {
+  if (S.rm?.id !== rmId) { const e = entryById(rmId); if (!e) return; await openEntry(e); }
+  if (!S.rm?.projById[projId]) return;
+  setView('projects');
+  selectProject(projId);
+}
+
+function toggleMode() {
+  store.set(THEME_KEY, scheme() === 'dark' ? 'light' : 'dark');
+  applyTheme();
+}
+
+function paletteActions() {
+  const L = S.L, a = (id, title, run, keys = '') => ({ kind: 'action', key: `a:${id}`, title, keys, run, words: L[`paletteWords_${id}`] || '' });
+  const list = [];
+  if (S.rm && !S.preview) {
+    list.push(a('next', L.nextTopic, next, 'N'), a('map', `${L.viewSwitch}: ${L.viewMap}`, () => setView('map'), 'M'), a('kanban', `${L.viewSwitch}: ${L.viewKanban}`, () => setView('kanban'), 'K'));
+    if (S.rm.projects.length) list.push(a('projects', `${L.viewSwitch}: ${L.viewProjects}`, () => setView('projects'), 'P'));
+    list.push(a('notes', L.notesAll, openNotes), a('export', L.exportProgress, exportBundle), a('import', L.importProgress, () => $('importFile').click()));
+  }
+  list.push(a('new', L.newRoadmap, () => openEditor()), a('manage', L.manageRoadmaps, openManage), a('theme', L.toggleMode, toggleMode, 'T'),
+    a('settings', L.settings, () => setSettingsOpen(true)), a('keys', L.shortcuts, openShortcuts, '?'));
+  return list;
+}
+
+/* Everything the palette can reach: the open roadmap (live), the others from the manifest's light index. */
+function paletteItems() {
+  const L = S.L, items = [], cur = S.rm && !S.preview && !S.isLocal ? S.rm : null;
+  const lv = l => L[`level_${l}`] || '';
+  if (cur) {
+    cur.nodes.forEach(n => items.push({ kind: 'topic', key: `t:${cur.id}:${n.id}`, here: true, title: n.title, sub: [cur.meta.title, cur.phaseById[n.phase]?.title].filter(Boolean).join(' · '), status: nodeStatus(n), run: () => goTopic(cur.id, n.id) }));
+    cur.projects.forEach(p => items.push({ kind: 'project', key: `p:${cur.id}:${p.id}`, here: true, title: p.title, sub: [cur.meta.title, lv(p.level)].join(' · '), level: p.level, status: projStatus(p), run: () => goProject(cur.id, p.id) }));
+  }
+  for (const e of visibleRoadmaps()) {
+    items.push({ kind: 'roadmap', key: `r:${e.id}`, title: e.title, sub: e.description || '', icon: e.icon, run: () => openEntry(e) });
+    if (cur?.id === e.id) continue;
+    const saved = savedNodes(e), dflt = new Set(e.doneByDefault || []);
+    (e.search?.t || []).forEach(([id, title, phase]) => items.push({ kind: 'topic', key: `t:${e.id}:${id}`, title, sub: [e.title, phase].filter(Boolean).join(' · '), status: saved[id] ?? (dflt.has(id) ? 'finished' : 'todo'), run: () => goTopic(e.id, id) }));
+    (e.search?.p || []).forEach(([id, title, level]) => items.push({ kind: 'project', key: `p:${e.id}:${id}`, title, sub: [e.title, lv(level)].join(' · '), level, run: () => goProject(e.id, id) }));
+  }
+  return [...items, ...paletteActions()];
+}
+
+const PALETTE_GROUPS = [['topic', 'paletteTopics', 8], ['project', 'viewProjects', 5], ['roadmap', 'roadmaps', 5], ['action', 'paletteActions', 6]];
+
+function readRecent() { try { const v = JSON.parse(store.get(RECENT_KEY) || '[]'); return Array.isArray(v) ? v : []; } catch { return []; } }
+
+function renderPalette() {
+  const L = S.L, q = fold($('cmdkInput').value.trim()), byKey = new Map(pal.items.map(it => [it.key, it]));
+  const sections = [];
+  if (!q) {   // nothing typed: what you opened lately, then the actions
+    const recent = readRecent().map(k => byKey.get(k)).filter(Boolean).slice(0, 6);
+    if (recent.length) sections.push([L.paletteRecent, recent]);
+    sections.push([L.paletteActions, paletteActions().slice(0, 8)]);
+  } else {
+    for (const [kind, label, max] of PALETTE_GROUPS) {
+      const found = pal.items.filter(it => it.kind === kind).map(it => { const s = Math.max(fuzzy(q, it.title), it.words ? fuzzy(q, it.words) * 0.9 : 0); return { it, s: s && s + (it.here ? 50 : 0) }; }).filter(x => x.s > 0)   // the open roadmap first, among matches only
+        .sort((a, b) => b.s - a.s).slice(0, max).map(x => x.it);
+      if (found.length) sections.push([L[label], found]);
+    }
+  }
+  pal.shown = sections.flatMap(([, list]) => list);
+  pal.active = Math.min(pal.active, Math.max(0, pal.shown.length - 1));
+  let i = -1;
+  $('cmdkList').innerHTML = pal.shown.length
+    ? sections.map(([title, list]) => `<div class="cmdk-group" role="presentation">${esc(title)}</div>` + list.map(it => {
+        i++;
+        const mark = it.kind === 'topic' ? `<span class="kdot k-${it.status || 'todo'}" aria-hidden="true"></span>`
+          : it.kind === 'project' ? `<span class="pips lv-${it.level}" aria-hidden="true"><i class="on"></i></span>`
+          : it.kind === 'roadmap' ? `<span class="cmdk-ico" aria-hidden="true">${esc(it.icon || '▦')}</span>` : `<span class="cmdk-ico" aria-hidden="true">›</span>`;
+        const state = it.status ? ` · ${L[STATUS_LABEL[it.status]]}` : '';
+        return `<div class="cmdk-opt" role="option" id="cmdk-o-${i}" data-i="${i}" aria-selected="${i === pal.active}">${mark}<span class="cmdk-txt"><span class="cmdk-t">${esc(it.title)}</span>${it.sub || state ? `<span class="cmdk-s">${esc(it.sub)}${esc(state)}</span>` : ''}</span>${it.keys ? `<kbd>${esc(it.keys)}</kbd>` : ''}</div>`;
+      }).join('')).join('')
+    : `<p class="cmdk-none">${esc(L.paletteNone)}</p>`;
+  $('cmdkInput').setAttribute('aria-activedescendant', pal.shown.length ? `cmdk-o-${pal.active}` : '');
+}
+
+function movePalette(d) {
+  if (!pal.shown.length) return;
+  pal.active = (pal.active + d + pal.shown.length) % pal.shown.length;
+  $('cmdkList').querySelectorAll('.cmdk-opt').forEach(o => o.setAttribute('aria-selected', String(Number(o.dataset.i) === pal.active)));
+  $('cmdkInput').setAttribute('aria-activedescendant', `cmdk-o-${pal.active}`);
+  $(`cmdk-o-${pal.active}`)?.scrollIntoView({ block: 'nearest' });
+}
+
+function runPalette(i = pal.active) {
+  const it = pal.shown[i];
+  if (!it) return;
+  if (it.kind !== 'action') store.set(RECENT_KEY, JSON.stringify([it.key, ...readRecent().filter(k => k !== it.key)].slice(0, 8)));
+  pal.back = null;   // the chosen item decides where the focus goes
+  $('cmdk').close();
+  it.run();
+}
+
+function openPalette() {
+  if (S.editing || !S.manifest || $('cmdk').open) return;
+  document.querySelectorAll('dialog[open]').forEach(d => d.close());
+  setSettingsOpen(false); setPicker(false);
+  pal.back = document.activeElement;
+  pal.items = paletteItems(); pal.active = 0;
+  $('cmdkInput').value = '';
+  $('cmdk').showModal();
+  renderPalette();
+  $('cmdkInput').focus();
+}
+
+/* The shortcut list, shown with "?" and from the palette. */
+const SHORTCUTS = [['Ctrl K', 'key_palette'], ['/', 'key_search'], ['M · K · P', 'key_views'], ['N', 'key_next'], ['J · L', 'key_step'], ['1 · 2 · 3 · 4', 'key_status'], ['T', 'key_theme'], ['?', 'key_help'], ['Esc', 'key_close']];
+function openShortcuts() {
+  const L = S.L, mac = /Mac|iPhone|iPad/.test(navigator.platform);
+  $('keysBody').innerHTML = `<table class="keys-table"><tbody>${SHORTCUTS.map(([k, label]) => `<tr><td>${k.split(' · ').map(x => `<kbd>${esc(mac ? x.replace('Ctrl', '⌘') : x)}</kbd>`).join(' ')}</td><td>${esc(L[label])}</td></tr>`).join('')}</tbody></table>` +
+    `<p class="dlg-note">${esc(keysOn() ? L.keysHint : L.keysOffNote)}</p>`;
+  $('keysDlg').showModal();
+}
+
+/* Previous / next topic in the order of the path, each main topic followed by its sub-topics. */
+function stepTopic(d) {
+  const list = [...S.rm.nodes].sort((a, b) => order(a) - order(b));
+  const i = list.findIndex(n => n.id === S.selected);
+  const n = list[i < 0 ? 0 : Math.min(Math.max(i + d, 0), list.length - 1)];
+  if (S.view === 'projects') setView('map');
+  select(n.id, true);
+}
+
+const typingIn = el => !!el && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName));
+
+function wirePalette() {
+  const dlg = $('cmdk'), input = $('cmdkInput');
+  input.addEventListener('input', () => { pal.active = 0; renderPalette(); $('cmdkList').scrollTop = 0; });
+  input.addEventListener('keydown', e => {
+    if (e.key === 'ArrowDown') { e.preventDefault(); movePalette(1); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); movePalette(-1); }
+    else if (e.key === 'Enter') { e.preventDefault(); runPalette(); }
+  });
+  $('cmdkList').addEventListener('mousemove', e => { const o = e.target.closest('.cmdk-opt'); if (o && Number(o.dataset.i) !== pal.active) movePalette(Number(o.dataset.i) - pal.active); });
+  $('cmdkList').addEventListener('click', e => { const o = e.target.closest('.cmdk-opt'); if (o) runPalette(Number(o.dataset.i)); });
+  dlg.addEventListener('click', e => { if (e.target === dlg || e.target.closest('#cmdkClose')) dlg.close(); });
+  dlg.addEventListener('close', () => { if (pal.back?.isConnected) pal.back.focus(); pal.back = null; });
+  $('keysDlg').addEventListener('click', e => { if (e.target === $('keysDlg') || e.target.closest('[data-close]')) $('keysDlg').close(); });
+  $('paletteBtn').addEventListener('click', openPalette);
+  $('keysSel').value = keysOn() ? 'on' : 'off';
+  $('keysSel').addEventListener('change', e => store.set(KEYS_KEY, e.target.value));
+
+  addEventListener('keydown', e => {
+    if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && e.key.toLowerCase() === 'k') {   // always on, even while typing
+      if (S.editing) return;
+      e.preventDefault();
+      if (dlg.open) dlg.close(); else openPalette();
+      return;
+    }
+    if (e.ctrlKey || e.metaKey || e.altKey || e.defaultPrevented || !keysOn() || S.editing) return;
+    if (typingIn(e.target) || document.querySelector('dialog[open]') || !$('settings').hidden) return;
+    const k = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+    if (k === '?') { e.preventDefault(); openShortcuts(); return; }
+    if (e.shiftKey || !S.rm || S.preview) return;
+    const proj = S.rm.projById[S.project], node = S.rm.byId[S.selected];
+    const act = {
+      '/': () => { $('search').focus(); $('search').select(); },
+      m: () => setView('map'), k: () => setView('kanban'), p: () => S.rm.projects.length && setView('projects'),
+      n: next, j: () => stepTopic(-1), l: () => stepTopic(1), t: toggleMode,
+    }[k];
+    const st = { 1: 'todo', 2: 'working', 3: 'review', 4: 'finished' }[k];
+    if (act) { e.preventDefault(); act(); }
+    else if (st && (proj || node)) { e.preventDefault(); if (proj) setProjectStatus(proj, st); else setNodeStatus(node, st); }
+  });
+}
+
 /* ---------- roadmap loading ---------- */
 function showMessage(title, html) {
   S.svg = null;
@@ -2488,6 +2688,7 @@ function wire() {
   wireDnd();
   wireProjects();
   wireNotesDlg();
+  wirePalette();
   wireDetailResize();
   wireSidebar();
 }
