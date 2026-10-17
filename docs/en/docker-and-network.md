@@ -35,7 +35,7 @@ docker run --rm -v roadkit_roadkit-data:/d -v "$PWD":/b alpine \
   tar czf /b/roadkit-data.tgz -C /d .
 ```
 
-The archive holds one file per roadmap with progress (`<id>.json`), the `roadmaps/` folder with what was created in the interface, and `_hidden.json` with the list of hidden roadmaps. To restore, run the same command the other way around, with `tar xzf`.
+The archive holds one file per roadmap with progress (`<id>.json`), the `roadmaps/` folder with what was created in the interface, the `notes/` folder with your notes, and `_hidden.json` with the list of hidden roadmaps. To restore, run the same command the other way around, with `tar xzf`.
 
 If you only want the progress of one roadmap, the **Export** button in the interface already does that, one at a time.
 

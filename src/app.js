@@ -10,6 +10,8 @@ const KEY = {
   ts: id => `roadkit:v2:ts:${id}`,           // when the saved progress last changed (ms), used to sync with the server
   backup: id => `roadkit:v2:backup:${id}`,   // local progress replaced by the server's, kept just in case
   view: id => `roadkit:v1:view:${id}`,
+  notes: id => `roadkit:v1:notes:${id}`,       // offline cache of the notes (the server keeps data/notes/<id>.json)
+  notesTs: id => `roadkit:v1:notes-ts:${id}`,
   last: 'roadkit:v1:last',
   token: 'roadkit:v1:token',
 };
@@ -58,12 +60,14 @@ const S = {
   manifest: null, defaults: {}, L: {}, labelCache: {},
   rm: null, localRm: null, state: { nodes: {}, tasks: {} }, view: 'map', selected: null, phase: 'all', search: '',
   links: [], legendEl: null, svg: null, warnOpen: new Set(),
+  notes: {}, notesTs: 0, noteMode: {},
 };
 
 const ICON = {
   warn: '<svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><path d="M8 2l6.5 11.5h-13z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M8 6.6v3.2M8 11.7v.1" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>',
   left: '<svg viewBox="0 0 12 12" width="10" height="10" aria-hidden="true"><path d="M7.5 2.5L4 6l3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
   right: '<svg viewBox="0 0 12 12" width="10" height="10" aria-hidden="true"><path d="M4.5 2.5L8 6l-3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  note: '<svg class="ico-note" viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><path d="M3 2.5h7l3 3v8H3z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M5.5 7.5h5M5.5 10.5h3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>',
   grip: '<svg viewBox="0 0 8 14" width="8" height="14" aria-hidden="true"><g fill="currentColor"><circle cx="2" cy="2" r="1.1"/><circle cx="6" cy="2" r="1.1"/><circle cx="2" cy="7" r="1.1"/><circle cx="6" cy="7" r="1.1"/><circle cx="2" cy="12" r="1.1"/><circle cx="6" cy="12" r="1.1"/></g></svg>',
 };
 
@@ -527,6 +531,189 @@ const pull = () => queue(async () => {
     setSyncStatus('on');
   } catch { setSyncStatus('offline'); }
 });
+
+/* ---------- notes: personal Markdown per topic, project and roadmap ----------
+   The server keeps data/notes/<id>.json; localStorage is the offline cache. Same rules as the progress:
+   each copy carries the time of its last change and the newest one wins. */
+const MAX_NOTE = 20000;
+const MD = window.RoadkitMarkdown;
+const nodeNote = n => `node:${n.id}`, projectNote = p => `project:${p.id}`, ROADMAP_NOTE = 'roadmap';
+const noteOf = key => S.notes[key] || '';
+const notesSync = { timer: 0, status: 'local' };
+
+function loadNotes(rm) {
+  let v = null;
+  try { v = JSON.parse(store.get(KEY.notes(rm.id)) || 'null'); } catch { /* corrupt entry */ }
+  S.notes = {};
+  if (v && typeof v === 'object') for (const [k, t] of Object.entries(v)) if (typeof t === 'string' && t.trim()) S.notes[k] = t.slice(0, MAX_NOTE);
+  S.notesTs = Number(store.get(KEY.notesTs(rm.id))) || 0;
+  S.noteMode = {};
+}
+
+function saveNotesLocal() {
+  if (S.preview || !S.rm) return;
+  store.set(KEY.notes(S.rm.id), JSON.stringify(S.notes));
+  store.set(KEY.notesTs(S.rm.id), String(S.notesTs));
+}
+
+function setNotesStatus(kind) {
+  notesSync.status = kind;
+  document.querySelectorAll('.note-status').forEach(el => { el.dataset.kind = kind; el.textContent = S.L[`note_${kind}`] ?? ''; });
+}
+
+/* Typing in a note: cache now, send half a second after the last key. Card markers only change when a note
+   appears or disappears. */
+function setNote(key, text) {
+  const had = !!noteOf(key);
+  text = str(text).slice(0, MAX_NOTE);
+  if (text.trim()) S.notes[key] = text; else delete S.notes[key];
+  S.notesTs = Date.now();
+  saveNotesLocal();
+  if (!syncEnabled()) setNotesStatus('local');
+  else {
+    setNotesStatus('saving');
+    clearTimeout(notesSync.timer);
+    notesSync.timer = setTimeout(() => { notesSync.timer = 0; pushNotes(); }, 600);
+  }
+  if (had !== !!noteOf(key)) { refresh(); renderBoard(); renderProjects(); renderNotesDlg(); }
+}
+
+const notesApi = (method, rm, body, keepalive = false) => apiFetch(method, `api/notes/${encodeURIComponent(rm.id)}`, body, keepalive);
+
+function adoptNotes(rm, remote) {
+  if (S.rm !== rm || !remote || typeof remote.notes !== 'object') return;
+  S.notes = {};
+  for (const [k, t] of Object.entries(remote.notes)) if (typeof t === 'string' && t.trim()) S.notes[k] = t;
+  S.notesTs = remote.updatedAt;
+  saveNotesLocal();
+  refresh(); renderBoard(); renderProjects(); renderNotesDlg();
+  if (!document.activeElement?.matches?.('.note-text')) renderDetail();   // never under the cursor of someone typing
+}
+
+const pushNotes = (keepalive = false) => queue(async () => {
+  const rm = S.rm;
+  if (!syncEnabled()) return setNotesStatus('local');
+  if (!S.notesTs) return;
+  try {
+    const r = await notesApi('PUT', rm, { updatedAt: S.notesTs, notes: S.notes }, keepalive);
+    if (r.status === 409) adoptNotes(rm, await r.json());
+    setNotesStatus(r.ok || r.status === 409 ? 'saved' : r.status === 401 ? 'auth' : [404, 405, 501].includes(r.status) ? 'local' : 'offline');
+  } catch { setNotesStatus('offline'); }
+});
+
+const pullNotes = () => queue(async () => {
+  const rm = S.rm;
+  if (!syncEnabled() || notesSync.timer) return;
+  try {
+    const r = await notesApi('GET', rm);
+    if (S.rm !== rm) return;
+    if (r.status === 204) { if (Object.keys(S.notes).length) pushNotes(); else setNotesStatus('saved'); return; }
+    if (!r.ok) return setNotesStatus(r.status === 401 ? 'auth' : [404, 405, 501].includes(r.status) ? 'local' : 'offline');
+    const remote = await r.json();
+    if (remote.updatedAt > S.notesTs) adoptNotes(rm, remote);
+    if (remote.updatedAt < S.notesTs) pushNotes(); else setNotesStatus('saved');
+  } catch { setNotesStatus('offline'); }
+});
+
+/* The notes box of a topic, a project or the roadmap: "Write" is a growing text area, "View" the rendered Markdown. */
+function noteBlock(key, title = S.L.notes) {
+  if (S.preview) return '';
+  const L = S.L, text = noteOf(key), mode = S.noteMode[key] || (text ? 'view' : 'write');
+  return `<section class="note" data-note="${esc(key)}"><div class="note-head"><h3>${ICON.note} ${esc(title)}</h3>` +
+    `<div class="seg small note-tabs" role="group" aria-label="${esc(L.notes)}"><button type="button" data-note-mode="write" aria-pressed="${mode === 'write'}">${esc(L.noteWrite)}</button><button type="button" data-note-mode="view" aria-pressed="${mode === 'view'}">${esc(L.noteView)}</button></div></div>` +
+    (mode === 'write'
+      ? `<textarea class="note-text" data-note-key="${esc(key)}" maxlength="${MAX_NOTE}" rows="3" spellcheck="true" placeholder="${esc(L.notePh)}" aria-label="${esc(L.notes)}">${esc(text)}</textarea>`
+      : `<div class="note-view md">${text ? MD.render(text) : `<p class="note-empty">${esc(L.noteEmpty)}</p>`}</div>`) +
+    `<p class="note-status" data-kind="${notesSync.status}" aria-live="polite">${esc(L[`note_${notesSync.status}`] ?? '')}</p></section>`;
+}
+
+const growNote = el => { el.style.height = 'auto'; el.style.height = `${Math.min(el.scrollHeight + 2, innerHeight * 0.7)}px`; };
+
+/* Notes boxes live in the details panel and in the notes dialog; both use these handlers. */
+function wireNotes(box, rerender) {
+  box.addEventListener('input', e => {
+    if (!e.target.matches('.note-text')) return;
+    setNote(e.target.dataset.noteKey, e.target.value);
+    growNote(e.target);
+  });
+  box.addEventListener('click', e => {
+    const mode = e.target.closest('[data-note-mode]');
+    if (mode) {
+      const key = mode.closest('[data-note]').dataset.note;
+      S.noteMode[key] = mode.dataset.noteMode;
+      rerender();
+      if (mode.dataset.noteMode === 'write') {
+        const ta = box.querySelector(`.note-text[data-note-key="${CSS.escape(key)}"]`);
+        if (ta) { ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }
+      }
+      return;
+    }
+    const tick = e.target.closest('.note-view input[data-line]');
+    if (tick) {   // a "- [ ]" ticked in the rendered view updates the text itself
+      const key = tick.closest('[data-note]').dataset.note;
+      setNote(key, MD.toggleTask(noteOf(key), Number(tick.dataset.line)));
+      rerender();
+    }
+  });
+}
+
+/* The notes dialog: the roadmap's general note, then every topic and project note in roadmap order. */
+function notedItems() {
+  const rm = S.rm;
+  if (!rm) return [];
+  return [
+    ...rm.nodes.filter(n => noteOf(nodeNote(n))).sort((a, b) => order(a) - order(b)).map(n => ({ key: nodeNote(n), title: n.title, kind: 'node', id: n.id })),
+    ...rm.projects.filter(p => noteOf(projectNote(p))).map(p => ({ key: projectNote(p), title: p.title, kind: 'project', id: p.id, level: p.level })),
+  ];
+}
+/* main topics in path order, each followed by its sub-topics */
+const order = n => { const root = n.parent ? (function up(x) { return x.parent ? up(x.parent) : x; })(n) : n; return root.num * 1000 + S.rm.nodes.indexOf(n); };
+
+function renderNotesDlg() {
+  if (!$('notesDlg').open || !S.rm) return;
+  const L = S.L, items = notedItems();
+  $('notesBody').innerHTML = noteBlock(ROADMAP_NOTE, L.notesRoadmap) +
+    (items.length
+      ? items.map(it => `<article class="note-entry"><button type="button" class="note-go" data-${it.kind === 'node' ? 'goto' : 'project'}="${esc(it.id)}">${it.kind === 'project' ? `<span class="pj-lv lv-${it.level}">${esc(L.viewProjects)}</span> ` : ''}${esc(it.title)}</button><div class="md">${MD.render(noteOf(it.key))}</div></article>`).join('')
+      : `<p class="dlg-note">${esc(L.notesNone)}</p>`);
+  $('notesBody').querySelectorAll('.note-text').forEach(growNote);
+}
+
+function openNotes() {
+  if (!S.rm || S.preview) return;
+  $('notesTitle').textContent = `${S.L.notesAll} · ${S.rm.meta.title}`;
+  $('notesDlg').showModal();
+  renderNotesDlg();
+}
+
+/* Everything in one Markdown text, to paste into Obsidian, a README or an issue. */
+function notesMarkdown() {
+  const L = S.L, parts = [`# ${S.rm.meta.title}`];
+  if (noteOf(ROADMAP_NOTE)) parts.push(`## ${L.notesRoadmap}\n\n${noteOf(ROADMAP_NOTE).trim()}`);
+  for (const it of notedItems()) parts.push(`## ${it.title}\n\n${noteOf(it.key).trim()}`);
+  return parts.join('\n\n') + '\n';
+}
+
+function wireNotesDlg() {
+  const dlg = $('notesDlg');
+  wireNotes($('notesBody'), renderNotesDlg);
+  wireNotes($('detailContent'), renderDetail);
+  dlg.addEventListener('click', e => {
+    if (e.target === dlg || e.target.closest('[data-close]')) return dlg.close();
+    const go = e.target.closest('.note-go');
+    if (go) {
+      dlg.close();
+      if (go.dataset.goto) { if (S.view === 'projects') setView('map'); select(go.dataset.goto, true); }
+      else { setView('projects'); selectProject(go.dataset.project); }
+    }
+  });
+  $('notesCopy').addEventListener('click', async () => {
+    const t = notesMarkdown();
+    try { await navigator.clipboard.writeText(t); } catch { prompt('', t); return; }
+    $('notesCopy').textContent = S.L.notesCopied; setTimeout(() => { $('notesCopy').textContent = S.L.notesCopy; }, 1500);
+  });
+  dlg.addEventListener('close', () => renderDetail());   // the panel shows the same notes
+}
 
 /* ---------- labels / chrome ---------- */
 async function loadLabels(lang) {
@@ -1484,8 +1671,10 @@ function addLine(d, optional, a, b) {
 }
 
 /* ---------- state refresh ---------- */
+/* The search box also looks inside your notes. */
+const noteHas = (key, q) => noteOf(key).toLocaleLowerCase().includes(q);
 function dimmed(n) {
-  return (S.phase !== 'all' && n.phase !== S.phase) || !!(S.search && !n.hay.includes(S.search));
+  return (S.phase !== 'all' && n.phase !== S.phase) || !!(S.search && !n.hay.includes(S.search) && !noteHas(nodeNote(n), S.search));
 }
 
 function refresh() {
@@ -1498,6 +1687,7 @@ function refresh() {
     n.el.classList.toggle('st-review', st === 'review');
     n.el.classList.toggle('selected', S.selected === n.id);
     n.el.classList.toggle('dimmed', dimmed(n));
+    n.el.classList.toggle('has-note', !!noteOf(nodeNote(n)));
     n.el.setAttribute('aria-label', `${n.title}, ${L[STATUS_LABEL[st]]}`);
     n.el.querySelector('.node-check').setAttribute('aria-pressed', String(done));
     if (n.metaEl) n.metaEl.textContent = metaText(n);
@@ -1547,7 +1737,7 @@ function renderBoard() {
       return `<div class="kcard${S.selected === n.id ? ' selected' : ''}" data-drag data-node="${esc(n.id)}" tabindex="0" style="--flag:${ph.color}">` +
         `<span class="grip">${ICON.grip}</span>` +
         `<div class="kc-top">${rm.hasPhases && ph.title ? `<span class="kc-phase">${esc(ph.title)}</span>` : ''}${n.optional ? `<span class="kc-opt">${esc(L.optionalTag)}</span>` : ''}${n.parent && !n.optional ? `<span class="kc-sub">↳ ${esc(n.parent.title)}</span>` : ''}${miss ? `<button type="button" class="kc-warn${open ? ' on' : ''}" data-warn aria-expanded="${open}" aria-label="${esc(L.skipWarnLabel)}" title="${esc(L.skipWarnLabel)}">${ICON.warn}</button>` : ''}</div>` +
-        `<div class="kc-title">${esc(n.title)}</div>` + (open ? skipNote(miss) : '') +
+        `<div class="kc-title">${esc(n.title)}${noteOf(nodeNote(n)) ? `<span class="has-note-ico" title="${esc(L.noteHas)}">${ICON.note}</span>` : ''}</div>` + (open ? skipNote(miss) : '') +
         (n.time ? `<div class="kc-time">${esc(n.time)}</div>` : '') +
         (tot ? `<div class="kc-prog"><span class="kc-bar"><i style="width:${Math.round(fin / tot * 100)}%"></i></span><span>${fin}/${tot}</span></div>` : '') +
         moveButtons(i) + `</div>`;
@@ -1580,7 +1770,7 @@ function projectCard(p) {
   return `<button type="button" class="pj-card lv-${p.level} s-${st}${S.project === p.id ? ' selected' : ''}" data-project="${esc(p.id)}">` +
     `<span class="pj-top"><span class="pj-status s-${st}">${esc(L[STATUS_LABEL[st]])}</span>${ready ? `<span class="pj-ready">${esc(L.projectReady)}</span>` : ''}` +
     (p.stretch.length ? `<span class="pj-fire${stretchCount(p) ? ' lit' : ''}" title="${esc(L.stretch)}">🔥 ${stretchCount(p)}/${p.stretch.length}</span>` : '') + `</span>` +
-    `<span class="pj-title">${esc(p.title)}</span>` +
+    `<span class="pj-title">${esc(p.title)}${noteOf(projectNote(p)) ? `<span class="has-note-ico" title="${esc(L.noteHas)}">${ICON.note}</span>` : ''}</span>` +
     (p.summary ? `<span class="pj-sum">${esc(p.summary)}</span>` : '') +
     (p.uses.length ? `<span class="pj-uses">${p.uses.map(n => `<span class="pj-use${isDone(n) ? ' ok' : ''}">${esc(n.title)}</span>`).join('')}</span>` : '') +
     (tot ? `<span class="kc-prog"><span class="kc-bar"><i style="width:${Math.round(fin / tot * 100)}%"></i></span><span>${fin}/${tot}</span></span>` : '') +
@@ -1591,7 +1781,7 @@ function renderProjects() {
   if (S.view !== 'projects' || !S.rm) return;
   const { rm, L } = S, done = rm.projects.filter(projDone).length;
   if (!LEVELS.includes(S.projLevel)) S.projLevel = LEVELS.find(lv => rm.projects.some(p => p.level === lv)) || LEVELS[0];
-  const shown = rm.projects.filter(p => (!S.readyOnly || (projReady(p) && !projDone(p))) && (!S.search || p.hay.includes(S.search)));
+  const shown = rm.projects.filter(p => (!S.readyOnly || (projReady(p) && !projDone(p))) && (!S.search || p.hay.includes(S.search) || noteHas(projectNote(p), S.search)));
   $('projects').innerHTML =
     `<div class="pj-head"><p class="pj-count">${esc(fmt(L.projectsDone, { done, total: rm.projects.length }))}</p>` +
     `<label class="pj-filter"><input type="checkbox" data-ready-only${S.readyOnly ? ' checked' : ''}> ${esc(L.projectsReadyOnly)}</label></div>` +
@@ -1625,7 +1815,18 @@ function selectProject(id, { drawer = true } = {}) {
 }
 
 /* ---------- details panel, with the per-card task kanban ---------- */
+/* Redraws the panel; someone typing in a note keeps their cursor and scroll. */
 function renderDetail() {
+  const ta = document.activeElement?.matches?.('#detailContent .note-text') ? document.activeElement : null;
+  const keep = ta && { key: ta.dataset.noteKey, a: ta.selectionStart, b: ta.selectionEnd, top: $('detail').scrollTop };
+  drawDetail();
+  $('detailContent').querySelectorAll('.note-text').forEach(growNote);
+  if (!keep) return;
+  const again = $('detailContent').querySelector(`.note-text[data-note-key="${CSS.escape(keep.key)}"]`);
+  if (again) { again.focus(); again.setSelectionRange(keep.a, keep.b); $('detail').scrollTop = keep.top; }
+}
+
+function drawDetail() {
   if (!S.rm) return;
   const { rm, L } = S, box = $('detailContent'), n = rm.byId[S.selected], proj = rm.projById[S.project];
   if (proj) return renderProjectDetail(proj);
@@ -1664,6 +1865,7 @@ function renderDetail() {
     (n.challenge ? `<h3>${esc(L.challenge)}</h3><div class="mission">${esc(n.challenge)}</div>` : '') +
     tasks +
     (n.success ? `<h3>${esc(L.success)}</h3><p>${esc(n.success)}</p>` : '') +
+    noteBlock(nodeNote(n)) +
     projects +
     linkList(n.links) +
     `<button class="complete-action ${done ? 'done' : ''}" id="completeAction">${esc(done ? L.markUndone : L.markDone)}</button><p class="small-note">${esc(L.doneHint)}</p>`;
@@ -1694,6 +1896,7 @@ function renderProjectDetail(p) {
       ? `<h3 class="stretch-h"><span aria-hidden="true">🔥</span> ${esc(L.stretch)} <span class="h3-count">${stretchCount(p)}/${p.stretch.length}</span></h3><p class="stretch-hint">${esc(L.stretchHint)}</p>` +
         `<div class="stretchlist">${p.stretch.map(s => `<label class="stretch-item"><input type="checkbox" data-stretch="${esc(s.id)}"${stretchDone(p, s) ? ' checked' : ''}><span>${esc(s.title)}</span><b class="flame" aria-hidden="true">🔥</b></label>`).join('')}</div>`
       : '') +
+    noteBlock(projectNote(p)) +
     `<h3><label for="projRepo">${esc(L.yourRepo)}</label></h3><div class="repo-row"><input type="url" id="projRepo" inputmode="url" autocomplete="off" spellcheck="false" maxlength="${MAX_REPO_URL}" value="${esc(repo)}" placeholder="${esc(L.yourRepoPh)}">` +
     (repo ? `<a class="repo-open" href="${esc(safeUrl(repo))}" target="_blank" rel="noopener noreferrer" title="${esc(L.repoOpen)}" aria-label="${esc(L.repoOpen)}">↗</a>` : '') + `</div>` +
     `<p class="repo-err" id="projRepoErr" role="alert" hidden>${esc(L.repoInvalid)}</p>` +
@@ -2011,7 +2214,10 @@ async function setRoadmap(rm, { local = false, keep = false, preview = false } =
   S.preview = preview;
   if (local) S.localRm = rm;
   if (!(keep && preview)) loadState(rm);
+  if (!keep) loadNotes(rm);
   clearTimeout(sync.timer); sync.timer = 0;
+  if (notesSync.timer) { clearTimeout(notesSync.timer); notesSync.timer = 0; }
+  setNotesStatus(local || preview ? 'local' : 'saved');
   setSyncStatus('local');
   if (keep) {
     if (S.project && !rm.projById[S.project]) S.project = null;
@@ -2036,7 +2242,7 @@ async function setRoadmap(rm, { local = false, keep = false, preview = false } =
   const relayout = () => { if (S.rm === rm && S.svg && S.view === 'map') layout(); };
   requestAnimationFrame(relayout);
   document.fonts?.ready.then(relayout);
-  if (!preview) pull();
+  if (!preview) { pull(); pullNotes(); }
 }
 
 /* Builds a roadmap from its JSON text, keeping the text and file name for export. */
@@ -2144,7 +2350,18 @@ function exportBundle() {
   download(makeZip([
     { name: dir + (rm.fileName || `${rm.id}.json`), data: enc.encode(source) },
     { name: dir + 'progress.json', data: enc.encode(JSON.stringify(progressDoc(rm), null, 2) + '\n') },
+    ...(Object.keys(S.notes).length ? [{ name: dir + 'notes.json', data: enc.encode(JSON.stringify({ roadmap: rm.id, version: 1, exportedAt: new Date().toISOString(), notes: S.notes }, null, 2) + '\n') }] : []),
   ]), `${rm.id}.zip`);
+}
+
+/* notes.json from an export: keeps only valid keys and text, and replaces this roadmap's notes. */
+function importNotes(obj) {
+  const notes = {};
+  for (const [k, t] of Object.entries(obj?.notes || {})) if (/^(roadmap|node:[\w.-]{1,100}|project:[\w.-]{1,100})$/.test(k) && typeof t === 'string' && t.trim()) notes[k] = t.slice(0, MAX_NOTE);
+  S.notes = notes; S.notesTs = Date.now();
+  saveNotesLocal();
+  refresh(); renderBoard(); renderProjects(); renderDetail();
+  if (syncEnabled()) pushNotes();
 }
 
 /* Progress file -> state for this roadmap. Version 2 is { nodes, tasks }; version 1 was { id: true }. */
@@ -2160,7 +2377,8 @@ const looksLikeRoadmap = o => o && typeof o === 'object' && Array.isArray(o.node
 async function importZip(buf) {
   const dec = new TextDecoder(), files = await readZip(buf);
   const progFile = files.find(f => /(^|\/)progress\.json$/i.test(f.name));
-  const rmFile = files.find(f => f !== progFile && /\.json$/i.test(f.name) && !/(^|\/)_section\.json$/i.test(f.name));
+  const notesFile = files.find(f => /(^|\/)notes\.json$/i.test(f.name));
+  const rmFile = files.find(f => f !== progFile && f !== notesFile && /\.json$/i.test(f.name) && !/(^|\/)_section\.json$/i.test(f.name));
   if (!rmFile && !progFile) throw new Error('no roadmap or progress inside the zip');
   let local = false;
   if (rmFile) {
@@ -2176,6 +2394,7 @@ async function importZip(buf) {
     S.state = progressToState(S.rm, obj);
     changed();
   }
+  if (notesFile) importNotes(JSON.parse(dec.decode(notesFile.data)));
   alert(local ? S.L.importOkLocal : S.L.importOk);
 }
 
@@ -2213,7 +2432,7 @@ function wire() {
   document.addEventListener('click', e => {
     const act = e.target.closest('[data-act]');
     if (act) {
-      ({ export: exportBundle, import: () => $('importFile').click(), open: () => $('openFile').click(), reset: resetProgress, new: () => openEditor(), manage: openManage })[act.dataset.act]?.();
+      ({ export: exportBundle, import: () => $('importFile').click(), open: () => $('openFile').click(), reset: resetProgress, new: () => openEditor(), manage: openManage, notes: openNotes })[act.dataset.act]?.();
       setSettingsOpen(false);
     } else if (!$('settings').hidden && !e.target.closest('#settings, #settingsBtn')) setSettingsOpen(false);
   });
@@ -2260,12 +2479,15 @@ function wire() {
     if (f && !S.editing) openLocalFile(f);
   });
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'hidden') { if (sync.timer) { clearTimeout(sync.timer); sync.timer = 0; push(true); } }
-    else pull();
+    if (document.visibilityState === 'hidden') {
+      if (sync.timer) { clearTimeout(sync.timer); sync.timer = 0; push(true); }
+      if (notesSync.timer) { clearTimeout(notesSync.timer); notesSync.timer = 0; pushNotes(true); }
+    } else { pull(); pullNotes(); }
   });
-  addEventListener('online', () => { if (sync.status === 'offline') pull(); });
+  addEventListener('online', () => { if (sync.status === 'offline') pull(); if (notesSync.status === 'offline') pullNotes(); });
   wireDnd();
   wireProjects();
+  wireNotesDlg();
   wireDetailResize();
   wireSidebar();
 }

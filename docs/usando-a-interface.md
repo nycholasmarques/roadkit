@@ -45,6 +45,18 @@ Clicar num projeto abre o painel dele, com o mesmo jeito do painel de um tópico
 
 No painel de um tópico, a seção **Projetos que usam este tópico** leva aos projetos ligados a ele. Os projetos não entram na barra de progresso do topo: ela continua medindo os tópicos principais, e a tela de projetos tem a própria contagem.
 
+## Notas
+
+Cada tópico e cada projeto tem um bloco **Minhas notas** no painel. É seu, não faz parte do roadmap: o comando que funcionou, o link que faltava, a dúvida que ficou, a decisão que você tomou no projeto.
+
+- **Escrever** abre uma caixa de texto que cresce com o conteúdo. O texto é salvo sozinho, meio segundo depois de você parar de digitar, e uma linha embaixo diz se foi para o servidor ("Salvo") ou ficou só no navegador. Sem servidor, nada se perde: a nota sobe quando ele voltar.
+- **Ver** mostra o texto formatado. Aceita o básico de Markdown: títulos (`#`), **negrito**, *itálico*, listas, `código`, blocos de código, citações, links e caixas `- [ ]`, que dá para marcar ali mesmo.
+- Tópicos e projetos com notas ganham um ícone no cartão, no mapa, no kanban e na tela de projetos.
+- A busca do topo também procura dentro das notas.
+- **Notas do roadmap**, nas ferramentas da barra lateral, junta tudo numa tela: uma nota geral do roadmap no topo e, embaixo, as notas de cada tópico e projeto, em ordem, com um atalho para cada um. **Copiar tudo em Markdown** leva o conjunto para o Obsidian, um README ou um issue.
+
+As notas vão junto no **Exportar** (um `notes.json` dentro do zip) e voltam no **Importar**. Reiniciar as marcações não apaga as notas; excluir um roadmap com "apagar o progresso e as notas" apaga.
+
 ## Como o progresso é contado
 
 Só os tópicos principais contam na barra de progresso do topo. Os outros níveis têm regras próprias:

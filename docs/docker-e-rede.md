@@ -35,7 +35,7 @@ docker run --rm -v roadkit_roadkit-data:/d -v "$PWD":/b alpine \
   tar czf /b/roadkit-dados.tgz -C /d .
 ```
 
-Dentro do zip fica um arquivo por roadmap com progresso (`<id>.json`), a pasta `roadmaps/` com o que foi criado na interface, e o `_hidden.json` com a lista dos ocultos. Para restaurar, o mesmo comando ao contrário, com `tar xzf`.
+Dentro do zip fica um arquivo por roadmap com progresso (`<id>.json`), a pasta `roadmaps/` com o que foi criado na interface, a pasta `notes/` com as suas notas, e o `_hidden.json` com a lista dos ocultos. Para restaurar, o mesmo comando ao contrário, com `tar xzf`.
 
 Se você prefere só o progresso de um roadmap, o botão **Exportar** da interface já faz isso, de um em um.
 

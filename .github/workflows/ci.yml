@@ -72,6 +72,8 @@ jobs:
       - name: JavaScript and Python parse
         run: |
           node --check src/app.js
+          node --check src/markdown.js
+          node tools/markdown.test.cjs
           python3 -m py_compile tools/roadkit.py
 
       - name: Server smoke test
@@ -99,8 +101,18 @@ jobs:
           curl -sf -X PUT -H "$H" -d '{"updatedAt": 3, "state": {"nodes": {}, "tasks": {}}}' http://127.0.0.1:8765/api/state/ci-smoke
           curl -sf http://127.0.0.1:8765/api/state/ci-smoke | python3 -c "import json,sys; s=json.load(sys.stdin)['state']; assert s['projects']['p1']['status']=='working' and s['projects']['p1']['stretch']=={'s': True} and s['nodes']=={}, s"
           test "$(curl -s -o /dev/null -w '%{http_code}' -X PUT -H "$H" -d '{"updatedAt": 4, "state": {"projects": {"p1": {"repo": "javascript:alert(1)"}}}}' http://127.0.0.1:8765/api/state/ci-smoke)" = 400
+
+          # notes: saved and read back, empty ones dropped, size and key limits, newer server copy wins
+          curl -sf -X PUT -H "$H" -d '{"updatedAt": 5, "notes": {"node:first": "# Hi\n<script>x</script>", "roadmap": "general", "node:other": "  "}}' http://127.0.0.1:8765/api/notes/ci-smoke
+          curl -sf http://127.0.0.1:8765/api/notes/ci-smoke | python3 -c "import json,sys; n=json.load(sys.stdin)['notes']; assert n=={'node:first': '# Hi\n<script>x</script>', 'roadmap': 'general'}, n"
+          python3 -c "import json; print(json.dumps({'updatedAt': 6, 'notes': {'node:first': 'x' * 20001}}))" > /tmp/long.json
+          test "$(curl -s -o /dev/null -w '%{http_code}' -X PUT -H "$H" --data-binary @/tmp/long.json http://127.0.0.1:8765/api/notes/ci-smoke)" = 400
+          test "$(curl -s -o /dev/null -w '%{http_code}' -X PUT -H "$H" -d '{"updatedAt": 6, "notes": {"../x": "y"}}' http://127.0.0.1:8765/api/notes/ci-smoke)" = 400
+          test "$(curl -s -o /dev/null -w '%{http_code}' -X PUT -H "$H" -d '{"updatedAt": 1, "notes": {}}' http://127.0.0.1:8765/api/notes/ci-smoke)" = 409
+
           curl -sf -X DELETE "http://127.0.0.1:8765/api/roadmaps/ci-smoke?progress=1"
           test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8765/api/state/ci-smoke)" = 204
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8765/api/notes/ci-smoke)" = 204
           # writes from another origin are refused
           test "$(curl -s -o /dev/null -w '%{http_code}' -X PUT -H "$H" -H 'Origin: http://evil.example' -d '{}' http://127.0.0.1:8765/api/state/x)" = 403
           # the data folder and the server code are never served as files, however the path is spelled

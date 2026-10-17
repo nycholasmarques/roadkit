@@ -58,6 +58,14 @@ Quem decide a seção de um roadmap é a pasta. No editor, o campo Categoria esc
 
 Os ocultos são só uma lista de ids em `data/_hidden.json`. Ocultar não apaga nem mexe no arquivo.
 
+## Onde as notas são guardadas
+
+As notas ficam fora do arquivo de progresso, em `data/notes/<id>.json`, porque o progresso é regravado a cada clique e um texto grande deixaria cada gravação pesada. O arquivo tem a hora da última alteração e um mapa de notas: `roadmap` para a nota geral, `node:<id>` para um tópico e `project:<id>` para um projeto. A sincronização é a mesma do progresso: o navegador guarda uma cópia, a versão mais nova vence, e nada se perde se o servidor cair.
+
+O texto das notas nunca vira HTML: o renderizador em `src/markdown.js` escapa tudo antes de formatar e só aceita links `http(s)`. Ele tem testes próprios (`node tools/markdown.test.cjs`), que rodam no CI.
+
+Nada dentro de `data/` é servido como arquivo comum: só pela API, que exige o token quando ele está ligado.
+
 ## A API
 
 Tudo o que a interface pede ao servidor está abaixo. Pode ser útil para scripts, e é o que a skill do Claude Code usa quando precisa gravar no volume.
@@ -68,6 +76,8 @@ Tudo o que a interface pede ao servidor está abaixo. Pode ser útil para script
 | `GET /api/state/<id>` | o progresso salvo de um roadmap (`204` se não houver) |
 | `PUT /api/state/<id>` | grava o progresso, ou devolve `409` com o que o servidor tem se for mais novo. As partes do progresso que o cliente não mandar ficam como estavam, então uma versão antiga, que só conhece tópicos e tarefas, não apaga os projetos |
 | `GET /api/states` | o resumo de todos, para os selos de andamento |
+| `GET /api/notes/<id>` | as notas de um roadmap (`204` se não houver) |
+| `PUT /api/notes/<id>` | grava as notas, com a mesma regra do progresso (`409` se o servidor tiver uma versão mais nova). Cada nota tem até 20 mil caracteres |
 | `POST /api/validate` | valida um JSON de roadmap sem gravar |
 | `POST /api/roadmaps?category=` | cria um roadmap (`categoryTitle=` dá o nome de uma categoria nova) |
 | `PUT /api/roadmaps/<id>?category=` | substitui um roadmap criado pela interface, e troca de categoria se mudar o parâmetro |

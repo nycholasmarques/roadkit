@@ -35,6 +35,9 @@ HIDDEN_FILE = DATA_DIR / "_hidden.json"                           # ids hidden f
 LOCK = threading.Lock()
 STATE_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$")
 MAX_STATE_BYTES = 1_000_000
+NOTES_DIR = DATA_DIR / "notes"                                    # personal notes, one JSON per roadmap
+NOTE_KEY = re.compile(r"^(roadmap|node:[A-Za-z0-9._-]{1,100}|project:[A-Za-z0-9._-]{1,100})$")
+MAX_NOTE_CHARS = 20_000
 
 SLUG = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 HEX = re.compile(r"^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$")
@@ -571,6 +574,15 @@ def valid_state(obj):
     return all(isinstance(v, dict) for v in st.values())
 
 
+def valid_notes(obj):
+    """Notes payload: {"updatedAt": ms, "notes": {"roadmap" | "node:<id>" | "project:<id>": markdown}}."""
+    if not isinstance(obj, dict) or not isinstance(obj.get("updatedAt"), (int, float)):
+        return False
+    notes = obj.get("notes")
+    return isinstance(notes, dict) and all(
+        isinstance(k, str) and NOTE_KEY.match(k) and isinstance(v, str) and len(v) <= MAX_NOTE_CHARS for k, v in notes.items())
+
+
 class ApiError(Exception):
     def __init__(self, code, body):
         self.code, self.body = code, body
@@ -748,6 +760,37 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             write_json(f, out)
         return 200, out
 
+    # -- notes: GET/PUT /api/notes/<id>, the same sync rules as the progress, in a file of their own --
+    def notes_file(self, rid):
+        if not STATE_ID.match(rid or ""):
+            raise ApiError(404, {"error": "unknown roadmap id"})
+        return NOTES_DIR / f"{rid}.json"
+
+    def notes_get(self, rid, query):
+        f = self.notes_file(rid)
+        try:
+            return 200, json.loads(f.read_text("utf-8"))
+        except FileNotFoundError:
+            return 204, None
+        except ValueError:
+            raise ApiError(500, {"error": "saved notes are unreadable"})
+
+    def notes_put(self, rid, query):
+        f = self.notes_file(rid)
+        incoming = self.read_json()   # the body limit (1 MB) also caps the notes of one roadmap
+        if not valid_notes(incoming):
+            raise ApiError(400, {"error": f"invalid notes payload (each note up to {MAX_NOTE_CHARS} characters)"})
+        with LOCK:
+            try:
+                current = json.loads(f.read_text("utf-8"))
+            except (OSError, ValueError):
+                current = None
+            if valid_notes(current) and current["updatedAt"] > incoming["updatedAt"]:
+                return 409, current
+            out = {"updatedAt": incoming["updatedAt"], "notes": {k: v for k, v in incoming["notes"].items() if v.strip()}}
+            write_json(f, out)
+        return 200, out
+
     def states_get(self, _, query):
         out = {}
         for f in DATA_DIR.glob("*.json") if DATA_DIR.is_dir() else []:
@@ -816,11 +859,12 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             raise ApiError(405 if rid in known_ids() else 404, {"error": "only roadmaps created in the interface can be deleted; hide the others"})
         with LOCK:
             f.unlink()
-            if query.get("progress", [""])[0] == "1":
-                try:
-                    self.state_file(rid).unlink()
-                except (FileNotFoundError, ApiError):
-                    pass
+            if query.get("progress", [""])[0] == "1":   # the progress and the notes go together
+                for path in (self.state_file, self.notes_file):
+                    try:
+                        path(rid).unlink()
+                    except (FileNotFoundError, ApiError):
+                        pass
             hidden = read_hidden()
             if rid in hidden:
                 write_json(HIDDEN_FILE, sorted(hidden - {rid}))
@@ -840,6 +884,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 ROUTES = [
     (r"/api/state/([^/]+)", {"GET": "state_get", "PUT": "state_put"}),
     (r"/api/states", {"GET": "states_get"}),
+    (r"/api/notes/([^/]+)", {"GET": "notes_get", "PUT": "notes_put"}),
     (r"/api/validate", {"POST": "roadmap_validate"}),
     (r"/api/roadmaps", {"POST": "roadmap_create"}),
     (r"/api/roadmaps/([^/]+)", {"PUT": "roadmap_update", "DELETE": "roadmap_delete"}),

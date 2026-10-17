@@ -45,6 +45,18 @@ Clicking a project opens its panel, which works like a topic's:
 
 In a topic's panel, the **Projects that use this topic** section leads to the projects linked to it. Projects do not count toward the progress bar at the top: it still measures main topics, and the Projects view has its own count.
 
+## Notes
+
+Every topic and every project has a **My notes** box in its panel. It is yours, not part of the roadmap: the command that worked, the missing link, the open question, the decision you made in the project.
+
+- **Write** opens a text box that grows with its content. The text saves itself half a second after you stop typing, and a line below says whether it reached the server ("Saved") or stayed in the browser. Without a server nothing is lost: the note goes up when it comes back.
+- **View** shows the formatted text. It supports basic Markdown: headings (`#`), **bold**, *italics*, lists, `code`, code blocks, quotes, links and `- [ ]` checkboxes, which you can tick right there.
+- Topics and projects with notes get an icon on their card, on the map, the kanban and the Projects view.
+- The search box at the top also looks inside your notes.
+- **Roadmap notes**, in the sidebar tools, gathers everything in one screen: a general note for the roadmap at the top and, below it, the notes of each topic and project in order, with a shortcut to each one. **Copy all as Markdown** takes the whole set to Obsidian, a README or an issue.
+
+Notes go along with **Export** (a `notes.json` inside the zip) and come back with **Import**. Resetting checkmarks does not erase notes; deleting a roadmap with "erase progress and notes" does.
+
 ## How progress is counted
 
 Only main topics count toward the progress bar at the top. The other levels have their own rules:
