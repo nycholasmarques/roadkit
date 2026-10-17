@@ -1,123 +1,125 @@
 # Changelog
 
-Todas as mudanças relevantes ficam aqui, da mais nova para a mais antiga. O formato segue o [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e as versões seguem o [versionamento semântico](https://semver.org/lang/pt-BR/).
+Every notable change lives here, newest first. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versions follow [semantic versioning](https://semver.org/).
 
-Cada release no GitHub também lista automaticamente os commits desde a versão anterior; este arquivo é onde ficam os destaques escritos à mão. Para publicar uma versão, veja [`docs/publicando-versoes.md`](docs/publicando-versoes.md).
+Each GitHub release also lists the commits since the previous version on its own; this file is where the hand-written highlights go. To publish a version, see [`docs/en/releasing.md`](docs/en/releasing.md).
 
-## [1.7.0] - não lançada
+## [1.7.0] - 2026-10-17
 
-### Tela Hoje
-- Uma tela **Hoje**, no topo da barra lateral (ou a tecla `H`), que junta todos os roadmaps: **Continuar** traz os tópicos e projetos em andamento ou em revisão, do que você mexeu por último para o mais antigo, e **A seguir** traz o próximo tópico de cada roadmap usado nos últimos 30 dias, com andamento e prazo.
-- **Ajustes → Ao abrir** faz o Roadkit abrir direto na tela Hoje. Ela também está na busca (`Ctrl+K`) e na lista de atalhos.
-- Clicar numa fase da jornada sai da tela Hoje e leva para a fase.
+### Today screen
+- A **Today** screen, at the top of the sidebar (or the `H` key), gathers every roadmap. **Continue** lists the topics and projects in progress or in review, the one you touched last first. **Up next** shows the next topic of each roadmap used in the last 30 days, with progress and due date.
+- **Settings → On open** makes Roadkit open straight on the Today screen. It is also in the search (`Ctrl+K`) and in the shortcut list.
+- Clicking a phase of the journey leaves the Today screen and goes to that phase.
 
-### Atalhos à vista
-- No computador, os botões com atalho mostram a tecla ao lado: `H` em Hoje, `N` em Próximo tópico, `M` `K` `P` nas visualizações, `Ctrl K` (ou `⌘K`) na busca e `Esc` no botão de voltar da tela Hoje. Somem com os atalhos de uma letra desligados e no celular.
+### Shortcuts in sight
+- On a computer, buttons with a shortcut show the key next to them: `H` on Today, `N` on Next topic, `M` `K` `P` on the views, `Ctrl K` (or `⌘K`) on the search and `Esc` on the Today screen's back button. They go away when single-letter shortcuts are off, and on phones.
 
-### Atividade
-- O servidor passa a guardar quando cada tópico começou, foi concluído e foi mexido por último, e quanto você fez em cada dia, em `data/activity/<id>.json`. O arquivo tem tamanho limitado (dois anos de totais por dia; o resto vira totais por mês) e é escrito pelo próprio servidor a partir das mudanças de progresso, no fuso de quem fez a mudança.
-- Rotas novas: `GET /api/activity` e `GET /api/activity/<id>`. O `GET /api/states` também traz as tarefas, os projetos e as datas. Excluir um roadmap com o progresso leva a atividade junto.
+### Activity
+- The server now records when each topic started, was finished and was last touched, and how much you did each day, in `data/activity/<id>.json`. The file has a bounded size: two years of daily totals, with older days folded into monthly totals. The server writes it from the progress changes, on the time zone of whoever made the change.
+- New routes: `GET /api/activity` and `GET /api/activity/<id>`. `GET /api/states` also returns tasks, projects and dates. Deleting a roadmap along with its progress removes its activity too.
 
 ## [1.6.0] - 2026-10-17
 
-### App instalável e offline
-- O Roadkit virou um app instalável (PWA): ícone próprio, janela sem a barra do navegador e **Ajustes → Instalar como app**.
-- Depois de aberto uma vez, ele **abre sem internet**, com a interface e uma cópia de todos os roadmaps da lista, mesmo os que você nunca abriu naquele aparelho. Progresso e notas feitos offline sobem quando a conexão volta.
-- Quando sai uma versão nova, uma faixa oferece **Recarregar**; o app nunca recarrega sozinho.
-- A API nunca vem de cache, e a página exportada para compartilhar continua sendo um arquivo único, sem service worker.
+### Installable and offline
+- Roadkit is now an installable app (PWA): its own icon, a window without the browser bar, and **Settings → Install as an app**.
+- Once opened, it **works with no internet**, with the interface and a copy of every roadmap in the list, even the ones you never opened on that device. Progress and notes made offline go up when the connection returns.
+- When a new version is out, a bar offers **Reload**; the app never reloads on its own.
+- The API is never served from cache, and the exported page to share is still a single file, with no service worker.
 
-### Por dentro
-- `src/sw.js` (sem bibliotecas), servido em `/sw.js` com uma versão calculada a partir dos arquivos da interface; `src/manifest.webmanifest`.
+### Under the hood
+- `src/sw.js` (no libraries), served at `/sw.js` with a version computed from the interface files; `src/manifest.webmanifest`.
 
-### Ícone
-- O Roadkit ganhou um ícone: uma estrada que serpenteia até uma meta verde com um check, passando por pontos de controle. Aparece na aba do navegador (numa versão simplificada, legível em 16 px), no app instalado e na tela inicial do celular.
-- Os PNGs são gerados a partir do SVG por `tools/icons.cjs`, com um navegador de verdade, para ficarem idênticos.
-- O guia de Docker e rede explica o HTTPS necessário para instalar fora do `localhost` (Tailscale ou Caddy).
+### Icon
+- Roadkit got an icon: a road winding up to a green goal with a check, past a few checkpoints. It shows in the browser tab (as a simplified version that reads at 16 px), in the installed app and on the phone's home screen.
+- The PNGs are rendered from the SVG by `tools/icons.cjs`, with a real browser, so they match exactly.
+- The Docker and network guide explains the HTTPS needed to install outside `localhost` (Tailscale or Caddy).
 
 ## [1.5.0] - 2026-10-17
 
-### Exportar e compartilhar
-- O botão **Exportar** virou um menu: o `.zip` de sempre, **Markdown** (o roadmap em texto com `- [x]`, projetos e, se quiser, as notas) e **página para compartilhar**.
-- A **página para compartilhar** é um `.html` único que abre em qualquer navegador, sem servidor e sem internet: o próprio Roadkit, congelado no progresso do dia, somente leitura, com mapa, kanban, projetos e painéis. As notas vão junto só se você quiser.
-### Datas
-- **Começo do roadmap**: com o dia em que você começou, os períodos das fases e os prazos dos tópicos ("Semanas 1 e 2", "Mês 2") viram datas no mapa e no painel, com um aviso no que passou da data.
-- O JSON aceita `meta.startDate` e `due` em fases e tópicos, que valem mais que as datas calculadas. O `check` valida o formato e avisa quando uma fase vence antes da anterior.
+### Export and share
+- The **Export** button became a menu: the usual `.zip`, **Markdown** (the roadmap as text with `- [x]`, projects and, if you want, your notes) and a **page to share**.
+- The **page to share** is a single `.html` that opens in any browser, with no server and no internet: Roadkit itself, frozen on that day's progress and read-only, with map, kanban, projects and panels. Notes go along only if you choose.
+
+### Dates
+- **Roadmap start**: with the day you started, phase periods and topic times ("Weeks 1 and 2", "Month 2") turn into dates on the map and in the panel, with a warning on what is past due.
+- The JSON accepts `meta.startDate` and `due` on phases and topics, which win over the computed dates. `check` validates the format and warns when a phase is due before the previous one.
 
 ## [1.4.0] - 2026-10-16
 
-### Busca e atalhos
-- `Ctrl+K` (ou a lupa no topo) abre uma busca que vai para qualquer tópico ou projeto de todos os roadmaps, para os próprios roadmaps e para as ações. Ela ignora acentos e aceita letras pulando no meio, e mostra o estado de cada tópico e os itens abertos por último.
-- Atalhos de uma letra: `/` busca, `M` `K` `P` visualizações, `N` próximo tópico, `J` `L` anterior e seguinte, `1` a `4` estados, `T` modo claro ou escuro e `?` a lista de atalhos. Eles não disparam enquanto você digita e podem ser desligados nos ajustes.
-- No celular, a busca ocupa a tela inteira.
+### Search and shortcuts
+- `Ctrl+K` (or the magnifier at the top) opens a search that goes to any topic or project of every roadmap, to the roadmaps themselves and to the actions. It ignores accents, accepts skipped letters, and shows each topic's state and the items you opened last.
+- Single-letter shortcuts: `/` search, `M` `K` `P` views, `N` next topic, `J` `L` previous and next, `1` to `4` states, `T` light or dark mode and `?` the shortcut list. They never fire while you type and can be turned off in the settings.
+- On phones, the search takes the whole screen.
 
-### Por dentro
-- O `manifest.json` traz um índice leve dos tópicos e projetos de cada roadmap, para a busca não precisar baixar todos os arquivos.
+### Under the hood
+- `manifest.json` carries a light index of each roadmap's topics and projects, so the search does not need to download every file.
 
 ## [1.3.0] - 2026-10-16
 
-### Notas
-- Cada tópico e cada projeto tem um bloco **Minhas notas** no painel, em Markdown, com as abas Escrever e Ver. O texto é salvo sozinho no servidor e funciona offline, como o progresso.
-- O Markdown aceita títulos, negrito, itálico, listas, código, citações, links e caixas `- [ ]`, que dá para marcar na própria visualização. Nada do que você escreve vira HTML.
-- Cartões com notas ganham um ícone, e a busca do topo também procura dentro das notas.
-- **Notas do roadmap**, nas ferramentas, junta a nota geral do roadmap e todas as notas em ordem, e copia tudo em Markdown.
-- As notas vão no export (`notes.json`) e voltam no import. Excluir um roadmap com o progresso também apaga as notas.
+### Notes
+- Every topic and project has a **My notes** block in the panel, in Markdown, with Write and View tabs. The text saves itself on the server and works offline, like the progress.
+- The Markdown supports headings, bold, italics, lists, code, quotes, links and `- [ ]` boxes, which you can check right in the view. Nothing you write becomes HTML.
+- Cards with notes get an icon, and the search at the top also looks inside your notes.
+- **Roadmap notes**, in the tools, gathers the roadmap's general note and every note in order, and copies it all as Markdown.
+- Notes go into the export (`notes.json`) and come back on import. Deleting a roadmap along with its progress deletes its notes too.
 
 ## [1.2.1] - 2026-10-16
 
-### Segurança
-- O servidor deixou de entregar arquivos da pasta de dados e do código quando o endereço vinha codificado (por exemplo `/%64ata/<id>.json`). Antes, isso permitia ler o progresso salvo sem passar pela API e, portanto, sem o token. Afeta as versões 1.0.0 a 1.2.0; atualize se você abre o Roadkit para outros aparelhos.
+### Security
+- The server no longer serves files from the data folder or the code when the path came encoded (for example `/%64ata/<id>.json`). Before, that let anyone read the saved progress without going through the API and so without the token. Affects versions 1.0.0 to 1.2.0; update if you open Roadkit to other devices.
 
 ## [1.2.0] - 2026-10-16
 
-### Projetos
-- Roadmaps podem trazer projetos práticos em três níveis (iniciante, intermediário e avançado), num campo novo e opcional `projects`. Roadmaps sem projetos ficam exatamente como eram.
-- Uma tela **Projetos** ao lado de Mapa e Kanban, com uma coluna por nível (abas no celular), o estado de cada projeto, os tópicos que ele usa e o andamento dos requisitos.
-- No painel do projeto: estados, requisitos para marcar, entregável, critério de sucesso, ideias para ir além e um campo para o link do seu repositório. Tudo salvo no servidor, junto com o progresso.
-- Um projeto fica "pronto para começar" quando você conclui os tópicos que ele usa, com um aviso na hora e um filtro para ver só esses.
-- O painel de cada tópico lista os projetos que o usam.
-- O editor ganhou uma seção de projetos, o **Criar com IA** pode pedir projetos junto, e a skill para agentes sabe escrevê-los.
-- Os exemplos de Argo CD e SQL, nas duas línguas, trazem projetos.
+### Projects
+- Roadmaps can include hands-on projects at three levels (beginner, intermediate and advanced), in a new optional `projects` field. Roadmaps without projects stay exactly as they were.
+- A **Projects** view next to Map and Kanban, with one column per level (tabs on phones), each project's state, the topics it uses and how far along its requirements are.
+- In the project panel: states, requirements to check off, deliverable, success criteria, ideas to go further and a field for the link to your repository. All saved on the server, with the progress.
+- A project becomes "ready to start" when you finish the topics it uses, with a notice at that moment and a filter to show only those.
+- Each topic's panel lists the projects that use it.
+- The editor got a projects section, **Create with AI** can ask for projects too, and the agent skill knows how to write them.
+- The Argo CD and SQL examples, in both languages, come with projects.
 
-### Por dentro
-- O servidor passou a guardar as partes do progresso que um cliente não manda. Assim, um navegador com a versão anterior não apaga os projetos salvos por esta.
-- O `check` e o schema validam os projetos: nível, ids repetidos e tópicos que não existem.
+### Under the hood
+- The server keeps the parts of the progress a client does not send. That way a browser running the previous version does not erase the projects saved by this one.
+- `check` and the schema validate projects: level, repeated ids and topics that do not exist.
 
 ## [1.1.0] - 2026-10-16
 
-### Temas
-- Sete temas no lugar de só claro e escuro: Claro, Névoa e Papel no modo claro; Noite, Grafite, Ameixa e Breu no modo escuro.
-- Os ajustes separam o modo (claro, escuro ou automático) do tema, com uma prévia de cada um. No automático dá para escolher um tema para cada modo do sistema.
-- Névoa e Breu pensados para telas grandes: menos brilho no claro, preto de verdade no escuro.
-- Quem já usava o Roadkit continua com o mesmo visual: os temas padrão são o Claro e o Noite de antes.
+### Themes
+- Seven themes instead of just light and dark: Light, Mist and Paper in light mode; Night, Graphite, Plum and Black in dark mode.
+- The settings separate the mode (light, dark or auto) from the theme, with a preview of each. In auto you can pick one theme for each system mode.
+- Mist and Black are made for big screens: less glare in light mode, true black in dark mode.
+- Anyone already using Roadkit keeps the same look: the default themes are the earlier Light and Night.
 
 ## [1.0.0] - 2026-10-16
 
-A primeira versão estável. O formato do JSON dos roadmaps e a API do servidor passam a seguir o versionamento semântico: mudanças que quebrem roadmaps existentes só entram numa versão 2.
+The first stable version. The roadmap JSON format and the server API now follow semantic versioning: changes that break existing roadmaps only come in a version 2.
 
 ### Interface
-- Mapa e kanban para o mesmo roadmap, com quatro estados por tópico, tarefas dentro dos tópicos e subtópicos em até dois níveis.
-- Seletor de roadmaps com o andamento de cada um e selo de concluído, e uma tela para gerenciar: abrir, duplicar, ocultar e restaurar.
-- Barras laterais que se redimensionam, e a da esquerda recolhe para uma faixa de ícones.
-- Temas claro e escuro, quatro tamanhos de texto e idioma da interface (português e inglês).
-- Aviso opcional quando um tópico avança sem os anteriores estarem concluídos.
+- Map and kanban for the same roadmap, with four states per topic, tasks inside topics and sub-topics up to two levels deep.
+- A roadmap picker with each roadmap's progress and a finished badge, and a screen to manage them: open, duplicate, hide and restore.
+- Resizable sidebars, and the left one folds into a strip of icons.
+- Light and dark themes, four text sizes and the interface language (Portuguese and English).
+- An optional warning when a topic moves ahead before the previous ones are finished.
 
-### Criar roadmaps
-- Editor em tela própria, com o formulário de um lado e a prévia ao vivo do outro. Cobre fases, tópicos, subtópicos, opcionais, cores, logo e categoria, e tem uma aba com o JSON completo.
-- Validação enquanto você digita, com as mesmas regras do `check`.
-- **Criar com IA**: monta um prompt a partir do objetivo, e a resposta da IA volta para o editor. Não usa chave de API.
-- Skill para agentes de código em `.agents/skills/roadkit/`.
-- Categorias: cada subpasta de `roadmaps/` vira uma seção, e o editor grava roadmaps na categoria escolhida.
+### Creating roadmaps
+- An editor on its own screen, with the form on one side and a live preview on the other. It covers phases, topics, sub-topics, optional topics, colors, logo and category, and has a tab with the full JSON.
+- Validation as you type, with the same rules as `check`.
+- **Create with AI**: builds a prompt from your goal, and the AI's answer comes back into the editor. No API key needed.
+- A skill for coding agents in `.agents/skills/roadkit/`.
+- Categories: each subfolder of `roadmaps/` becomes a section, and the editor saves roadmaps into the chosen category.
 
-### Progresso e dados
-- O progresso é salvo no servidor e usado como cache no navegador, então vale em qualquer aparelho e continua funcionando se o servidor cair.
-- Exportar e importar roadmap e progresso num `.zip`.
-- Token opcional (`ROADKIT_TOKEN`) para proteger a leitura e a escrita.
+### Progress and data
+- Progress is saved on the server and cached in the browser, so it works on any device and keeps working if the server goes down.
+- Export and import a roadmap and its progress as a `.zip`.
+- An optional token (`ROADKIT_TOKEN`) to protect reads and writes.
 
-### Servidor e distribuição
-- Servidor em Python, só com a biblioteca padrão, e comandos `serve`, `check` e `index`.
-- Imagem Docker com volume para os dados e a pasta `roadmaps/` somente leitura.
-- Documentação em `docs/` e GIFs gerados por um script.
+### Server and distribution
+- A Python server using only the standard library, with `serve`, `check` and `index` commands.
+- A Docker image with a volume for the data and a read-only `roadmaps/` folder.
+- Documentation in `docs/` and GIFs generated by a script.
 
+[1.7.0]: https://github.com/nycholasmarques/roadkit/releases/tag/v1.7.0
 [1.6.0]: https://github.com/nycholasmarques/roadkit/releases/tag/v1.6.0
 [1.5.0]: https://github.com/nycholasmarques/roadkit/releases/tag/v1.5.0
 [1.4.0]: https://github.com/nycholasmarques/roadkit/releases/tag/v1.4.0

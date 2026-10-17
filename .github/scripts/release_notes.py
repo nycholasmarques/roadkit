@@ -5,9 +5,9 @@
 
 The body has three parts:
   1. The matching section of CHANGELOG.md, if you wrote one (the curated highlights).
-  2. "O que mudou": every commit since the previous release tag, grouped by what it
+  2. "What changed": every commit since the previous release tag, grouped by what it
      says it is. Conventional prefixes win (feat:, fix:, docs:...). Without a prefix,
-     the first word decides (Add..., Fix...). Everything else is "Outras mudanças".
+     the first word decides (Add..., Fix...). Everything else is "Other changes".
      Skipped for the first release, which would just list the whole history.
   3. How to get it: the zip, the checksum and the Docker image.
 """
@@ -18,13 +18,13 @@ import sys
 from pathlib import Path
 
 GROUPS = [
-    ("feat", "Novidades"),
-    ("fix", "Correções"),
-    ("perf", "Desempenho"),
-    ("docs", "Documentação"),
-    ("deps", "Dependências"),
-    ("maint", "Manutenção"),
-    ("other", "Outras mudanças"),
+    ("feat", "New features"),
+    ("fix", "Fixes"),
+    ("perf", "Performance"),
+    ("docs", "Documentation"),
+    ("deps", "Dependencies"),
+    ("maint", "Maintenance"),
+    ("other", "Other changes"),
 ]
 PREFIX = re.compile(r"^(?P<type>[a-z]+)(?:\((?P<scope>[^)]*)\))?(?P<bang>!)?:\s*(?P<rest>.+)$", re.I)
 TYPE_TO_GROUP = {
@@ -77,14 +77,14 @@ def changelog_section(version):
 
 def classify(subject, author):
     if "dependabot" in author.lower():
-        return "deps", re.sub(r"^bump\b", "Atualiza", subject, flags=re.I)
+        return "deps", re.sub(r"^bump\b", "Bump", subject, flags=re.I)
     m = PREFIX.match(subject)
     if m and m["type"].lower() in TYPE_TO_GROUP:
         group = TYPE_TO_GROUP[m["type"].lower()]
         if (m["scope"] or "").lower() in ("deps", "dependencies"):
             group = "deps"
         text = m["rest"][0].upper() + m["rest"][1:]
-        return group, ("**Quebra compatibilidade:** " + text) if m["bang"] else text
+        return group, ("**Breaking:** " + text) if m["bang"] else text
     first = subject.split(" ", 1)[0].lower()
     return VERB_TO_GROUP.get(first, "other"), subject
 
@@ -132,20 +132,20 @@ def main():
             else:
                 body.append(f"### {title}\n\n" + "\n".join(groups[key]))
         if body:
-            parts.append("## O que mudou\n\n" + "\n\n".join(body))
-        parts.append(f"**Todas as mudanças:** [{prev}...{a.tag}](https://github.com/{a.repo}/compare/{prev}...{a.tag})")
+            parts.append("## What changed\n\n" + "\n\n".join(body))
+        parts.append(f"**Full changelog:** [{prev}...{a.tag}](https://github.com/{a.repo}/compare/{prev}...{a.tag})")
 
     image = f"ghcr.io/{a.repo.lower()}"
     if "-" in version:
         tags = f"`docker pull {image}:{version}`"
     else:
         major, minor = version.split(".")[:2]
-        tags = f"`docker pull {image}:{version}` (também existem `:{major}.{minor}`, `:{major}` e `:latest`)"
+        tags = f"`docker pull {image}:{version}` (`:{major}.{minor}`, `:{major}` and `:latest` also exist)"
     parts.append(
-        "## Como instalar\n\n"
-        f"- **Código:** baixe o `roadkit-{version}.zip` abaixo, descompacte e rode `python3 tools/roadkit.py serve`. O `SHA256SUMS` confere o arquivo.\n"
+        "## How to install\n\n"
+        f"- **Code:** download `roadkit-{version}.zip` below, unzip it and run `python3 tools/roadkit.py serve`. `SHA256SUMS` checks the file.\n"
         f"- **Docker:** {tags}.\n"
-        "- Como atualizar, o que fica no volume e o que muda entre versões: [documentação](https://github.com/" + a.repo + "/blob/" + a.tag + "/docs/docker-e-rede.md)."
+        "- How to update, what lives in the volume and what changes between versions: [documentation](https://github.com/" + a.repo + "/blob/" + a.tag + "/docs/en/docker-and-network.md)."
     )
     sys.stdout.write("\n\n".join(parts).strip() + "\n")
 
