@@ -410,5 +410,15 @@
   "demoTitle": "Demo",
   "demoHide": "Hide for 30 days",
   "demoHidden": "Notice hidden for 30 days.",
-  "statsNoServer": "Statistics come from the activity record, which lives on Roadkit's server. In the demo, or with the app open without a server, they do not show up."
+  "statsNoServer": "Statistics come from the activity record, which lives on Roadkit's server. In the demo, or with the app open without a server, they do not show up.",
+  "cascadeTitle": "Mark as \"{status}\"?",
+  "cascadeText": "This also marks {what} of \"{title}\" as \"{status}\".",
+  "cascadeSubOne": "1 sub-topic",
+  "cascadeSubMany": "{n} sub-topics",
+  "cascadeTaskOne": "1 task",
+  "cascadeTaskMany": "{n} tasks",
+  "cascadeAnd": "and",
+  "cascadeOk": "Mark all",
+  "cascadeSkip": "Don't ask again",
+  "cascadeAsk": "Ask before changing sub-topics along with their topic"
 }

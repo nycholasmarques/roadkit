@@ -410,5 +410,15 @@
   "demoTitle": "Demonstração",
   "demoHide": "Esconder por 30 dias",
   "demoHidden": "Aviso escondido por 30 dias.",
-  "statsNoServer": "As estatísticas vêm do registro de atividade, que fica no servidor do Roadkit. Na demonstração, ou com o app aberto sem servidor, elas não aparecem."
+  "statsNoServer": "As estatísticas vêm do registro de atividade, que fica no servidor do Roadkit. Na demonstração, ou com o app aberto sem servidor, elas não aparecem.",
+  "cascadeTitle": "Marcar como \"{status}\"?",
+  "cascadeText": "Isso também marca {what} de \"{title}\" como \"{status}\".",
+  "cascadeSubOne": "1 subtópico",
+  "cascadeSubMany": "{n} subtópicos",
+  "cascadeTaskOne": "1 tarefa",
+  "cascadeTaskMany": "{n} tarefas",
+  "cascadeAnd": "e",
+  "cascadeOk": "Marcar tudo",
+  "cascadeSkip": "Não perguntar de novo",
+  "cascadeAsk": "Avisar antes de mudar os subtópicos junto com o tópico"
 }
