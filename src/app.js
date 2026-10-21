@@ -154,6 +154,15 @@ function metricsChanged() {
 function setSettingsOpen(open) {
   $('settings').hidden = !open;
   $('settingsBtn').setAttribute('aria-expanded', String(open));
+  if (open) fitSettings();
+}
+
+/* The settings never run past the bottom of the window (short screens, an installed app's window): they scroll. */
+function fitSettings() {
+  const el = $('settings');
+  if (el.hidden) return;
+  if (innerWidth <= 800) { el.style.maxHeight = ''; return; }   // phones: a sheet with its own limit
+  el.style.maxHeight = Math.max(220, innerHeight - el.getBoundingClientRect().top - 12) + 'px';
 }
 
 function resetProgress() {
@@ -438,10 +447,51 @@ function setTaskStatus(n, t, st) {
   changed();
 }
 
+/* Finishing or resetting a topic carries its required sub-topics (and tasks) along. When that would change any
+   sub-topic, a dialog says how many first; "don't ask again" is undone in the settings. */
+const CASCADE_KEY = 'roadkit:v1:cascade-ask';
+function cascadeCount(n, st) {
+  let subs = 0, tasks = 0;
+  const walk = x => {
+    x.tasks.forEach(t => { if (taskStatus(x, t) !== st) tasks++; });
+    requiredKids(x).forEach(c => { if (nodeStatus(c) !== st) subs++; walk(c); });
+  };
+  walk(n);
+  return { subs, tasks };
+}
+
+function askCascade(n, st, { subs, tasks }) {
+  const L = S.L, status = L[STATUS_LABEL[st]];
+  let dlg = $('cascadeDlg');
+  if (!dlg) {
+    dlg = Object.assign(document.createElement('dialog'), { id: 'cascadeDlg', className: 'dlg dlg-small' });
+    dlg.setAttribute('aria-labelledby', 'cascadeTitle');
+    document.body.append(dlg);
+  }
+  const what = [fmt(subs === 1 ? L.cascadeSubOne : L.cascadeSubMany, { n: subs }), tasks && fmt(tasks === 1 ? L.cascadeTaskOne : L.cascadeTaskMany, { n: tasks })].filter(Boolean).join(` ${L.cascadeAnd} `);
+  dlg.innerHTML = `<form method="dialog" class="dlg-in"><div class="dlg-head"><h2 id="cascadeTitle">${esc(fmt(L.cascadeTitle, { status }))}</h2></div>` +
+    `<div class="dlg-body"><p class="cascade-text">${esc(fmt(L.cascadeText, { what, title: n.title, status }))}</p>` +
+    `<label class="set-check"><input type="checkbox" data-cascade-skip> <span>${esc(L.cascadeSkip)}</span></label></div>` +
+    `<div class="dlg-foot"><button type="submit" value="cancel" class="secondary">${esc(L.rmCancel)}</button><button type="submit" value="ok" class="primary">${esc(L.cascadeOk)}</button></div></form>`;
+  dlg.returnValue = '';
+  dlg.onclose = () => {
+    if (dlg.returnValue === 'ok') {
+      if (dlg.querySelector('[data-cascade-skip]').checked) { store.set(CASCADE_KEY, 'off'); $('cascadeAsk').checked = false; }
+      setNodeStatus(n, st, true);
+    } else { refresh(); renderBoard(); renderDetail(); }   // cancelled: a card dragged on the kanban goes back
+  };
+  dlg.showModal();
+  dlg.querySelector('.primary').focus();
+}
+
 /* Moving a node to finished or todo applies to all its tasks; leaving finished reopens them too. */
-function setNodeStatus(n, st) {
+function setNodeStatus(n, st, confirmed = false) {
   const prev = nodeStatus(n);
   if (S.readOnly || prev === st) return;
+  if (!confirmed && (st === 'finished' || st === 'todo' || prev === 'finished') && store.get(CASCADE_KEY) !== 'off') {
+    const c = cascadeCount(n, st);
+    if (c.subs) return askCascade(n, st, c);
+  }
   S.state.nodes[n.id] = st;
   if (st === 'finished' || st === 'todo' || prev === 'finished') {   // applies to all of its tasks and required sub-topics
     const apply = x => { x.tasks.forEach(t => { S.state.tasks[taskKey(x, t)] = st; }); requiredKids(x).forEach(c => { S.state.nodes[c.id] = st; apply(c); }); };
@@ -3579,6 +3629,9 @@ function wire() {
     if (S.editing) { buildCategorySelect(); $('editTitle').textContent = ed.id ? S.L.edTitleEdit : S.L.edTitleNew; if (ed.mode === 'form') renderForm(); if (!S.rm) await showPreviewHint(); }
   });
   $('skipSel').addEventListener('change', e => { store.set(SKIP_KEY, e.target.value); applyFilters(); renderDetail(); });
+  $('cascadeAsk').checked = store.get(CASCADE_KEY) !== 'off';
+  $('cascadeAsk').addEventListener('change', e => store.set(CASCADE_KEY, e.target.checked ? 'on' : 'off'));
+  addEventListener('resize', fitSettings);
   new ResizeObserver(syncToolbarHeight).observe($('toolbar'));
   $('importFile').addEventListener('change', async e => { const f = e.target.files?.[0]; if (f) await importBundle(f); e.target.value = ''; });
   darkQuery.addEventListener('change', applyTheme);

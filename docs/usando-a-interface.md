@@ -48,7 +48,7 @@ O estado do tópico é o mesmo nas duas telas. Mover um cartão no kanban muda a
 Só os tópicos principais contam na barra de progresso do topo. Os outros níveis têm regras próprias:
 
 - **Tarefas.** Um tópico pode ter uma lista de tarefas, que aparece como um kanban pequeno no painel de detalhes. O estado do tópico acompanha as tarefas: quando todas estão concluídas, ele também está. Marcar o tópico como concluído conclui todas as tarefas de uma vez, e reabrir o tópico reabre tudo.
-- **Subtópicos.** Funcionam do mesmo jeito, só que com tópicos no lugar de tarefas. Um tópico com subtópicos obrigatórios só fica concluído quando todos estiverem. Os subtópicos não entram sozinhos na barra de progresso, quem entra é o tópico principal.
+- **Subtópicos.** Funcionam do mesmo jeito, só que com tópicos no lugar de tarefas. Um tópico com subtópicos obrigatórios só fica concluído quando todos estiverem. Os subtópicos não entram sozinhos na barra de progresso, quem entra é o tópico principal. Como concluir (ou voltar para "a fazer") um tópico leva os subtópicos junto, o Roadkit pergunta antes, dizendo quantos subtópicos e tarefas vão mudar; "Não perguntar de novo" desliga o aviso, que volta em **Ajustes → Avisar antes de mudar os subtópicos junto com o tópico**.
 - **Opcionais.** Ficam do lado, com a borda tracejada, e não contam para nada. São para explorar se der vontade, sem travar o resto.
 
 ## O aviso de tópicos pulados

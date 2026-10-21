@@ -48,7 +48,7 @@ A topic's state is the same in both views. Moving a card on the kanban changes i
 Only main topics count toward the progress bar at the top. The other levels have their own rules:
 
 - **Tasks.** A topic can have a task list, shown as a small kanban in the details panel. The topic follows its tasks: when all of them are finished, so is the topic. Marking the topic as done finishes every task at once, and reopening the topic reopens them all.
-- **Sub-topics.** They work the same way, with topics in place of tasks. A topic with required sub-topics is only done when all of them are. Sub-topics do not count on their own in the progress bar; their main topic does.
+- **Sub-topics.** They work the same way, with topics in place of tasks. A topic with required sub-topics is only done when all of them are. Sub-topics do not count on their own in the progress bar; their main topic does. Since finishing a topic (or moving it back to "to do") carries its sub-topics along, Roadkit asks first, saying how many sub-topics and tasks will change; "Don't ask again" turns that off, and **Settings → Ask before changing sub-topics along with their topic** turns it back on.
 - **Optional topics.** They sit to the side with a dashed border and count toward nothing. They are there to explore if you feel like it, without blocking anything.
 
 ## The skipped topic warning
