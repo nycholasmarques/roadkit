@@ -6,6 +6,14 @@ Each GitHub release also lists the commits since the previous version on its own
 
 ## [1.13.0] - Unreleased
 
+### Sync with GitHub
+- A new **Sync** setting keeps progress, notes, activity, the review queue and the roadmaps made in the interface in a folder of a GitHub repository of yours, so the same path follows you to other machines. It is **off** by default; until you set it up, the server makes no outside calls. See [Sync with GitHub](docs/en/sync.md).
+- **Manual** (a *Sync now* button) or **automatic** (the server sends 2 minutes after the last change and fetches every 15 minutes, even with the tab closed). Each sync is one commit, and nothing outside the chosen folder is touched.
+- Changes on two machines merge file by file against the last sync: the newest progress, notes and review win, activity adds up, deletions reach the other machines, and the first sync with data on both sides asks how to combine them.
+- Security: it talks only to `https://api.github.com` with the certificate verified and no redirects. It uses a fine-grained token limited to one repository, stored only on the server and never returned. Changing the destination needs a pairing code from the server log (or `ROADKIT_TOKEN`). A public repository needs explicit confirmation, and anything coming from the repository is validated like a request from the browser.
+- `ROADKIT_SYNC_TOKEN` / `ROADKIT_SYNC_TOKEN_FILE` set the token from the environment (Docker secrets work).
+- New `tools/roadkit_sync/` package and the first Python tests (`python3 -m unittest discover -s tests`), run in CI against a local fake of the GitHub API.
+
 ### Security
 - Every response now carries `X-Frame-Options: DENY`, `Content-Security-Policy: frame-ancestors 'none'`, `X-Content-Type-Options: nosniff` and `Referrer-Policy: no-referrer`, so Roadkit cannot be embedded in another site.
 - The API only answers when Roadkit is opened by `localhost`, an IP address or a name listed in the new `ROADKIT_HOSTS`. This blocks DNS rebinding, where a site points its own domain at your machine to get past the same-origin check. **If you open Roadkit by a name** (a Tailscale `*.ts.net` address, a domain behind Caddy), add it to `ROADKIT_HOSTS`, or progress stops syncing with the server. See [Docker and network](docs/en/docker-and-network.md).

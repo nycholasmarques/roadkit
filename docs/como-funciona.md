@@ -95,6 +95,12 @@ A fila de revisão é uma agenda pessoal, não progresso de um roadmap, então f
 
 Nada dentro de `data/` é servido como arquivo comum: só pela API, que exige o token quando ele está ligado.
 
+## Onde a sincronização é guardada
+
+A [sincronização com o GitHub](sincronizar.md) tem a pasta própria, `data/_sync/`: a configuração, o token (com permissão `0600`), o que os dois lados tinham em comum na última vez (`base.json`, que permite saber o que mudou de cada lado) e o status. Essa pasta nunca vai para o repositório nem é servida. O que vai é o resto de `data/`, com nomes mais fáceis de ler: `<id>.json` vira `state/<id>.json` e `_hidden.json` vira `hidden.json`.
+
+O código fica em `tools/roadkit_sync/`, um pacote que não importa o `roadkit.py`: o servidor entrega a ele o lock, a gravação atômica e os validadores. O GitHub é um *provedor*, uma classe com três métodos (conferir, ler e escrever); outro destino, como o Google Drive, seria outra classe, sem mexer no resto.
+
 ## A API
 
 Tudo o que a interface pede ao servidor está abaixo. Pode ser útil para scripts, e é o que a skill do Claude Code usa quando precisa gravar no volume.
@@ -118,8 +124,16 @@ Tudo o que a interface pede ao servidor está abaixo. Pode ser útil para script
 | `DELETE /api/roadmaps/<id>?progress=1` | exclui, e opcionalmente apaga o progresso, as notas e a atividade junto |
 | `PUT /api/hidden/<id>` | oculta ou restaura, com `{"hidden": true}` |
 | `GET /user/<categoria>/<id>.json` | o JSON de um roadmap criado pela interface |
+| `GET /api/sync` | a configuração e o status da [sincronização](sincronizar.md), nunca o token |
+| `POST /api/sync/pair` | escreve um código de pareamento no log do servidor (no máximo um a cada 30 s) |
+| `POST /api/sync/unlock` | troca o código, `{"code": "123456"}`, por um ticket que libera a configuração por 15 minutos |
+| `POST /api/sync/test` | confere destino e token sem gravar (exige o ticket ou `ROADKIT_TOKEN`) |
+| `PUT /api/sync/setup` | confere e grava destino e token (exige o ticket ou `ROADKIT_TOKEN`; repositório público exige `"publicAck": true`) |
+| `PUT /api/sync/mode` | `{"mode": "off" \| "manual" \| "auto"}` e o nome do aparelho |
+| `POST /api/sync/run` | sincroniza agora: `{"mode": "sync" \| "push" \| "pull", "first": "merge" \| "remote" \| "local"}` |
+| `DELETE /api/sync` | desconecta: apaga o token e a configuração, mantém os dados |
 
-Com `ROADKIT_TOKEN` definido, tudo em `/api/` exige `Authorization: Bearer <token>`. As escritas só aceitam requisições da mesma origem e `Content-Type: application/json`, o que impede uma página de outro site de escrever no seu progresso.
+A API só responde quando o Roadkit é aberto por `localhost`, por um IP ou por um nome listado em `ROADKIT_HOSTS` (proteção contra *DNS rebinding*). Com `ROADKIT_TOKEN` definido, tudo em `/api/` exige `Authorization: Bearer <token>`. As escritas só aceitam requisições da mesma origem e `Content-Type: application/json`, o que impede uma página de outro site de escrever no seu progresso.
 
 ## Como o código está organizado
 
@@ -130,6 +144,8 @@ src/style.css       o visual, com claro e escuro
 src/labels/         os textos da interface, um arquivo por idioma
 src/ai-prompt.txt   o modelo do prompt do botão "Criar com IA"
 tools/roadkit.py    o servidor e os comandos check e index
+tools/roadkit_sync/ a sincronização: formato da pasta, mescla, provedor do GitHub
+tests/              testes em Python (python3 -m unittest discover -s tests)
 schema/             o JSON Schema, para autocompletar no editor
 examples/           roadmaps de exemplo em português e inglês
 roadmaps/           os seus roadmaps (vazia no repositório)

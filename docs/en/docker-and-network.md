@@ -103,10 +103,36 @@ docker compose -f compose.preview.yaml down -v           # stop it and drop the 
 
 It has its own name, image, container and volume, so progress checked off there never mixes with the real instance. Switched branches? Run the same `up -d --build` again. Another port: `PREVIEW_PORT=8767`.
 
+## Sync with GitHub
+
+[Sync](sync.md) is the only thing in Roadkit that goes out to the internet, and only once it is set up: it talks to `https://api.github.com` (port 443) and nothing else. If your network uses a proxy, the server honors `HTTPS_PROXY`.
+
+The token can be pasted on screen or come from the environment, and the environment wins. In `.env`:
+
+```
+ROADKIT_SYNC_TOKEN=github_pat_...
+```
+
+Or with Docker secrets, keeping the token out of `.env`:
+
+```yaml
+services:
+  roadmap:
+    environment:
+      ROADKIT_SYNC_TOKEN_FILE: /run/secrets/roadkit_sync
+    secrets:
+      - roadkit_sync
+secrets:
+  roadkit_sync:
+    file: ./roadkit-sync-token.txt
+```
+
+The pairing code the screen asks for shows up in `docker compose logs roadmap`.
+
 ## Without Docker
 
 ```bash
 python3 tools/roadkit.py serve --host 0.0.0.0 --port 8765
 ```
 
-It works the same. Three environment variables change its behavior: `ROADKIT_DATA` points to another folder for the data (the default is `data/` next to the project), `ROADKIT_TOKEN` turns on the token requirement and `ROADKIT_HOSTS` lists the extra names you open Roadkit by.
+It works the same. Four environment variables change its behavior: `ROADKIT_DATA` points to another folder for the data (the default is `data/` next to the project), `ROADKIT_TOKEN` turns on the token requirement, `ROADKIT_HOSTS` lists the extra names you open Roadkit by and `ROADKIT_SYNC_TOKEN` (or `ROADKIT_SYNC_TOKEN_FILE`) gives the sync token.

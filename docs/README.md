@@ -15,6 +15,7 @@ Se é a primeira vez, comece pelo passeio na interface, ou abra a [demonstraçã
 | [Estatísticas](estatisticas.md) | Mapa de calor, sequência, ritmo e previsão, e de onde vêm os números |
 | [Criando roadmaps](criar-roadmaps.md) | Três jeitos de criar um, e o que faz um roadmap ser bom de usar |
 | [Criando com IA](criar-com-ia.md) | O botão "Criar com IA" e a skill para agentes de código |
+| [Sincronizar com o GitHub](sincronizar.md) | Levar progresso, notas e atividade para outra máquina, por um repositório seu, com segurança |
 | [Como funciona](como-funciona.md) | O que roda onde, onde cada coisa é guardada e como o código se organiza |
 | [Docker e rede](docker-e-rede.md) | Subir com Compose, volumes, backup e abrir para outros aparelhos |
 | [Formato do JSON](SCHEMA.md) | Referência de cada campo de um roadmap |

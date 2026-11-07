@@ -115,6 +115,10 @@ Cada tópico e projeto tem um bloco de notas em Markdown, salvo no servidor e of
 
 Exporte o roadmap em Markdown ou como uma página `.html` única que abre em qualquer navegador sem servidor, para mostrar o seu progresso a alguém.
 
+### Levar para outra máquina
+
+Ligue a sincronização nos ajustes e o Roadkit guarda progresso, notas e atividade numa pasta de um repositório seu no GitHub, um commit por vez. Em outra máquina, aponte para a mesma pasta e continue de onde parou. Vem desligada, e o token só alcança aquele repositório. [Mais](docs/sincronizar.md).
+
 ### Instalar e usar offline
 
 O Roadkit é um app instalável: abre em janela própria, com ícone, e depois da primeira vez funciona sem internet, com todos os roadmaps à mão. O que você marcar offline sobe quando a conexão voltar. No celular, o mapa vira uma linha do tempo e todas as telas cabem.
@@ -175,6 +179,7 @@ Salve em `roadmaps/` (ou numa subpasta, que vira a categoria) e rode `python3 to
 | [Estatísticas](docs/estatisticas.md) | mapa de calor, sequência, ritmo e previsão |
 | [Criando roadmaps](docs/criar-roadmaps.md) | três jeitos de criar, categorias e o que faz um bom roadmap |
 | [Criando com IA](docs/criar-com-ia.md) | o botão e a skill |
+| [Sincronizar com o GitHub](docs/sincronizar.md) | o mesmo progresso em várias máquinas, por um repositório seu |
 | [Como funciona](docs/como-funciona.md) | o que roda onde, onde ficam os dados, a API |
 | [Docker e rede](docs/docker-e-rede.md) | volumes, backup, token, outros aparelhos |
 | [Formato do JSON](docs/SCHEMA.md) | referência de cada campo |
