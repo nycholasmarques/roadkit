@@ -3665,7 +3665,7 @@ function wire() {
       if (sync.timer) { clearTimeout(sync.timer); sync.timer = 0; push(true); }
       if (notesSync.timer) { clearTimeout(notesSync.timer); notesSync.timer = 0; pushNotes(true); }
       if (rv.timer) { clearTimeout(rv.timer); rv.timer = 0; pushReview(true); }
-    } else { pull(); pullNotes(); pullReview(); flushFocus(); paintReview(); }
+    } else { pull(); pullNotes(); pullReview(); flushFocus(); paintReview(); loadRemote(); }
   });
   addEventListener('online', () => { if (sync.status === 'offline') pull(); if (notesSync.status === 'offline') pullNotes(); });
   wireDnd();
@@ -3677,6 +3677,212 @@ function wire() {
   wireToday();
   wireStats();
   wireReviewFocus();
+  wireRemote();
+}
+
+/* ---------- sync with a folder of a GitHub repository (server side: tools/roadkit_sync); off until set up ----------
+   The token goes to the server once and never comes back: nothing about it is kept in this browser. */
+const remote = { info: null, ticket: '', lastSync: 0 };
+const TOKEN_URL = owner => 'https://github.com/settings/personal-access-tokens/new?' + new URLSearchParams({
+  name: 'Roadkit sync', description: 'Roadkit: sync progress to one repository', expires_in: '90', contents: 'write',
+  ...(owner ? { target_name: owner } : {}) });
+
+async function remoteCall(method, path, body) {
+  try {
+    const r = await apiFetch(method, 'api/sync' + path, body);
+    const j = await r.json().catch(() => null);
+    return { ok: r.ok, status: r.status, body: j };
+  } catch { return { ok: false, status: 0, body: { error: S.L.remoteNoServer } }; }
+}
+
+const remoteWhy = st => (st?.lastError && (S.L['remoteErr_' + st.lastError.code] || st.lastError.message)) || '';
+function remoteAgo(ms) {
+  const min = Math.round((Date.now() - ms) / 60000);
+  if (min < 1) return S.L.remoteJustNow;
+  if (min < 60) return fmt(S.L.remoteMinAgo, { n: min });
+  return fmt(S.L.remoteAt, { when: new Date(ms).toLocaleString(document.documentElement.lang || undefined, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) });
+}
+
+function paintRemote() {
+  const i = remote.info, row = $('remoteRow');
+  if (!S.L) return;
+  row.hidden = !i;
+  $('settingsBtn').toggleAttribute('data-alert', !!i?.configured && i.mode !== 'off' && i.status?.state === 'paused');
+  if (!i) return;
+  const st = i.status || {}, where = i.configured ? `${i.owner}/${i.repo}` : '';
+  $('remoteMode').value = i.configured ? i.mode : 'off';
+  $('remoteNow').hidden = !i.configured || i.mode === 'off' || st.state === 'syncing';
+  $('remoteSetup').textContent = i.configured ? S.L.remoteChange : S.L.remoteSetup;
+  let kind = 'remote_off', text;
+  if (!i.configured) text = S.L.remoteNotSet;
+  else if (i.mode === 'off') text = fmt(S.L.remoteIsOff, { where });
+  else if (st.state === 'syncing') { kind = 'remote_syncing'; text = S.L.remoteSyncing; }
+  else if (st.state === 'paused') { kind = 'remote_paused'; text = st.needsChoice ? S.L.remoteNeedsChoice : fmt(S.L.remotePaused, { why: remoteWhy(st) }); }
+  else if (st.state === 'error') { kind = 'remote_error'; text = fmt(S.L.remoteError, { why: remoteWhy(st) }); }
+  else if (st.lastSync) { kind = 'remote_ok'; text = fmt(S.L.remoteOk, { where, when: remoteAgo(st.lastSync) }); }
+  else text = fmt(S.L.remoteReady, { where });
+  const exp = i.tokenExpires && Date.parse(i.tokenExpires);
+  if (exp && exp - Date.now() < 7 * dayMs) text += ' ' + fmt(S.L.remoteExpires, { date: new Date(exp).toLocaleDateString(document.documentElement.lang || undefined) });
+  $('remoteStatus').dataset.kind = kind;
+  $('remoteStatus').textContent = text;
+}
+
+/* What the server answered; when a sync brought something in, the open screens read it again. */
+async function takeRemote(info) {
+  if (!info) return;
+  remote.info = info;
+  const st = info.status || {};
+  const fresh = st.lastSync && st.lastSync !== remote.lastSync;
+  const seen = remote.lastSync;
+  if (st.lastSync) remote.lastSync = st.lastSync;
+  paintRemote();
+  if (fresh && seen && st.pulled) {
+    await reloadManifest().catch(() => {});
+    pull(); pullNotes(); pullReview(); loadRemoteStates().then(updatePickerBtn);
+  }
+}
+
+async function loadRemote() {
+  if (SNAP || S.manifest?.demo === true || !sync.api) { remote.info = null; paintRemote(); return; }
+  const r = await remoteCall('GET', '');
+  if (r.ok) await takeRemote(r.body);
+  else if ([404, 405, 501].includes(r.status)) { remote.info = null; paintRemote(); }
+}
+
+async function runRemote(first) {
+  const r = await remoteCall('POST', '/run', { mode: 'sync', first: first || null });
+  if (!r.ok) { alert(r.body?.error || `HTTP ${r.status}`); return loadRemote(); }
+  await takeRemote(r.body);
+  if (r.body?.status?.needsChoice) askRemoteChoice();
+}
+
+function askRemoteChoice() {
+  const L = S.L;
+  let dlg = $('remoteChoiceDlg');
+  if (!dlg) {
+    dlg = Object.assign(document.createElement('dialog'), { id: 'remoteChoiceDlg', className: 'dlg dlg-small' });
+    dlg.setAttribute('aria-labelledby', 'remoteChoiceTitle');
+    document.body.append(dlg);
+  }
+  dlg.innerHTML = `<form method="dialog" class="dlg-in"><div class="dlg-head"><h2 id="remoteChoiceTitle">${esc(L.remoteChoiceTitle)}</h2></div>` +
+    `<div class="dlg-body"><p class="cascade-text">${esc(L.remoteChoiceText)}</p><p class="set-hint">${esc(L.remoteChoiceHint)}</p></div>` +
+    `<div class="dlg-foot remote-choice"><button type="submit" value="cancel" class="secondary">${esc(L.rmCancel)}</button>` +
+    `<button type="submit" value="local" class="secondary">${esc(L.remoteChoiceLocal)}</button>` +
+    `<button type="submit" value="remote" class="secondary">${esc(L.remoteChoiceRemote)}</button>` +
+    `<button type="submit" value="merge" class="primary">${esc(L.remoteChoiceMerge)}</button></div></form>`;
+  dlg.returnValue = '';
+  dlg.onclose = () => { if (['merge', 'remote', 'local'].includes(dlg.returnValue)) runRemote(dlg.returnValue); };
+  dlg.showModal();
+  dlg.querySelector('.primary').focus();
+}
+
+function openRemoteSetup() {
+  const L = S.L, i = remote.info || {};
+  let dlg = $('remoteDlg');
+  if (!dlg) {
+    dlg = Object.assign(document.createElement('dialog'), { id: 'remoteDlg', className: 'dlg dlg-small remote-dlg' });
+    dlg.setAttribute('aria-labelledby', 'remoteTitle');
+    document.body.append(dlg);
+  }
+  const field = (id, label, value, attrs = '') => `<label class="remote-f"><span>${esc(label)}</span><input type="text" id="${id}" value="${esc(value ?? '')}" autocomplete="off" spellcheck="false" ${attrs}></label>`;
+  const envToken = i.tokenSource === 'env';
+  const pairing = i.pairing !== false && !remote.ticket;
+  dlg.innerHTML = `<form method="dialog" class="dlg-in"><div class="dlg-head"><h2 id="remoteTitle">${esc(L.remoteTitle)}</h2>` +
+    `<button type="submit" value="cancel" class="dlg-x" aria-label="${esc(L.close)}">×</button></div>` +
+    `<div class="dlg-body"><p class="set-hint">${esc(L.remoteIntro)}</p>` +
+    (pairing ? `<fieldset class="remote-step" id="rsPair"><legend>${esc(L.remotePairTitle)}</legend><p class="set-hint">${esc(L.remotePairText)}</p>` +
+      `<div class="remote-inline"><button type="button" class="secondary" id="rsPairBtn">${esc(L.remotePairBtn)}</button>` +
+      `<input type="text" id="rsCode" inputmode="numeric" maxlength="6" autocomplete="one-time-code" placeholder="${esc(L.remotePairCode)}" aria-label="${esc(L.remotePairCode)}"></div>` +
+      `<p class="set-hint" id="rsPairMsg" aria-live="polite"></p></fieldset>` : '') +
+    `<fieldset class="remote-step"><legend>${esc(L.remoteDestTitle)}</legend>` +
+      field('rsRepo', L.remoteRepo, i.owner ? `${i.owner}/${i.repo}` : '', 'placeholder="owner/repo"') +
+      `<div class="remote-two">${field('rsBranch', L.remoteBranch, i.branch || 'main')}${field('rsFolder', L.remoteFolder, i.folder || 'roadkit')}</div>` +
+      field('rsLabel', L.remoteLabel, i.label || '', 'maxlength="40"') + `</fieldset>` +
+    `<fieldset class="remote-step"><legend>${esc(L.remoteTokenTitle)}</legend>` +
+      (envToken ? `<p class="set-hint">${esc(L.remoteTokenEnv)}</p>` :
+        `<p class="set-hint">${esc(L.remoteTokenSteps)} <a id="rsTokenLink" href="${esc(TOKEN_URL(i.owner))}" target="_blank" rel="noopener noreferrer">${esc(L.remoteTokenLink)}</a></p>` +
+        `<label class="remote-f"><span>${esc(L.remoteToken)}</span><input type="password" id="rsToken" autocomplete="off" spellcheck="false" placeholder="${esc(i.tokenSet ? L.remoteTokenKeep : 'github_pat_...')}"></label>`) +
+    `</fieldset>` +
+    `<p class="remote-result" id="rsResult" aria-live="polite"></p>` +
+    `<label class="set-check" id="rsAckRow" hidden><input type="checkbox" id="rsAck"> <span>${esc(L.remotePublicAck)}</span></label></div>` +
+    `<div class="dlg-foot">${i.configured ? `<button type="button" class="secondary danger" id="rsDisconnect">${esc(L.remoteDisconnect)}</button>` : ''}` +
+    `<button type="button" class="secondary" id="rsTest">${esc(L.remoteTest)}</button><button type="button" class="primary" id="rsSave">${esc(L.remoteSave)}</button></div></form>`;
+
+  const q = id => dlg.querySelector('#' + id);
+  const show = (text, bad) => { const el = q('rsResult'); el.textContent = text; el.dataset.bad = bad ? '1' : ''; };
+  const body = () => {
+    const [owner = '', repo = ''] = q('rsRepo').value.trim().replace(/^https:\/\/github\.com\//, '').replace(/\.git$/, '').split('/');
+    const token = q('rsToken')?.value.trim();
+    return { provider: 'github', owner, repo, branch: q('rsBranch').value.trim(), folder: q('rsFolder').value.trim(),
+             label: q('rsLabel').value.trim(), ...(token ? { token } : {}), ...(remote.ticket ? { ticket: remote.ticket } : {}),
+             ...(q('rsAck').checked ? { publicAck: true } : {}) };
+  };
+  const describe = c => {
+    let t = fmt(L.remoteTestOk, { repo: c.fullName, visibility: c.private ? L.remotePrivate : L.remotePublic });
+    if (c.tokenKind === 'classic') t += ' ' + L.remoteClassic;
+    q('rsAckRow').hidden = !!c.private;
+    return t;
+  };
+  const busy = on => dlg.querySelectorAll('.dlg-foot button, #rsPairBtn').forEach(b => { b.disabled = on; });
+  const lock = r => { if (r.status === 403 && pairing) remote.ticket = ''; };
+
+  q('rsRepo').addEventListener('change', () => { const a = q('rsTokenLink'); if (a) a.href = TOKEN_URL(q('rsRepo').value.split('/')[0].trim()); });
+  q('rsPairBtn')?.addEventListener('click', async () => {
+    const r = await remoteCall('POST', '/pair', {});
+    q('rsPairMsg').textContent = r.ok ? L.remotePairSent : (r.body?.error || `HTTP ${r.status}`);
+    q('rsCode').focus();
+  });
+  q('rsCode')?.addEventListener('input', async e => {
+    const code = e.target.value.replace(/\D/g, '');
+    e.target.value = code;
+    if (code.length !== 6) return;
+    const r = await remoteCall('POST', '/unlock', { code });
+    if (r.ok) { remote.ticket = r.body.ticket; q('rsPairMsg').textContent = L.remotePairOk; e.target.disabled = true; q('rsPairBtn').disabled = true; }
+    else { q('rsPairMsg').textContent = r.body?.error || `HTTP ${r.status}`; e.target.select(); }
+  });
+  q('rsTest').addEventListener('click', async () => {
+    busy(true); show('');
+    const r = await remoteCall('POST', '/test', body());
+    busy(false); lock(r);
+    show(r.ok ? describe(r.body) : (r.body?.error || `HTTP ${r.status}`), !r.ok);
+  });
+  q('rsSave').addEventListener('click', async () => {
+    busy(true); show('');
+    const r = await remoteCall('PUT', '/setup', body());
+    busy(false); lock(r);
+    if (r.status === 409 && !q('rsAck').checked && /public/i.test(r.body?.error || '')) { q('rsAckRow').hidden = false; show(r.body.error, true); return; }
+    if (!r.ok) { show(r.body?.error || `HTTP ${r.status}`, true); return; }
+    if (q('rsToken')) q('rsToken').value = '';
+    dlg.close();
+    await takeRemote(r.body);
+    runRemote();
+  });
+  q('rsDisconnect')?.addEventListener('click', async () => {
+    if (!confirm(L.remoteDisconnectAsk)) return;
+    const r = await remoteCall('DELETE', '');
+    if (r.ok) { remote.ticket = ''; dlg.close(); await takeRemote(r.body); }
+    else show(r.body?.error || `HTTP ${r.status}`, true);
+  });
+  dlg.onclose = () => { dlg.innerHTML = ''; };   // the token typed here does not stay in the page
+  dlg.showModal();
+  (q('rsPairBtn') || q('rsRepo')).focus();
+}
+
+function wireRemote() {
+  addEventListener('labelschange', paintRemote);
+  $('remoteSetup').addEventListener('click', openRemoteSetup);
+  $('remoteNow').addEventListener('click', () => (remote.info?.status?.needsChoice ? askRemoteChoice() : runRemote()));
+  $('remoteMode').addEventListener('change', async e => {
+    if (!remote.info?.configured) {   // nothing to turn on yet: set it up first
+      const wanted = e.target.value;
+      e.target.value = 'off';
+      if (wanted !== 'off') openRemoteSetup();
+      return;
+    }
+    const r = await remoteCall('PUT', '/mode', { mode: e.target.value });
+    if (!r.ok) alert(r.body?.error || `HTTP ${r.status}`);
+    await takeRemote(r.ok ? r.body : remote.info);
+  });
 }
 
 /* ---------- installable app and offline use (service worker, src/sw.js served at /sw.js) ---------- */
@@ -3781,6 +3987,7 @@ async function init() {
   buildSwitch();
   wirePwa();
   if (S.manifest.demo === true) startDemo();
+  if (!SNAP) loadRemote();
   const asked = new URLSearchParams(location.search).get('r'), last = store.get(KEY.last), visible = visibleRoadmaps();
   const entry = entryById(asked) || visible.find(r => r.id === last) || visible[0];
   loadRemoteStates().then(updatePickerBtn);

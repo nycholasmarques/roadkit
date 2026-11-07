@@ -155,6 +155,15 @@
               <option value="off" data-i18n="keysOffOpt"></option>
             </select></div>
             <span class="set-hint" data-i18n="keysHint"></span></div>
+          <div class="set-row" id="remoteRow" hidden><label class="set-label" for="remoteMode" data-i18n="remoteSetting"></label>
+            <div class="sel-wrap"><select id="remoteMode">
+              <option value="off" data-i18n="remoteOff"></option>
+              <option value="manual" data-i18n="remoteManual"></option>
+              <option value="auto" data-i18n="remoteAuto"></option>
+            </select></div>
+            <p class="sync-note" id="remoteStatus" aria-live="polite"></p>
+            <div class="remote-btns"><button type="button" class="secondary" id="remoteSetup" data-i18n="remoteSetup"></button><button type="button" class="secondary" id="remoteNow" data-i18n="remoteNow" hidden></button></div>
+            <span class="set-hint" data-i18n="remoteHint"></span></div>
           <p class="sync-note" id="syncStatus" aria-live="polite"></p>
           <div class="set-tools">
             <button type="button" class="secondary" data-act="new" data-i18n="newRoadmap"></button>
