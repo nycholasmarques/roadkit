@@ -8,7 +8,10 @@ validators, so this package can be tested on its own and never imports the serve
     store      the local side (data/ and data/_sync/)
     engine     one sync, start to end
     provider   what a destination implements; PROVIDERS lists them
+    net        the only way out to the network: a restricted HTTPS client
+    github     GitHub, through the Git Data API
 """
+from . import github  # noqa: F401  (registers the provider)
 from .engine import Result, SyncEngine
 from .errors import SyncError
 from .provider import PROVIDERS, Provider, Remote
