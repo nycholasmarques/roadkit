@@ -95,7 +95,10 @@ jobs:
           node --check src/app.js
           node --check src/markdown.js
           node tools/markdown.test.cjs
-          python3 -m py_compile tools/roadkit.py
+          python3 -m py_compile tools/roadkit.py tools/roadkit_sync/*.py
+
+      - name: Python unit tests
+        run: python3 -m unittest discover -s tests -v
 
       - name: Server smoke test
         run: |
