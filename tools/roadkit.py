@@ -769,6 +769,62 @@ def valid_review(obj):
         and isinstance(v.get("step"), int) and not isinstance(v["step"], bool) and 0 <= v["step"] < 10 for k, v in items.items())
 
 
+def valid_activity(obj):
+    """Activity as read_activity() returns it: {"v": 1, "days": {day: totals}, "months": {"YYYY-MM": totals},
+    "topics": {topic or "project:<id>": {touched, started, finished, focus, sessions}}}. Only the server writes it;
+    this checks a copy that comes from somewhere else (a sync)."""
+    if not isinstance(obj, dict) or set(obj) - {"v", "days", "months", "topics"}:
+        return False
+    count = lambda v: isinstance(v, int) and not isinstance(v, bool) and 0 <= v < 10_000_000
+    totals = lambda t: isinstance(t, dict) and set(t) <= set(DAY_TOTALS) and all(count(v) for v in t.values())
+    days, months, topics = obj.get("days", {}), obj.get("months", {}), obj.get("topics", {})
+    if not (isinstance(days, dict) and isinstance(months, dict) and isinstance(topics, dict)):
+        return False
+    if not all(valid_day(d) and totals(t) for d, t in days.items()):
+        return False
+    if not all(isinstance(m, str) and re.fullmatch(r"\d{4}-(0[1-9]|1[0-2])", m) and totals(t) for m, t in months.items()):
+        return False
+    for k, t in topics.items():
+        if not (isinstance(k, str) and FOCUS_KEY.match(k) and isinstance(t, dict)):
+            return False
+        if set(t) - {"touched", "started", "finished", "focus", "sessions"}:
+            return False
+        if "touched" in t and not (isinstance(t["touched"], int) and not isinstance(t["touched"], bool) and t["touched"] >= 0):
+            return False
+        if any(k2 in t and not valid_day(t[k2]) for k2 in ("started", "finished")):
+            return False
+        if any(k2 in t and not count(t[k2]) for k2 in ("focus", "sessions")):
+            return False
+    return True
+
+
+def sync_validators():
+    """What a file coming from a sync must pass before it is written to data/: the same rules as the API."""
+    def roadmap(obj, path):
+        errs, _ = validate(obj, label_keys()) if isinstance(obj, dict) else (["not an object"], [])
+        if errs:
+            return "invalid roadmap: " + "; ".join(errs[:3])
+        if obj.get("id") != path.rsplit("/", 1)[-1][:-len(".json")]:
+            return "the roadmap id does not match its file name"
+        return None
+    def section(obj, path):
+        ok = isinstance(obj, dict) and set(obj) <= {"title"} and isinstance(obj.get("title", ""), str) and len(obj.get("title", "")) <= 80
+        return None if ok else "invalid category"
+    def hidden(obj, path):
+        ok = isinstance(obj, list) and len(obj) <= 10_000 and all(slug_ok(x) or (isinstance(x, str) and STATE_ID.match(x)) for x in obj)
+        return None if ok else "invalid hidden list"
+    simple = lambda fn, what: (lambda obj, path: None if fn(obj) else f"invalid {what}")
+    return {"state": simple(valid_state, "progress"), "notes": simple(valid_notes, "notes"),
+            "review": simple(valid_review, "review"), "activity": simple(valid_activity, "activity"),
+            "hidden": hidden, "roadmap": roadmap, "section": section}
+
+
+def sync_store():
+    """The data/ folder as the sync sees it, written with this server's lock and atomic write."""
+    from roadkit_sync import DataDirStore
+    return DataDirStore(DATA_DIR, LOCK, write_json, sync_validators())
+
+
 class ApiError(Exception):
     def __init__(self, code, body):
         self.code, self.body = code, body
