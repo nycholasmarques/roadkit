@@ -103,10 +103,36 @@ docker compose -f compose.preview.yaml down -v           # para e apaga o progre
 
 Ela tem nome, imagem, contêiner e volume próprios, então o progresso marcado ali não se mistura com o da instância de verdade. Trocou de branch? Rode o mesmo `up -d --build` de novo. Outra porta: `PREVIEW_PORT=8767`.
 
+## Sincronização com o GitHub
+
+A [sincronização](sincronizar.md) é a única coisa no Roadkit que sai para a internet, e só depois de configurada: ela fala com `https://api.github.com` (porta 443) e com mais nada. Se a sua rede usa proxy, o servidor respeita `HTTPS_PROXY`.
+
+O token pode ser colado na tela ou vir do ambiente, e o ambiente tem precedência. No `.env`:
+
+```
+ROADKIT_SYNC_TOKEN=github_pat_...
+```
+
+Ou com Docker secrets, sem o token no `.env`:
+
+```yaml
+services:
+  roadmap:
+    environment:
+      ROADKIT_SYNC_TOKEN_FILE: /run/secrets/roadkit_sync
+    secrets:
+      - roadkit_sync
+secrets:
+  roadkit_sync:
+    file: ./roadkit-sync-token.txt
+```
+
+O código de pareamento que a tela pede aparece em `docker compose logs roadmap`.
+
 ## Sem Docker
 
 ```bash
 python3 tools/roadkit.py serve --host 0.0.0.0 --port 8765
 ```
 
-Funciona igual. Três variáveis de ambiente mudam o comportamento: `ROADKIT_DATA` aponta outra pasta para os dados (o padrão é `data/` ao lado do projeto), `ROADKIT_TOKEN` liga a exigência de token e `ROADKIT_HOSTS` lista os nomes extras pelos quais você abre o Roadkit.
+Funciona igual. Quatro variáveis de ambiente mudam o comportamento: `ROADKIT_DATA` aponta outra pasta para os dados (o padrão é `data/` ao lado do projeto), `ROADKIT_TOKEN` liga a exigência de token, `ROADKIT_HOSTS` lista os nomes extras pelos quais você abre o Roadkit e `ROADKIT_SYNC_TOKEN` (ou `ROADKIT_SYNC_TOKEN_FILE`) dá o token da sincronização.

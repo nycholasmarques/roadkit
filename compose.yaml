@@ -21,6 +21,9 @@ services:
       # optional: other names you open Roadkit by (comma separated), e.g. roadkit.home or a Tailscale name.
       # localhost and IP addresses always work; any other name is refused by the API (DNS rebinding protection)
       ROADKIT_HOSTS: ${ROADKIT_HOSTS:-}
+      # optional: the sync token, instead of pasting it in the settings (docs/en/sync.md).
+      # With Docker secrets, use ROADKIT_SYNC_TOKEN_FILE: /run/secrets/<name> instead
+      ROADKIT_SYNC_TOKEN: ${ROADKIT_SYNC_TOKEN:-}
     security_opt:
       - no-new-privileges:true
     cap_drop:

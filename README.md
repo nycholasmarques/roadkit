@@ -117,6 +117,10 @@ Every topic and project has a Markdown notes box, saved on the server and offlin
 
 Export the roadmap as Markdown, or as a single `.html` page that opens in any browser with no server, to show your progress to someone.
 
+### Take it to another machine
+
+Turn on sync in the settings and Roadkit keeps progress, notes and activity in a folder of a GitHub repository of yours, one commit at a time. On another machine, point it at the same folder and pick up where you left off. It comes off, and the token only reaches that repository. [More](docs/en/sync.md).
+
 ### Install it, use it offline
 
 Roadkit is an installable app: it opens in its own window, with an icon, and after the first visit it works with no internet, with every roadmap at hand. What you check off offline goes up when the connection returns. On a phone, the map becomes a timeline and every screen fits.
@@ -177,6 +181,7 @@ Save it in `roadmaps/` (or in a subfolder, which becomes its category) and run `
 | [Statistics](docs/en/statistics.md) | heatmap, streak, pace and forecast |
 | [Creating roadmaps](docs/en/creating-roadmaps.md) | three ways to create one, categories and what makes a good roadmap |
 | [Creating with AI](docs/en/creating-with-ai.md) | the button and the skill |
+| [Sync with GitHub](docs/en/sync.md) | the same progress on several machines, through a repository of yours |
 | [How it works](docs/en/how-it-works.md) | what runs where, where the data lives, the API |
 | [Docker and network](docs/en/docker-and-network.md) | volumes, backups, token, other devices |
 | [JSON format](docs/en/SCHEMA.md) | reference for every field |

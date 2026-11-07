@@ -15,6 +15,7 @@ If this is your first time, start with the interface tour, or open the [demo](ht
 | [Statistics](statistics.md) | Heatmap, streak, pace and forecast, and where the numbers come from |
 | [Creating roadmaps](creating-roadmaps.md) | Three ways to create one, and what makes a roadmap pleasant to use |
 | [Creating with AI](creating-with-ai.md) | The "Create with AI" button and the skill for coding agents |
+| [Sync with GitHub](sync.md) | Take progress, notes and activity to another machine through a repository of yours, safely |
 | [How it works](how-it-works.md) | What runs where, where everything is stored and how the code is organized |
 | [Docker and network](docker-and-network.md) | Running with Compose, volumes, backups and opening it to other devices |
 | [JSON format](SCHEMA.md) | Reference for every field of a roadmap |
