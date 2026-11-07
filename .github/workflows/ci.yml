@@ -103,7 +103,7 @@ jobs:
       - name: Server smoke test
         run: |
           export ROADKIT_DATA="$(mktemp -d)"
-          python3 tools/roadkit.py serve --port 8765 &
+          python3 tools/roadkit.py serve --port 8765 > /tmp/server.log 2>&1 &
           pid=$!
           trap 'kill $pid' EXIT
           for i in $(seq 40); do curl -sf http://127.0.0.1:8765/manifest.json >/dev/null && break; sleep 0.25; done
@@ -197,6 +197,30 @@ jobs:
           for host in 'localhost:8765' '192.168.0.10:8765' '[::1]:8765' '10.0.0.2'; do
             test "$(curl -s -o /dev/null -w '%{http_code}' -H "Host: $host" http://127.0.0.1:8765/api/states)" = 200 || { echo "::error::Host $host refused"; exit 1; }
           done
+          # sync: off until set up; changing where the data goes needs the pairing code from the server log
+          S=SMOKETEST_SECRET_42
+          curl -sf http://127.0.0.1:8765/api/sync | python3 -c "import json,sys; s=json.load(sys.stdin); assert s['configured'] is False and s['mode']=='off' and s['tokenSet'] is False, s"
+          test "$(curl -s -o /dev/null -w '%{http_code}' -X PUT -H "$H" -d "{\"owner\":\"me\",\"repo\":\"r\",\"token\":\"github_pat_$S\"}" http://127.0.0.1:8765/api/sync/setup)" = 403
+          test "$(curl -s -o /dev/null -w '%{http_code}' -X POST -H "$H" -d '{}' http://127.0.0.1:8765/api/sync/test)" = 403
+          test "$(curl -s -o /dev/null -w '%{http_code}' -X PUT -H "$H" -d '{"mode":"auto"}' http://127.0.0.1:8765/api/sync/mode)" = 409
+          test "$(curl -s -o /dev/null -w '%{http_code}' -X POST -H "$H" -d '{}' http://127.0.0.1:8765/api/sync/run)" = 409
+          test "$(curl -s -o /dev/null -w '%{http_code}' -H 'Host: evil.example' http://127.0.0.1:8765/api/sync)" = 403
+          curl -sf -X POST -H "$H" -d '{}' http://127.0.0.1:8765/api/sync/pair >/dev/null
+          test "$(curl -s -o /dev/null -w '%{http_code}' -X POST -H "$H" -d '{}' http://127.0.0.1:8765/api/sync/pair)" = 429
+          code="$(grep -o 'sync pairing code [0-9]*' /tmp/server.log | tail -1 | awk '{print $4}')"
+          test "${#code}" = 6
+          test "$(curl -s -o /dev/null -w '%{http_code}' -X POST -H "$H" -d '{"code":"12345x"}' http://127.0.0.1:8765/api/sync/unlock)" = 403
+          ticket="$(curl -sf -X POST -H "$H" -d "{\"code\":\"$code\"}" http://127.0.0.1:8765/api/sync/unlock | python3 -c "import json,sys; print(json.load(sys.stdin)['ticket'])")"
+          test "$(curl -s -o /dev/null -w '%{http_code}' -X POST -H "$H" -d "{\"code\":\"$code\"}" http://127.0.0.1:8765/api/sync/unlock)" = 403
+          # with the ticket, a bad destination is refused before anything leaves the server
+          test "$(curl -s -o /dev/null -w '%{http_code}' -X PUT -H "$H" -d "{\"ticket\":\"$ticket\",\"owner\":\"../x\",\"repo\":\"r\",\"token\":\"github_pat_$S\"}" http://127.0.0.1:8765/api/sync/setup)" = 400
+          test "$(curl -s -o /dev/null -w '%{http_code}' -X PUT -H "$H" -d "{\"ticket\":\"$ticket\",\"owner\":\"me\",\"repo\":\"r\",\"folder\":\"../..\",\"token\":\"github_pat_$S\"}" http://127.0.0.1:8765/api/sync/setup)" = 400
+          # a token that GitHub refuses is not saved, and it never comes back in any answer nor in the log
+          curl -s -X PUT -H "$H" -d "{\"ticket\":\"$ticket\",\"owner\":\"roadkit-ci-nobody\",\"repo\":\"none\",\"token\":\"github_pat_$S\"}" http://127.0.0.1:8765/api/sync/setup > /tmp/setup.json || true
+          for u in /api/sync /api/states /api/review; do curl -s "http://127.0.0.1:8765$u"; echo; done > /tmp/answers.json
+          if grep -q "$S" /tmp/setup.json /tmp/answers.json /tmp/server.log; then echo "::error::the sync token leaked"; exit 1; fi
+          curl -sf http://127.0.0.1:8765/api/sync | python3 -c "import json,sys; s=json.load(sys.stdin); assert s['tokenSet'] is False and s['configured'] is False, s"
+          test ! -e "$ROADKIT_DATA/_sync/secret.json"
           # writes from another origin are refused
           test "$(curl -s -o /dev/null -w '%{http_code}' -X PUT -H "$H" -H 'Origin: http://evil.example' -d '{}' http://127.0.0.1:8765/api/state/x)" = 403
           # the data folder and the server code are never served as files, however the path is spelled

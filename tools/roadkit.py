@@ -819,6 +819,15 @@ def sync_validators():
             "hidden": hidden, "roadmap": roadmap, "section": section}
 
 
+SYNC = None   # the SyncService, started by `serve`
+
+
+def changed():
+    """Something was saved: in automatic mode, the sync sends it a little later."""
+    if SYNC is not None:
+        SYNC.notify_change()
+
+
 def sync_store():
     """The data/ folder as the sync sees it, written with this server's lock and atomic write."""
     from roadkit_sync import DataDirStore
@@ -1071,6 +1080,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                                     incoming.get("events"), current["updatedAt"])
                 except (OSError, ValueError) as e:   # the progress is saved; the activity failing must not undo that
                     print(f"activity: {rid}: {e}", file=sys.stderr)
+        changed()
         return 200, out
 
     # -- notes: GET/PUT /api/notes/<id>, the same sync rules as the progress, in a file of their own --
@@ -1102,6 +1112,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 return 409, current
             out = {"updatedAt": incoming["updatedAt"], "notes": {k: v for k, v in incoming["notes"].items() if v.strip()}}
             write_json(f, out)
+        changed()
         return 200, out
 
     def states_get(self, _, query):
@@ -1159,6 +1170,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             raise ApiError(400, {"error": f'send {{"id": "<topic>", "min": 1..{MAX_FOCUS_MIN}, "t": <ms>}}'})
         with LOCK:
             t = record_focus(rid, b["id"], b["min"], b["t"], b.get("tz"))
+        changed()
         return 200, {"id": b["id"], "focus": t["focus"], "sessions": t["sessions"]}
 
     # -- spaced review: GET/PUT /api/review, one file for every roadmap, the same sync rules as the progress --
@@ -1183,6 +1195,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 return 409, current
             out = {"updatedAt": incoming["updatedAt"], "on": incoming.get("on", False), "skip": incoming.get("skip", []), "items": incoming.get("items", {})}
             write_json(REVIEW_FILE, out)
+        changed()
         return 200, out
 
     def activity_get(self, rid, query):
@@ -1226,6 +1239,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             if data["id"] in known_ids():
                 raise ApiError(409, {"error": f"a roadmap with id '{data['id']}' already exists"})
             write_json(folder / f"{data['id']}.json", data)
+        changed()
         return 201, {"id": data["id"], "warnings": warns}
 
     def roadmap_update(self, rid, query):
@@ -1241,6 +1255,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             write_json(folder / f"{rid}.json", data)
             if folder / f"{rid}.json" != current:   # moved to another category
                 current.unlink()
+        changed()
         return 200, {"id": rid, "warnings": warns}
 
     def roadmap_delete(self, rid, query):
@@ -1258,6 +1273,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             hidden = read_hidden()
             if rid in hidden:
                 write_json(HIDDEN_FILE, sorted(hidden - {rid}))
+        changed()
         return 200, {"id": rid}
 
     def hidden_put(self, rid, query):
@@ -1268,7 +1284,50 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             hidden = read_hidden()
             hidden = hidden | {rid} if body["hidden"] else hidden - {rid}
             write_json(HIDDEN_FILE, sorted(hidden))
+        changed()
         return 200, {"id": rid, "hidden": body["hidden"]}
+
+    # -- sync with a folder of a GitHub repository (tools/roadkit_sync); off until you set it up --
+    def sync_service(self):
+        if SYNC is None:
+            raise ApiError(501, {"error": "sync is not available on this server"})
+        return SYNC
+
+    def sync_call(self, fn, *args):
+        from roadkit_sync.service import ServiceError
+        try:
+            return 200, fn(*args)
+        except ServiceError as e:
+            raise ApiError(e.status, {"error": e.message})
+
+    def sync_get(self, _, query):
+        return 200, self.sync_service().info()
+
+    def sync_pair(self, _, query):
+        return self.sync_call(self.sync_service().pair)
+
+    def sync_unlock(self, _, query):
+        body = self.read_json()
+        return self.sync_call(self.sync_service().unlock, body.get("code") if isinstance(body, dict) else None)
+
+    def sync_test(self, _, query):
+        return self.sync_call(self.sync_service().test, self.read_json(), bool(TOKEN))
+
+    def sync_setup(self, _, query):
+        return self.sync_call(self.sync_service().setup, self.read_json(), bool(TOKEN))
+
+    def sync_mode(self, _, query):
+        return self.sync_call(self.sync_service().set_mode, self.read_json())
+
+    def sync_run(self, _, query):
+        body = self.read_json()
+        if not isinstance(body, dict) or body.get("mode", "sync") not in ("sync", "push", "pull") \
+                or body.get("first") not in (None, "merge", "remote", "local"):
+            raise ApiError(400, {"error": 'send {"mode": "sync" | "push" | "pull", "first": null | "merge" | "remote" | "local"}'})
+        return self.sync_call(self.sync_service().run, body.get("mode", "sync"), body.get("first"))
+
+    def sync_delete(self, _, query):
+        return self.sync_call(self.sync_service().disconnect)
 
 
 ROUTES = [
@@ -1283,11 +1342,22 @@ ROUTES = [
     (r"/api/roadmaps", {"POST": "roadmap_create"}),
     (r"/api/roadmaps/([^/]+)", {"PUT": "roadmap_update", "DELETE": "roadmap_delete"}),
     (r"/api/hidden/([^/]+)", {"PUT": "hidden_put"}),
+    (r"/api/sync", {"GET": "sync_get", "DELETE": "sync_delete"}),
+    (r"/api/sync/pair", {"POST": "sync_pair"}),
+    (r"/api/sync/unlock", {"POST": "sync_unlock"}),
+    (r"/api/sync/test", {"POST": "sync_test"}),
+    (r"/api/sync/setup", {"PUT": "sync_setup"}),
+    (r"/api/sync/mode", {"PUT": "sync_mode"}),
+    (r"/api/sync/run", {"POST": "sync_run"}),
 ]
 
 
 def cmd_serve(args):
+    global SYNC
     build_manifest()
+    from roadkit_sync.service import SyncService
+    SYNC = SyncService(sync_store(), compact=compact_activity, user_agent=f"roadkit/{app_version()}")
+    SYNC.start()
     handler = functools.partial(Handler, directory=str(ROOT))
     with http.server.ThreadingHTTPServer((args.host, args.port), handler) as srv:
         print(f"Roadkit: http://localhost:{args.port}  (Ctrl+C to stop)")
