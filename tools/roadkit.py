@@ -1301,7 +1301,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             raise ApiError(e.status, {"error": e.message})
 
     def sync_get(self, _, query):
-        return 200, self.sync_service().info()
+        # pairing: whether setup needs the code from the log (with ROADKIT_TOKEN on, the API token is enough)
+        return 200, {**self.sync_service().info(), "pairing": not TOKEN}
 
     def sync_pair(self, _, query):
         return self.sync_call(self.sync_service().pair)
