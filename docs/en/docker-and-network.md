@@ -56,6 +56,18 @@ Some limits, to be clear about what this is and what it is not:
 - The server is Python's `http.server`, built for personal use. Do not put it on the internet. Inside your home network it is fine; outside it, put it behind a VPN (WireGuard, Tailscale) or a reverse proxy with HTTPS and authentication.
 - Without HTTPS, the token travels in plain text on your network. On a home network the risk is small, but it is worth knowing.
 - Writes are only accepted from pages served by the server itself: requests coming from another site are refused. That protects you from some random page trying to change your progress while Roadkit is open.
+- The API only answers when the address you open Roadkit by is `localhost`, an IP (`192.168.0.10`, a Tailscale `100.x`) or a name you listed in `ROADKIT_HOSTS`. That stops *DNS rebinding*: some site pointing its own domain at your machine and getting past the rule above that way.
+- Every response carries headers that stop Roadkit from being embedded in another site (`X-Frame-Options`, `frame-ancestors`), a file from being read as another type (`nosniff`), and your address from leaking to the links you open (`Referrer-Policy`).
+
+### Opening it by a name
+
+If you open Roadkit by a name rather than an IP (Tailscale's `https://<machine>.<your-tailnet>.ts.net`, a domain on Caddy, a `roadkit.home` on your router), list that name in `.env`, comma separated if there are several:
+
+```
+ROADKIT_HOSTS=machine.my-tailnet.ts.net,roadkit.home
+```
+
+Without it, the interface opens but progress does not sync with the server (the API answers `403 unknown host`).
 
 ## Installable app and HTTPS
 
@@ -97,4 +109,4 @@ It has its own name, image, container and volume, so progress checked off there 
 python3 tools/roadkit.py serve --host 0.0.0.0 --port 8765
 ```
 
-It works the same. Two environment variables change its behavior: `ROADKIT_DATA` points to another folder for the data (the default is `data/` next to the project) and `ROADKIT_TOKEN` turns on the token requirement.
+It works the same. Three environment variables change its behavior: `ROADKIT_DATA` points to another folder for the data (the default is `data/` next to the project), `ROADKIT_TOKEN` turns on the token requirement and `ROADKIT_HOSTS` lists the extra names you open Roadkit by.

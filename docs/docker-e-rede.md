@@ -56,6 +56,18 @@ Alguns limites, para ficar claro o que isso é e o que não é:
 - O servidor é o `http.server` do Python, feito para uso pessoal. Não coloque na internet. Dentro da rede de casa está bem; fora dela, ponha atrás de uma VPN (WireGuard, Tailscale) ou de um proxy reverso com HTTPS e autenticação.
 - Sem HTTPS, o token trafega em texto puro na sua rede. Na rede de casa o risco é pequeno, mas é bom saber.
 - Escrita só é aceita de páginas servidas pelo próprio servidor: requisições que vêm de outro site são recusadas. Isso protege você de uma página qualquer tentar mexer no seu progresso enquanto o Roadkit está aberto.
+- A API só responde quando o endereço usado para abrir o Roadkit é `localhost`, um IP (`192.168.0.10`, `100.x` do Tailscale) ou um nome que você listou em `ROADKIT_HOSTS`. Isso barra o *DNS rebinding*: um site qualquer apontar o domínio dele para a sua máquina e, com isso, passar pela regra acima.
+- Toda resposta sai com cabeçalhos que impedem o Roadkit de ser embutido em outro site (`X-Frame-Options`, `frame-ancestors`), de ter um arquivo interpretado como outro tipo (`nosniff`) e de vazar o seu endereço para os links que você abre (`Referrer-Policy`).
+
+### Abrindo por um nome
+
+Se você abre o Roadkit por um nome, e não por IP (o `https://<máquina>.<sua-rede>.ts.net` do Tailscale, um domínio no Caddy, um `roadkit.casa` no roteador), liste esse nome no `.env`, separado por vírgula se forem vários:
+
+```
+ROADKIT_HOSTS=maquina.minha-rede.ts.net,roadkit.casa
+```
+
+Sem isso, a interface abre, mas o progresso não sincroniza com o servidor (a API responde `403 unknown host`).
 
 ## App instalável e HTTPS
 
@@ -97,4 +109,4 @@ Ela tem nome, imagem, contêiner e volume próprios, então o progresso marcado 
 python3 tools/roadkit.py serve --host 0.0.0.0 --port 8765
 ```
 
-Funciona igual. Duas variáveis de ambiente mudam o comportamento: `ROADKIT_DATA` aponta outra pasta para os dados (o padrão é `data/` ao lado do projeto) e `ROADKIT_TOKEN` liga a exigência de token.
+Funciona igual. Três variáveis de ambiente mudam o comportamento: `ROADKIT_DATA` aponta outra pasta para os dados (o padrão é `data/` ao lado do projeto), `ROADKIT_TOKEN` liga a exigência de token e `ROADKIT_HOSTS` lista os nomes extras pelos quais você abre o Roadkit.

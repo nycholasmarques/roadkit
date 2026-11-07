@@ -181,6 +181,19 @@ jobs:
           curl -sf -D /tmp/wm.h http://127.0.0.1:8765/src/manifest.webmanifest | python3 -c "import json,sys; m=json.load(sys.stdin); assert m['display']=='standalone' and m['icons'], m"
           grep -qi '^content-type: application/manifest+json' /tmp/wm.h
           for i in icon.svg favicon.svg icon-192.png icon-512.png maskable-512.png apple-touch-icon.png; do curl -sf -o /dev/null "http://127.0.0.1:8765/src/icons/$i"; done
+          # every response carries the security headers
+          for u in / /api/states; do
+            curl -s -D /tmp/h -o /dev/null "http://127.0.0.1:8765$u"
+            for h in 'x-frame-options: DENY' "content-security-policy: frame-ancestors 'none'" 'x-content-type-options: nosniff' 'referrer-policy: no-referrer'; do
+              grep -qi "^$h" /tmp/h || { echo "::error::$u lacks $h"; exit 1; }
+            done
+          done
+          # the API answers to localhost and IP addresses, not to other names (DNS rebinding)
+          test "$(curl -s -o /dev/null -w '%{http_code}' -H 'Host: evil.example' http://127.0.0.1:8765/api/states)" = 403
+          test "$(curl -s -o /dev/null -w '%{http_code}' -H 'Host: evil.example:8765' -X PUT -H "$H" -d '{}' http://127.0.0.1:8765/api/state/x)" = 403
+          for host in 'localhost:8765' '192.168.0.10:8765' '[::1]:8765' '10.0.0.2'; do
+            test "$(curl -s -o /dev/null -w '%{http_code}' -H "Host: $host" http://127.0.0.1:8765/api/states)" = 200 || { echo "::error::Host $host refused"; exit 1; }
+          done
           # writes from another origin are refused
           test "$(curl -s -o /dev/null -w '%{http_code}' -X PUT -H "$H" -H 'Origin: http://evil.example' -d '{}' http://127.0.0.1:8765/api/state/x)" = 403
           # the data folder and the server code are never served as files, however the path is spelled

@@ -18,6 +18,9 @@ services:
     environment:
       # optional: require this token to read/write progress (set it in .env when exposing on your LAN)
       ROADKIT_TOKEN: ${ROADKIT_TOKEN:-}
+      # optional: other names you open Roadkit by (comma separated), e.g. roadkit.home or a Tailscale name.
+      # localhost and IP addresses always work; any other name is refused by the API (DNS rebinding protection)
+      ROADKIT_HOSTS: ${ROADKIT_HOSTS:-}
     security_opt:
       - no-new-privileges:true
     cap_drop:
