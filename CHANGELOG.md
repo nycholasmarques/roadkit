@@ -6,6 +6,10 @@ Each GitHub release also lists the commits since the previous version on its own
 
 ## [1.13.0] - Unreleased
 
+### Security
+- Every response now carries `X-Frame-Options: DENY`, `Content-Security-Policy: frame-ancestors 'none'`, `X-Content-Type-Options: nosniff` and `Referrer-Policy: no-referrer`, so Roadkit cannot be embedded in another site.
+- The API only answers when Roadkit is opened by `localhost`, an IP address or a name listed in the new `ROADKIT_HOSTS`. This blocks DNS rebinding, where a site points its own domain at your machine to get past the same-origin check. **If you open Roadkit by a name** (a Tailscale `*.ts.net` address, a domain behind Caddy), add it to `ROADKIT_HOSTS`, or progress stops syncing with the server. See [Docker and network](docs/en/docker-and-network.md).
+
 ### Fixes
 - The settings no longer run past the bottom of short windows (an installed app on a laptop, for example): they fit the window and scroll, so every option can be reached.
 

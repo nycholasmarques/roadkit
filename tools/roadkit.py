@@ -13,6 +13,7 @@ import functools
 import hashlib
 import http.server
 import hmac
+import ipaddress
 import json
 import os
 import posixpath
@@ -32,6 +33,7 @@ MANIFEST = ROOT / "manifest.json"
 LABELS_DIR = ROOT / "src" / "labels"
 DATA_DIR = Path(os.environ.get("ROADKIT_DATA") or ROOT / "data")  # saved progress, one JSON per roadmap
 TOKEN = os.environ.get("ROADKIT_TOKEN", "")                       # optional: require it for the progress API
+HOSTS = {h.strip().lower().rstrip(".") for h in os.environ.get("ROADKIT_HOSTS", "").split(",") if h.strip()}  # extra names the API answers to
 USER_DIR = DATA_DIR / "roadmaps"                                  # roadmaps created in the UI
 HIDDEN_FILE = DATA_DIR / "_hidden.json"                           # ids hidden from the picker (read-only roadmaps can't be deleted)
 LOCK = threading.Lock()
@@ -802,6 +804,36 @@ def private_path(path):
 
 SW_SOURCE = ROOT / "src" / "sw.js"
 
+# Sent with every response: the app is never framed by another site, a file is never sniffed into another type,
+# and no address of the app leaks to the sites its links open.
+SECURITY_HEADERS = (
+    ("X-Frame-Options", "DENY"),
+    ("Content-Security-Policy", "frame-ancestors 'none'"),
+    ("X-Content-Type-Options", "nosniff"),
+    ("Referrer-Policy", "no-referrer"),
+)
+
+
+def host_allowed(header):
+    """The API only answers to localhost, to an IP address or to a name listed in ROADKIT_HOSTS. A page on another
+    site can point its own domain at this machine (DNS rebinding) and pass the same-origin check, but it cannot make
+    the browser send an IP address or one of your names as the Host."""
+    if not header:
+        return False
+    host = header.strip().lower()
+    if host.startswith("["):                        # [::1]:8765
+        host = host[1:].split("]", 1)[0]
+    elif host.count(":") == 1:                      # name:port or 1.2.3.4:port
+        host = host.rsplit(":", 1)[0]
+    host = host.rstrip(".")
+    if host == "localhost" or host in HOSTS:
+        return True
+    try:
+        ipaddress.ip_address(host)
+        return True
+    except ValueError:
+        return False
+
 
 def app_version():
     """A short hash of the interface files. The service worker carries it, so any change to the app (a
@@ -852,6 +884,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 
     def end_headers(self):
         self.send_header("Cache-Control", "no-store")
+        for name, value in SECURITY_HEADERS:
+            self.send_header(name, value)
         super().end_headers()
 
     def send_text(self, text):
@@ -898,6 +932,9 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             self.wfile.write(body)
 
     def api_allowed(self):
+        if not host_allowed(self.headers.get("Host")):
+            self.reply(403, {"error": "unknown host: add it to ROADKIT_HOSTS"})
+            return False
         origin = self.headers.get("Origin")
         if origin and urlsplit(origin).netloc != self.headers.get("Host"):
             self.reply(403, {"error": "cross-origin request refused"})
@@ -1199,6 +1236,8 @@ def cmd_serve(args):
     with http.server.ThreadingHTTPServer((args.host, args.port), handler) as srv:
         print(f"Roadkit: http://localhost:{args.port}  (Ctrl+C to stop)")
         print(f"progress is saved in {DATA_DIR}" + ("  (API token required)" if TOKEN else ""))
+        if HOSTS:
+            print("the API also answers to: " + ", ".join(sorted(HOSTS)))
         try:
             srv.serve_forever()
         except KeyboardInterrupt:
